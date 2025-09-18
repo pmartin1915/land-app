@@ -138,6 +138,8 @@ def create_sidebar_filters(df: pd.DataFrame) -> Dict:
         # Price range filter
         min_price = float(df['amount'].min()) if 'amount' in df.columns else 0
         max_price = float(df['amount'].max()) if 'amount' in df.columns else DEFAULT_PRICE_RANGE[1]
+        if min_price >= max_price:
+            max_price = min_price + 100.0
 
         filters['price_range'] = st.sidebar.slider(
             "Price Range ($)",
@@ -151,6 +153,8 @@ def create_sidebar_filters(df: pd.DataFrame) -> Dict:
         # Acreage range filter
         min_acres = float(df['acreage'].min()) if 'acreage' in df.columns else DEFAULT_ACREAGE_RANGE[0]
         max_acres = float(df['acreage'].max()) if 'acreage' in df.columns else DEFAULT_ACREAGE_RANGE[1]
+        if min_acres >= max_acres:
+            max_acres = min_acres + 0.1
 
         filters['acreage_range'] = st.sidebar.slider(
             "Acreage Range",
@@ -182,6 +186,8 @@ def create_sidebar_filters(df: pd.DataFrame) -> Dict:
         if 'investment_score' in df.columns:
             min_score = float(df['investment_score'].min())
             max_score = float(df['investment_score'].max())
+            if min_score >= max_score:
+                max_score = min_score + 0.1
             filters['min_investment_score'] = st.sidebar.slider(
                 "Minimum Investment Score",
                 min_value=min_score,

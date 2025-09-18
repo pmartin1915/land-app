@@ -5,7 +5,9 @@
       "Bash(python:*)",
       "Bash(where streamlit)",
       "Bash(pip install:*)",
-      "WebFetch(domain:www.revenue.alabama.gov)"
+      "WebFetch(domain:www.revenue.alabama.gov)",
+      "Bash(git add:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

@@ -349,7 +349,7 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     for col in string_columns:
         df_clean[col] = df_clean[col].astype(str).str.strip()
         # Replace common null representations
-        df_clean[col] = df_clean[col].replace(['nan', 'NaN', 'null', 'NULL', 'None', 'NONE', ''], np.nan)
+        df_clean[col] = df_clean[col].replace(['nan', 'NaN', 'null', 'NULL', 'None', 'NONE', ''], np.nan).infer_objects(copy=False)
 
     # Remove completely empty rows
     df_clean = df_clean.dropna(how='all')

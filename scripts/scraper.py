@@ -19,10 +19,18 @@ import re
 from typing import Optional, List, Dict, Tuple
 from urllib.parse import urljoin, urlparse, parse_qs
 import random
+from io import StringIO
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Import structured logging
+import sys
+from pathlib import Path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+from config.logging_config import get_logger, log_performance, log_scraping_metrics, log_error_with_context
+from scripts.exceptions import CountyValidationError, NetworkError, ParseError, ScrapingError
+
+logger = get_logger(__name__)
 
 # Alabama County Codes Mapping - ADOR System (Alphabetical Order, Not FIPS)
 # Note: ADOR uses alphabetical ordering, not standard FIPS county codes
@@ -109,9 +117,7 @@ RATE_LIMIT_DELAY = 2.0  # Seconds between requests
 MAX_RETRIES = 3
 
 
-class AdorScrapingError(Exception):
-    """Custom exception for ADOR scraping errors."""
-    pass
+# Using custom exceptions from scripts.exceptions module
 
 
 def validate_county_code(county_input: str) -> str:
@@ -145,7 +151,7 @@ def validate_county_code(county_input: str) -> str:
         if county_name in name or name.startswith(county_name):
             return code
 
-    raise ValueError(f"Unknown county: {county_input}. Use 2-digit code (01-67) or county name.")
+    raise CountyValidationError(county_input)
 
 
 def get_county_name(county_code: str) -> str:
@@ -221,7 +227,7 @@ def parse_property_table(soup: BeautifulSoup) -> pd.DataFrame:
     """
     try:
         # Try pandas.read_html first (simplest approach)
-        tables = pd.read_html(str(soup), attrs={'id': 'ador-delinquent-search-results'})
+        tables = pd.read_html(StringIO(str(soup)), attrs={'id': 'ador-delinquent-search-results'})
         if tables:
             df = tables[0]
             logger.info(f"Extracted table with {len(df)} rows using pandas.read_html")
@@ -306,9 +312,10 @@ def scrape_single_page(session: requests.Session, url: str, params: Dict = None)
         return df, pagination_info
 
     except requests.RequestException as e:
-        raise AdorScrapingError(f"HTTP request failed: {e}")
+        raise NetworkError(f"HTTP request failed: {e}", url=url)
     except Exception as e:
-        raise AdorScrapingError(f"Failed to parse page: {e}")
+        content_length = len(response.content) if 'response' in locals() else None
+        raise ParseError(f"Failed to parse page: {e}", page_content_length=content_length)
 
 
 def scrape_county_data(county_input: str,
@@ -333,7 +340,11 @@ def scrape_county_data(county_input: str,
     county_code = validate_county_code(county_input)
     county_name = get_county_name(county_code)
 
-    logger.info(f"Starting scrape for {county_name} County (code: {county_code})")
+    # Start timing for performance metrics
+    import time
+    start_time = time.time()
+
+    logger.info(f"Starting scrape for {county_name} County (code: {county_code}) - Max pages: {max_pages}")
 
     # Create session
     session = create_session()
@@ -402,7 +413,9 @@ def scrape_county_data(county_input: str,
         combined_df['County'] = county_name
         combined_df['County Code'] = county_code
 
-        logger.info(f"Successfully scraped {len(combined_df)} total records for {county_name} County")
+        # Calculate performance metrics
+        duration = time.time() - start_time
+        log_scraping_metrics(logger, county_name, page_count, len(combined_df), duration, errors=0)
 
         # Save raw data if requested
         if save_raw:
@@ -420,8 +433,11 @@ def scrape_county_data(county_input: str,
         return combined_df
 
     except Exception as e:
-        logger.error(f"Scraping failed for {county_name} County: {e}")
-        raise AdorScrapingError(f"Failed to scrape {county_name} County: {e}")
+        duration = time.time() - start_time
+        log_error_with_context(logger, e, "County data scraping failed",
+                             county=county_name, county_code=county_code,
+                             max_pages=max_pages, duration=duration)
+        raise ScrapingError(f"Failed to scrape {county_name} County: {e}")
 
     finally:
         session.close()

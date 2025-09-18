@@ -36,8 +36,17 @@ from scripts.utils import (
 
 from scripts.scraper import (
     scrape_county_data, validate_county_code, get_county_name,
-    list_available_counties, AdorScrapingError
+    list_available_counties
 )
+
+from config.logging_config import get_logger, log_processing_metrics, log_error_with_context
+from scripts.exceptions import (
+    CountyValidationError, ScrapingError, DataValidationError,
+    FileOperationError, DataProcessingError
+)
+
+# Set up logger
+logger = get_logger(__name__)
 
 
 class AuctionParser:
@@ -476,7 +485,7 @@ class AuctionParser:
 
             return summary
 
-        except AdorScrapingError as e:
+        except ScrapingError as e:
             print(f"Scraping failed: {e}")
             raise
         except Exception as e:
@@ -666,7 +675,11 @@ Examples:
             print(f"\nProcessing completed successfully!")
             print(f"Watchlist saved to: {args.output}")
 
-    except AdorScrapingError as e:
+    except CountyValidationError as e:
+        print(f"Invalid county: {e}")
+        print("\nTo see available counties, run:")
+        print("  python scripts/parser.py --list-counties")
+    except ScrapingError as e:
         print(f"Scraping failed: {e}")
         print("\nTroubleshooting tips:")
         print("- Check your internet connection")
