@@ -1,0 +1,32 @@
+# Alabama Auction Watcher - Windows-Specific Requirements
+# Optional packages for enhanced Windows desktop integration
+#
+# Installation:
+#   pip install -r requirements-windows.txt
+#
+# These packages enable:
+# - Advanced desktop shortcut creation with proper Windows .lnk files
+# - Start Menu integration
+# - System registry integration
+# - Auto-startup configuration
+# - Enhanced system tray functionality (if available)
+
+# Core Windows desktop integration (required for advanced installer)
+pywin32>=311
+winshell>=0.6
+
+# Optional: Enhanced system tray support
+# Uncomment these lines for system tray functionality:
+# pystray>=0.19.4
+# pillow>=9.0.0
+
+# Optional: Better Windows terminal integration
+# Uncomment these lines for enhanced terminal support:
+# colorama>=0.4.6
+# windows-curses>=2.3.1
+
+# Note: These packages are Windows-only and will fail on other platforms.
+# For cross-platform compatibility, use the main requirements.txt file only.
+#
+# The Alabama Auction Watcher will work without these packages using the
+# simple shortcut creator, but the advanced features require these dependencies.

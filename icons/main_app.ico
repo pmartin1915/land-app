@@ -1,0 +1,14 @@
+# Placeholder icon file for Alabama Auction Watcher Main Application
+# This is a text placeholder that should be replaced with a proper .ico file
+#
+# Design suggestions:
+# - House/property icon with auction gavel
+# - Alabama state outline integration
+# - Blue color scheme (#1f77b4)
+# - Multiple sizes: 16x16, 32x32, 48x48, 256x256
+#
+# To create a proper .ico file:
+# 1. Design the icon in a graphics program
+# 2. Export as PNG in multiple sizes
+# 3. Convert to .ico format using online tools or ImageMagick:
+#    convert icon.png -define icon:auto-resize="256,48,32,16" main_app.ico

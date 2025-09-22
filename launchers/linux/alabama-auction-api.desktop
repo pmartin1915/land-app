@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Alabama Auction Watcher API
+Comment=Backend API server for Alabama Auction Watcher with database and analytics
+GenericName=API Server
+Keywords=api;backend;server;auction;property;database;
+Icon=alabama-auction-api
+Exec=/bin/bash -c "cd '%k/../..' && ./launchers/linux/launch_scripts/launch_backend_api.sh"
+Terminal=true
+Categories=Development;Network;System;
+StartupNotify=true
+NoDisplay=false

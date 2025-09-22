@@ -1,0 +1,14 @@
+# Placeholder icon file for Alabama Auction Watcher Backend API
+# This is a text placeholder that should be replaced with a proper .ico file
+#
+# Design suggestions:
+# - Server/database icon with gear elements
+# - API/connection symbols
+# - Green color scheme (#2ca02c)
+# - Multiple sizes: 16x16, 32x32, 48x48, 256x256
+#
+# To create a proper .ico file:
+# 1. Design the icon in a graphics program (server/database theme)
+# 2. Export as PNG in multiple sizes
+# 3. Convert to .ico format using online tools or ImageMagick:
+#    convert icon.png -define icon:auto-resize="256,48,32,16" backend_api.ico

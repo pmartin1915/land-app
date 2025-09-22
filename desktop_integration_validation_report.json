@@ -1,0 +1,13 @@
+{
+  "test_date": "2025-09-21T22:08:08.599848",
+  "platform": "Windows",
+  "test_results": {
+    "installation_config": "PASS",
+    "desktop_shortcuts": "PASS",
+    "start_menu": "PASS",
+    "launcher_scripts": "PASS",
+    "dependencies": "PASS",
+    "requirements_files": "PASS",
+    "auto_startup": "PASS"
+  }
+}

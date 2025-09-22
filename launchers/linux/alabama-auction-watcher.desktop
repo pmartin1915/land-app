@@ -1,0 +1,29 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Alabama Auction Watcher
+Comment=Interactive dashboard for analyzing Alabama tax delinquent property auctions
+GenericName=Property Auction Analyzer
+Keywords=auction;property;investment;alabama;tax;real-estate;
+Icon=alabama-auction-watcher
+Exec=/bin/bash -c "cd '%k/../..' && ./launchers/linux/launch_scripts/launch_main_app.sh"
+Terminal=true
+Categories=Office;Finance;Development;
+StartupNotify=true
+MimeType=text/csv;application/csv;
+Actions=Backend;Enhanced;Health;
+
+[Desktop Action Backend]
+Name=Start Backend API
+Icon=alabama-auction-api
+Exec=/bin/bash -c "cd '%k/../..' && ./launchers/linux/launch_scripts/launch_backend_api.sh"
+
+[Desktop Action Enhanced]
+Name=Enhanced Dashboard
+Icon=alabama-auction-enhanced
+Exec=/bin/bash -c "cd '%k/../..' && ./launchers/linux/launch_scripts/launch_enhanced_dashboard.sh"
+
+[Desktop Action Health]
+Name=System Health Check
+Icon=alabama-auction-health
+Exec=/bin/bash -c "cd '%k/../..' && ./launchers/linux/launch_scripts/health_check.sh"

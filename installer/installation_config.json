@@ -1,0 +1,36 @@
+{
+  "app_name": "Alabama Auction Watcher",
+  "app_id": "alabama-auction-watcher",
+  "version": "1.0.0",
+  "description": "Interactive dashboard for analyzing Alabama tax delinquent property auctions",
+  "author": "Alabama Auction Watcher Team",
+  "website": "https://github.com/yourusername/alabama-auction-watcher",
+  "install_date": "2025-09-21T22:05:50.327089",
+  "shortcuts": {
+    "main_app": {
+      "name": "Alabama Auction Watcher",
+      "description": "Main interactive dashboard",
+      "icon": "main_app.ico"
+    },
+    "backend_api": {
+      "name": "Alabama Auction Watcher API",
+      "description": "Backend API server",
+      "icon": "backend_api.ico"
+    },
+    "enhanced_dashboard": {
+      "name": "Alabama Auction Watcher Enhanced",
+      "description": "Enhanced dashboard with AI monitoring",
+      "icon": "enhanced_dashboard.ico"
+    },
+    "health_check": {
+      "name": "Alabama Auction Watcher Health Check",
+      "description": "System health diagnostics",
+      "icon": "health_check.ico"
+    },
+    "smart_launcher": {
+      "name": "Alabama Auction Watcher Launcher",
+      "description": "Smart GUI launcher and system manager",
+      "icon": "main_app.ico"
+    }
+  }
+}
