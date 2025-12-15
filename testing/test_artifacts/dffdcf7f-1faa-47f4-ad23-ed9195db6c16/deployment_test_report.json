@@ -1,0 +1,25 @@
+{
+  "test_session_id": "dffdcf7f-1faa-47f4-ad23-ed9195db6c16",
+  "test_start_time": "2025-09-24T14:03:57.091715",
+  "test_end_time": "2025-09-24T14:03:57.250462",
+  "test_duration_minutes": 0.00264585,
+  "platform": "windows",
+  "test_summary": {
+    "total_tests": 0,
+    "passed_tests": 0,
+    "failed_tests": 0,
+    "success_rate": 0
+  },
+  "test_phases": [
+    {
+      "phase_name": "Installer Creation",
+      "success": false,
+      "details": "Failed to create test installer"
+    }
+  ],
+  "detailed_results": [],
+  "test_artifacts": "C:\\auction\\testing\\test_artifacts\\dffdcf7f-1faa-47f4-ad23-ed9195db6c16",
+  "recommendations": [
+    "All tests passed - deployment ready for enterprise use"
+  ]
+}

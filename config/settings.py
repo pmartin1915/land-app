@@ -10,8 +10,8 @@ water feature keywords, fee calculations, and column mappings for flexible CSV p
 # =============================================================================
 
 # Property filtering criteria
-MIN_ACRES = 1.0
-MAX_ACRES = 5.0
+MIN_ACRES = 0.001
+MAX_ACRES = 500.0
 MAX_PRICE = 20000.0
 
 # =============================================================================
@@ -165,7 +165,7 @@ MAX_REASONABLE_ACRES = 1000.0  # Maximum reasonable acreage
 # =============================================================================
 
 # Default filter ranges for Streamlit UI
-DEFAULT_PRICE_RANGE = (0, MAX_PRICE)
+DEFAULT_PRICE_RANGE = (0.0, MAX_PRICE)
 DEFAULT_ACREAGE_RANGE = (MIN_ACRES, MAX_ACRES)
 
 # Chart colors

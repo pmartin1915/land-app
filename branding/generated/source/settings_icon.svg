@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Neutral gradient for settings -->
+    <linearGradient id="neutralGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6B7280;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4B5563;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Primary accent for active elements -->
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6C8EF5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5A7CE8;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Shadow filter -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#6B7280" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background with rounded corners -->
+  <rect x="32" y="32" width="448" height="448" rx="75" ry="75" fill="url(#neutralGradient)" filter="url(#shadow)"/>
+
+  <!-- Main settings interface -->
+  <g transform="translate(256, 256)">
+    <!-- Main gear (large) -->
+    <g>
+      <!-- Outer ring -->
+      <circle cx="0" cy="0" r="120" fill="#FFFFFF" stroke="#6B7280" stroke-width="6"/>
+
+      <!-- Gear teeth (12 teeth) -->
+      <g fill="#FFFFFF" stroke="#6B7280" stroke-width="3">
+        <!-- Top -->
+        <rect x="-8" y="-135" width="16" height="25" rx="3"/>
+        <!-- Top-right -->
+        <rect x="95" y="-95" width="25" height="16" rx="3" transform="rotate(45 107.5 -87.5)"/>
+        <!-- Right -->
+        <rect x="110" y="-8" width="25" height="16" rx="3"/>
+        <!-- Bottom-right -->
+        <rect x="95" y="79" width="25" height="16" rx="3" transform="rotate(-45 107.5 87)"/>
+        <!-- Bottom -->
+        <rect x="-8" y="110" width="16" height="25" rx="3"/>
+        <!-- Bottom-left -->
+        <rect x="-120" y="79" width="25" height="16" rx="3" transform="rotate(45 -107.5 87)"/>
+        <!-- Left -->
+        <rect x="-135" y="-8" width="25" height="16" rx="3"/>
+        <!-- Top-left -->
+        <rect x="-120" y="-95" width="25" height="16" rx="3" transform="rotate(-45 -107.5 -87)"/>
+
+        <!-- Diagonal teeth -->
+        <rect x="67" y="-67" width="16" height="25" rx="3" transform="rotate(45 75 -54.5)"/>
+        <rect x="67" y="42" width="16" height="25" rx="3" transform="rotate(-45 75 54.5)"/>
+        <rect x="-83" y="42" width="16" height="25" rx="3" transform="rotate(45 -75 54.5)"/>
+        <rect x="-83" y="-67" width="16" height="25" rx="3" transform="rotate(-45 -75 -54.5)"/>
+      </g>
+
+      <!-- Inner ring -->
+      <circle cx="0" cy="0" r="80" fill="#F9FAFB" stroke="#6B7280" stroke-width="4"/>
+
+      <!-- Center hub -->
+      <circle cx="0" cy="0" r="30" fill="url(#accentGradient)"/>
+
+      <!-- Rotation animation -->
+      <animateTransform attributeName="transform" attributeType="XML" type="rotate"
+                        values="0 0 0;360 0 0" dur="20s" repeatCount="indefinite"/>
+    </g>
+
+    <!-- Smaller gear (upper right) -->
+    <g transform="translate(100, -100)">
+      <circle cx="0" cy="0" r="40" fill="#FFFFFF" stroke="#6B7280" stroke-width="3"/>
+
+      <!-- Small gear teeth -->
+      <g fill="#FFFFFF" stroke="#6B7280" stroke-width="2">
+        <rect x="-3" y="-45" width="6" height="10" rx="2"/>
+        <rect x="35" y="-3" width="10" height="6" rx="2"/>
+        <rect x="-3" y="35" width="6" height="10" rx="2"/>
+        <rect x="-45" y="-3" width="10" height="6" rx="2"/>
+
+        <rect x="25" y="-25" width="6" height="10" rx="2" transform="rotate(45)"/>
+        <rect x="25" y="15" width="6" height="10" rx="2" transform="rotate(-45)"/>
+        <rect x="-35" y="15" width="6" height="10" rx="2" transform="rotate(45)"/>
+        <rect x="-35" y="-25" width="6" height="10" rx="2" transform="rotate(-45)"/>
+      </g>
+
+      <circle cx="0" cy="0" r="15" fill="url(#accentGradient)"/>
+
+      <!-- Counter-rotation -->
+      <animateTransform attributeName="transform" attributeType="XML" type="rotate"
+                        values="0 100 -100;-360 100 -100" dur="15s" repeatCount="indefinite"/>
+    </g>
+
+    <!-- Control panel -->
+    <g transform="translate(-120, 50)">
+      <!-- Panel background -->
+      <rect x="0" y="0" width="100" height="120" fill="#FFFFFF" rx="8" stroke="#6B7280" stroke-width="2"/>
+
+      <!-- Settings sliders -->
+      <g transform="translate(20, 20)">
+        <!-- Slider 1 -->
+        <rect x="0" y="0" width="60" height="4" fill="#E5E7EB" rx="2"/>
+        <rect x="0" y="0" width="35" height="4" fill="url(#accentGradient)" rx="2"/>
+        <circle cx="35" cy="2" r="8" fill="#FFFFFF" stroke="url(#accentGradient)" stroke-width="2"/>
+
+        <!-- Slider 2 -->
+        <rect x="0" y="20" width="60" height="4" fill="#E5E7EB" rx="2"/>
+        <rect x="0" y="20" width="50" height="4" fill="url(#accentGradient)" rx="2"/>
+        <circle cx="50" cy="22" r="8" fill="#FFFFFF" stroke="url(#accentGradient)" stroke-width="2"/>
+
+        <!-- Slider 3 -->
+        <rect x="0" y="40" width="60" height="4" fill="#E5E7EB" rx="2"/>
+        <rect x="0" y="40" width="20" height="4" fill="url(#accentGradient)" rx="2"/>
+        <circle cx="20" cy="42" r="8" fill="#FFFFFF" stroke="url(#accentGradient)" stroke-width="2"/>
+      </g>
+
+      <!-- Toggle switches -->
+      <g transform="translate(20, 80)">
+        <!-- Toggle ON -->
+        <rect x="0" y="0" width="30" height="16" fill="url(#accentGradient)" rx="8"/>
+        <circle cx="22" cy="8" r="6" fill="#FFFFFF"/>
+
+        <!-- Toggle OFF -->
+        <rect x="35" y="0" width="30" height="16" fill="#E5E7EB" rx="8"/>
+        <circle cx="43" cy="8" r="6" fill="#FFFFFF"/>
+      </g>
+    </g>
+
+    <!-- Property/house element (connecting to main app theme) -->
+    <g transform="translate(120, 80)">
+      <!-- Small house icon -->
+      <rect x="-15" y="5" width="30" height="25" fill="#FFFFFF" stroke="#6B7280" stroke-width="2" rx="2"/>
+      <polygon points="-20,5 0,-10 20,5" fill="#FFFFFF" stroke="#6B7280" stroke-width="2"/>
+      <rect x="-3" y="15" width="6" height="15" fill="url(#accentGradient)" rx="1"/>
+      <rect x="-10" y="10" width="6" height="6" fill="#E5F3FF" stroke="#6B7280" stroke-width="1" rx="1"/>
+      <rect x="4" y="10" width="6" height="6" fill="#E5F3FF" stroke="#6B7280" stroke-width="1" rx="1"/>
+    </g>
+  </g>
+
+  <!-- Configuration dots pattern -->
+  <g opacity="0.3">
+    <circle cx="100" cy="100" r="2" fill="#FFFFFF">
+      <animate attributeName="opacity" values="0.3;0.7;0.3" dur="3s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="412" cy="120" r="2" fill="#FFFFFF">
+      <animate attributeName="opacity" values="0.7;0.3;0.7" dur="3s" begin="1s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="380" cy="400" r="2" fill="#FFFFFF">
+      <animate attributeName="opacity" values="0.3;0.7;0.3" dur="3s" begin="2s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="120" cy="420" r="2" fill="#FFFFFF">
+      <animate attributeName="opacity" values="0.7;0.3;0.7" dur="3s" begin="0.5s" repeatCount="indefinite"/>
+    </circle>
+  </g>
+
+  <!-- Corner configuration indicators -->
+  <g stroke="#FFFFFF" stroke-width="2" fill="none" opacity="0.4">
+    <!-- Top corners -->
+    <path d="M60,60 Q60,50 70,50 L80,50" stroke-linecap="round"/>
+    <path d="M452,60 Q452,50 442,50 L432,50" stroke-linecap="round"/>
+
+    <!-- Bottom corners -->
+    <path d="M60,452 Q60,462 70,462 L80,462" stroke-linecap="round"/>
+    <path d="M452,452 Q452,462 442,462 L432,462" stroke-linecap="round"/>
+  </g>
+</svg>

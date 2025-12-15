@@ -2,7 +2,7 @@
 
 Complete API reference for all modules, functions, and classes in the Alabama Auction Watcher system.
 
-## 📋 Quick Reference
+## Quick Reference
 
 ### Core Modules
 - **[scripts.parser](#scriptsparser)**: Main orchestrator and CLI interface

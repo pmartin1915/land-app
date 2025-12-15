@@ -1,0 +1,4766 @@
+{
+  "file_metrics": {
+    "run_parallel_tests.py": {
+      "filepath": "run_parallel_tests.py",
+      "total_lines": 493,
+      "code_lines": 375,
+      "comment_lines": 44,
+      "blank_lines": 74,
+      "comment_ratio": 0.08924949290060852,
+      "imports": {
+        "total": 10,
+        "from_imports": 4,
+        "standard_imports": 6,
+        "modules": [
+          "config",
+          "sys",
+          "typing",
+          "time",
+          "scripts",
+          "pathlib",
+          "traceback",
+          "asyncio",
+          "json",
+          "argparse"
+        ]
+      },
+      "functions": {
+        "total": 13,
+        "methods": 11,
+        "async_functions": 2,
+        "average_length": 32.27272727272727
+      },
+      "classes": {
+        "total": 1,
+        "with_inheritance": 0,
+        "average_methods": 12.0
+      },
+      "complexity": {
+        "total": 39,
+        "max_function": 7,
+        "average_function": 3.272727272727273
+      }
+    },
+    "start_backend_api.py": {
+      "filepath": "start_backend_api.py",
+      "total_lines": 189,
+      "code_lines": 131,
+      "comment_lines": 18,
+      "blank_lines": 40,
+      "comment_ratio": 0.09523809523809523,
+      "imports": {
+        "total": 11,
+        "from_imports": 6,
+        "standard_imports": 5,
+        "modules": [
+          "config",
+          "os",
+          "sys",
+          "uvicorn",
+          "scripts",
+          "logging",
+          "pathlib",
+          "backend_api",
+          "asyncio"
+        ]
+      },
+      "functions": {
+        "total": 5,
+        "methods": 0,
+        "async_functions": 3,
+        "average_length": 29.5
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 25,
+        "max_function": 7,
+        "average_function": 5.5
+      }
+    },
+    "test_backend_api.py": {
+      "filepath": "test_backend_api.py",
+      "total_lines": 265,
+      "code_lines": 188,
+      "comment_lines": 22,
+      "blank_lines": 55,
+      "comment_ratio": 0.0830188679245283,
+      "imports": {
+        "total": 5,
+        "from_imports": 1,
+        "standard_imports": 4,
+        "modules": [
+          "sys",
+          "datetime",
+          "time",
+          "requests",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 7,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 34.142857142857146
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 23,
+        "max_function": 12,
+        "average_function": 4.0
+      }
+    },
+    "test_backend_api_simple.py": {
+      "filepath": "test_backend_api_simple.py",
+      "total_lines": 384,
+      "code_lines": 278,
+      "comment_lines": 29,
+      "blank_lines": 77,
+      "comment_ratio": 0.07552083333333333,
+      "imports": {
+        "total": 6,
+        "from_imports": 2,
+        "standard_imports": 4,
+        "modules": [
+          "sys",
+          "datetime",
+          "time",
+          "requests",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 8,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 44.625
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 29,
+        "max_function": 13,
+        "average_function": 4.375
+      }
+    },
+    "test_county_intelligence_integration.py": {
+      "filepath": "test_county_intelligence_integration.py",
+      "total_lines": 183,
+      "code_lines": 140,
+      "comment_lines": 12,
+      "blank_lines": 31,
+      "comment_ratio": 0.06557377049180328,
+      "imports": {
+        "total": 7,
+        "from_imports": 3,
+        "standard_imports": 4,
+        "modules": [
+          "config",
+          "os",
+          "sys",
+          "datetime",
+          "requests",
+          "pathlib",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 1,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 154.0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 18,
+        "max_function": 17,
+        "average_function": 17.0
+      }
+    },
+    "test_runner.py": {
+      "filepath": "test_runner.py",
+      "total_lines": 276,
+      "code_lines": 201,
+      "comment_lines": 21,
+      "blank_lines": 54,
+      "comment_ratio": 0.07608695652173914,
+      "imports": {
+        "total": 8,
+        "from_imports": 2,
+        "standard_imports": 6,
+        "modules": [
+          "subprocess",
+          "sys",
+          "psutil",
+          "typing",
+          "time",
+          "pathlib",
+          "json",
+          "argparse"
+        ]
+      },
+      "functions": {
+        "total": 11,
+        "methods": 10,
+        "async_functions": 0,
+        "average_length": 21.727272727272727
+      },
+      "classes": {
+        "total": 1,
+        "with_inheritance": 0,
+        "average_methods": 10.0
+      },
+      "complexity": {
+        "total": 20,
+        "max_function": 5,
+        "average_function": 2.6363636363636362
+      }
+    },
+    "backend_api\\auth.py": {
+      "filepath": "backend_api\\auth.py",
+      "total_lines": 357,
+      "code_lines": 272,
+      "comment_lines": 27,
+      "blank_lines": 58,
+      "comment_ratio": 0.07563025210084033,
+      "imports": {
+        "total": 13,
+        "from_imports": 6,
+        "standard_imports": 7,
+        "modules": [
+          "hashlib",
+          "hmac",
+          "os",
+          "datetime",
+          "jwt",
+          "typing",
+          "pydantic",
+          "secrets",
+          "base64",
+          "logging",
+          "passlib",
+          "fastapi"
+        ]
+      },
+      "functions": {
+        "total": 17,
+        "methods": 1,
+        "async_functions": 6,
+        "average_length": 15.181818181818182
+      },
+      "classes": {
+        "total": 5,
+        "with_inheritance": 4,
+        "average_methods": 0.4
+      },
+      "complexity": {
+        "total": 36,
+        "max_function": 6,
+        "average_function": 2.8181818181818183
+      }
+    },
+    "backend_api\\main.py": {
+      "filepath": "backend_api\\main.py",
+      "total_lines": 260,
+      "code_lines": 199,
+      "comment_lines": 26,
+      "blank_lines": 35,
+      "comment_ratio": 0.1,
+      "imports": {
+        "total": 19,
+        "from_imports": 16,
+        "standard_imports": 3,
+        "modules": [
+          "middleware",
+          "config",
+          "slowapi",
+          "datetime",
+          "routers",
+          "auth",
+          "time",
+          "uvicorn",
+          "database",
+          "scripts",
+          "logging",
+          "fastapi",
+          "contextlib"
+        ]
+      },
+      "functions": {
+        "total": 8,
+        "methods": 0,
+        "async_functions": 8,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 10,
+        "max_function": 0
+      }
+    },
+    "backend_api\\__init__.py": {
+      "filepath": "backend_api\\__init__.py",
+      "total_lines": 1,
+      "code_lines": 0,
+      "comment_lines": 0,
+      "blank_lines": 1,
+      "comment_ratio": 0.0,
+      "imports": {
+        "total": 0,
+        "from_imports": 0,
+        "standard_imports": 0,
+        "modules": []
+      },
+      "functions": {
+        "total": 0,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 1,
+        "max_function": 0
+      }
+    },
+    "config\\ai_diagnostics.py": {
+      "filepath": "config\\ai_diagnostics.py",
+      "total_lines": 1564,
+      "code_lines": 1253,
+      "comment_lines": 69,
+      "blank_lines": 242,
+      "comment_ratio": 0.04411764705882353,
+      "imports": {
+        "total": 23,
+        "from_imports": 10,
+        "standard_imports": 13,
+        "modules": [
+          "pandas",
+          "config",
+          "os",
+          "datetime",
+          "collections",
+          "typing",
+          "gc",
+          "threading",
+          "time",
+          "enum",
+          "dataclasses",
+          "requests",
+          "scripts",
+          "tempfile",
+          "pathlib",
+          "asyncio",
+          "statistics",
+          "psutil"
+        ]
+      },
+      "functions": {
+        "total": 60,
+        "methods": 35,
+        "async_functions": 22,
+        "average_length": 18.236842105263158
+      },
+      "classes": {
+        "total": 10,
+        "with_inheritance": 3,
+        "average_methods": 5.6
+      },
+      "complexity": {
+        "total": 150,
+        "max_function": 8,
+        "average_function": 2.6315789473684212
+      }
+    },
+    "config\\ai_logging.py": {
+      "filepath": "config\\ai_logging.py",
+      "total_lines": 623,
+      "code_lines": 483,
+      "comment_lines": 30,
+      "blank_lines": 110,
+      "comment_ratio": 0.048154093097913325,
+      "imports": {
+        "total": 13,
+        "from_imports": 7,
+        "standard_imports": 6,
+        "modules": [
+          "uuid",
+          "sys",
+          "datetime",
+          "typing",
+          "enum",
+          "time",
+          "dataclasses",
+          "scripts",
+          "logging",
+          "pathlib",
+          "json",
+          "contextlib"
+        ]
+      },
+      "functions": {
+        "total": 37,
+        "methods": 34,
+        "async_functions": 0,
+        "average_length": 12.81081081081081
+      },
+      "classes": {
+        "total": 9,
+        "with_inheritance": 4,
+        "average_methods": 3.7777777777777777
+      },
+      "complexity": {
+        "total": 47,
+        "max_function": 12,
+        "average_function": 2.2432432432432434
+      }
+    },
+    "config\\caching.py": {
+      "filepath": "config\\caching.py",
+      "total_lines": 517,
+      "code_lines": 385,
+      "comment_lines": 37,
+      "blank_lines": 95,
+      "comment_ratio": 0.07156673114119923,
+      "imports": {
+        "total": 15,
+        "from_imports": 6,
+        "standard_imports": 9,
+        "modules": [
+          "hashlib",
+          "sqlalchemy",
+          "datetime",
+          "redis",
+          "typing",
+          "functools",
+          "base64",
+          "time",
+          "dataclasses",
+          "logging",
+          "backend_api",
+          "gzip",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 28,
+        "methods": 21,
+        "async_functions": 1,
+        "average_length": 15.962962962962964
+      },
+      "classes": {
+        "total": 4,
+        "with_inheritance": 0,
+        "average_methods": 5.25
+      },
+      "complexity": {
+        "total": 64,
+        "max_function": 9,
+        "average_function": 3.1481481481481484
+      }
+    },
+    "config\\database_optimization.py": {
+      "filepath": "config\\database_optimization.py",
+      "total_lines": 572,
+      "code_lines": 435,
+      "comment_lines": 39,
+      "blank_lines": 98,
+      "comment_ratio": 0.06818181818181818,
+      "imports": {
+        "total": 7,
+        "from_imports": 5,
+        "standard_imports": 2,
+        "modules": [
+          "sqlalchemy",
+          "datetime",
+          "typing",
+          "time",
+          "dataclasses",
+          "logging"
+        ]
+      },
+      "functions": {
+        "total": 23,
+        "methods": 22,
+        "async_functions": 0,
+        "average_length": 24.043478260869566
+      },
+      "classes": {
+        "total": 3,
+        "with_inheritance": 0,
+        "average_methods": 7.333333333333333
+      },
+      "complexity": {
+        "total": 71,
+        "max_function": 17,
+        "average_function": 4.739130434782608
+      }
+    },
+    "config\\logging_config.py": {
+      "filepath": "config\\logging_config.py",
+      "total_lines": 187,
+      "code_lines": 137,
+      "comment_lines": 13,
+      "blank_lines": 37,
+      "comment_ratio": 0.06951871657754011,
+      "imports": {
+        "total": 6,
+        "from_imports": 2,
+        "standard_imports": 4,
+        "modules": [
+          "os",
+          "sys",
+          "typing",
+          "logging",
+          "pathlib"
+        ]
+      },
+      "functions": {
+        "total": 7,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 20.0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 5,
+        "max_function": 3,
+        "average_function": 1.4285714285714286
+      }
+    },
+    "config\\rate_limiting.py": {
+      "filepath": "config\\rate_limiting.py",
+      "total_lines": 523,
+      "code_lines": 382,
+      "comment_lines": 49,
+      "blank_lines": 92,
+      "comment_ratio": 0.09369024856596558,
+      "imports": {
+        "total": 9,
+        "from_imports": 5,
+        "standard_imports": 4,
+        "modules": [
+          "hashlib",
+          "collections",
+          "typing",
+          "enum",
+          "time",
+          "dataclasses",
+          "logging",
+          "asyncio",
+          "fastapi"
+        ]
+      },
+      "functions": {
+        "total": 16,
+        "methods": 11,
+        "async_functions": 2,
+        "average_length": 29.285714285714285
+      },
+      "classes": {
+        "total": 5,
+        "with_inheritance": 2,
+        "average_methods": 2.4
+      },
+      "complexity": {
+        "total": 43,
+        "max_function": 9,
+        "average_function": 3.9285714285714284
+      }
+    },
+    "config\\security.py": {
+      "filepath": "config\\security.py",
+      "total_lines": 166,
+      "code_lines": 116,
+      "comment_lines": 10,
+      "blank_lines": 40,
+      "comment_ratio": 0.060240963855421686,
+      "imports": {
+        "total": 5,
+        "from_imports": 3,
+        "standard_imports": 2,
+        "modules": [
+          "os",
+          "typing",
+          "secrets",
+          "dataclasses",
+          "pathlib"
+        ]
+      },
+      "functions": {
+        "total": 7,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 16.714285714285715
+      },
+      "classes": {
+        "total": 1,
+        "with_inheritance": 0,
+        "average_methods": 0.0
+      },
+      "complexity": {
+        "total": 14,
+        "max_function": 9,
+        "average_function": 2.857142857142857
+      }
+    },
+    "config\\settings.py": {
+      "filepath": "config\\settings.py",
+      "total_lines": 178,
+      "code_lines": 93,
+      "comment_lines": 52,
+      "blank_lines": 33,
+      "comment_ratio": 0.29213483146067415,
+      "imports": {
+        "total": 0,
+        "from_imports": 0,
+        "standard_imports": 0,
+        "modules": []
+      },
+      "functions": {
+        "total": 0,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 1,
+        "max_function": 0
+      }
+    },
+    "config\\validation.py": {
+      "filepath": "config\\validation.py",
+      "total_lines": 439,
+      "code_lines": 330,
+      "comment_lines": 23,
+      "blank_lines": 86,
+      "comment_ratio": 0.05239179954441914,
+      "imports": {
+        "total": 7,
+        "from_imports": 3,
+        "standard_imports": 4,
+        "modules": [
+          "re",
+          "datetime",
+          "typing",
+          "dataclasses",
+          "html",
+          "logging",
+          "bleach"
+        ]
+      },
+      "functions": {
+        "total": 13,
+        "methods": 11,
+        "async_functions": 0,
+        "average_length": 24.23076923076923
+      },
+      "classes": {
+        "total": 4,
+        "with_inheritance": 0,
+        "average_methods": 2.75
+      },
+      "complexity": {
+        "total": 39,
+        "max_function": 10,
+        "average_function": 3.923076923076923
+      }
+    },
+    "scripts\\ai_exceptions.py": {
+      "filepath": "scripts\\ai_exceptions.py",
+      "total_lines": 580,
+      "code_lines": 442,
+      "comment_lines": 23,
+      "blank_lines": 115,
+      "comment_ratio": 0.039655172413793106,
+      "imports": {
+        "total": 9,
+        "from_imports": 5,
+        "standard_imports": 4,
+        "modules": [
+          "uuid",
+          "datetime",
+          "typing",
+          "enum",
+          "time",
+          "dataclasses",
+          "scripts",
+          "traceback",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 35,
+        "methods": 30,
+        "async_functions": 0,
+        "average_length": 11.542857142857143
+      },
+      "classes": {
+        "total": 16,
+        "with_inheritance": 11,
+        "average_methods": 1.875
+      },
+      "complexity": {
+        "total": 28,
+        "max_function": 7,
+        "average_function": 1.7714285714285714
+      }
+    },
+    "scripts\\analyze_caching_performance.py": {
+      "filepath": "scripts\\analyze_caching_performance.py",
+      "total_lines": 294,
+      "code_lines": 217,
+      "comment_lines": 20,
+      "blank_lines": 57,
+      "comment_ratio": 0.06802721088435375,
+      "imports": {
+        "total": 7,
+        "from_imports": 2,
+        "standard_imports": 5,
+        "modules": [
+          "config",
+          "typing",
+          "time",
+          "logging",
+          "asyncio",
+          "statistics",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 10,
+        "methods": 9,
+        "async_functions": 1,
+        "average_length": 25.444444444444443
+      },
+      "classes": {
+        "total": 1,
+        "with_inheritance": 0,
+        "average_methods": 9.0
+      },
+      "complexity": {
+        "total": 16,
+        "max_function": 4,
+        "average_function": 2.2222222222222223
+      }
+    },
+    "scripts\\analyze_code_quality.py": {
+      "filepath": "scripts\\analyze_code_quality.py",
+      "total_lines": 393,
+      "code_lines": 286,
+      "comment_lines": 26,
+      "blank_lines": 81,
+      "comment_ratio": 0.06615776081424936,
+      "imports": {
+        "total": 8,
+        "from_imports": 2,
+        "standard_imports": 6,
+        "modules": [
+          "os",
+          "re",
+          "sys",
+          "typing",
+          "logging",
+          "pathlib",
+          "ast",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 11,
+        "methods": 10,
+        "async_functions": 0,
+        "average_length": 32.0
+      },
+      "classes": {
+        "total": 1,
+        "with_inheritance": 0,
+        "average_methods": 10.0
+      },
+      "complexity": {
+        "total": 56,
+        "max_function": 10,
+        "average_function": 5.909090909090909
+      }
+    },
+    "scripts\\county_intelligence.py": {
+      "filepath": "scripts\\county_intelligence.py",
+      "total_lines": 615,
+      "code_lines": 429,
+      "comment_lines": 59,
+      "blank_lines": 127,
+      "comment_ratio": 0.0959349593495935,
+      "imports": {
+        "total": 3,
+        "from_imports": 2,
+        "standard_imports": 1,
+        "modules": [
+          "dataclasses",
+          "typing",
+          "math"
+        ]
+      },
+      "functions": {
+        "total": 23,
+        "methods": 22,
+        "async_functions": 0,
+        "average_length": 22.73913043478261
+      },
+      "classes": {
+        "total": 2,
+        "with_inheritance": 0,
+        "average_methods": 11.0
+      },
+      "complexity": {
+        "total": 47,
+        "max_function": 11,
+        "average_function": 2.9130434782608696
+      }
+    },
+    "scripts\\coverage_verifier.py": {
+      "filepath": "scripts\\coverage_verifier.py",
+      "total_lines": 693,
+      "code_lines": 486,
+      "comment_lines": 59,
+      "blank_lines": 148,
+      "comment_ratio": 0.08513708513708514,
+      "imports": {
+        "total": 11,
+        "from_imports": 4,
+        "standard_imports": 7,
+        "modules": [
+          "subprocess",
+          "config",
+          "glob",
+          "sys",
+          "typing",
+          "coverage",
+          "time",
+          "dataclasses",
+          "pathlib",
+          "ast",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 24,
+        "methods": 23,
+        "async_functions": 0,
+        "average_length": 24.541666666666668
+      },
+      "classes": {
+        "total": 5,
+        "with_inheritance": 0,
+        "average_methods": 4.6
+      },
+      "complexity": {
+        "total": 62,
+        "max_function": 8,
+        "average_function": 3.5
+      }
+    },
+    "scripts\\enhanced_description_analysis.py": {
+      "filepath": "scripts\\enhanced_description_analysis.py",
+      "total_lines": 421,
+      "code_lines": 304,
+      "comment_lines": 34,
+      "blank_lines": 83,
+      "comment_ratio": 0.08076009501187649,
+      "imports": {
+        "total": 4,
+        "from_imports": 2,
+        "standard_imports": 2,
+        "modules": [
+          "pandas",
+          "dataclasses",
+          "typing",
+          "re"
+        ]
+      },
+      "functions": {
+        "total": 16,
+        "methods": 15,
+        "async_functions": 0,
+        "average_length": 21.125
+      },
+      "classes": {
+        "total": 2,
+        "with_inheritance": 0,
+        "average_methods": 7.5
+      },
+      "complexity": {
+        "total": 42,
+        "max_function": 10,
+        "average_function": 3.4375
+      }
+    },
+    "scripts\\exceptions.py": {
+      "filepath": "scripts\\exceptions.py",
+      "total_lines": 270,
+      "code_lines": 181,
+      "comment_lines": 1,
+      "blank_lines": 88,
+      "comment_ratio": 0.003703703703703704,
+      "imports": {
+        "total": 0,
+        "from_imports": 0,
+        "standard_imports": 0,
+        "modules": []
+      },
+      "functions": {
+        "total": 16,
+        "methods": 10,
+        "async_functions": 0,
+        "average_length": 12.625
+      },
+      "classes": {
+        "total": 12,
+        "with_inheritance": 12,
+        "average_methods": 0.8333333333333334
+      },
+      "complexity": {
+        "total": 30,
+        "max_function": 5,
+        "average_function": 3.0
+      }
+    },
+    "scripts\\import_data.py": {
+      "filepath": "scripts\\import_data.py",
+      "total_lines": 97,
+      "code_lines": 69,
+      "comment_lines": 11,
+      "blank_lines": 17,
+      "comment_ratio": 0.1134020618556701,
+      "imports": {
+        "total": 8,
+        "from_imports": 2,
+        "standard_imports": 6,
+        "modules": [
+          "pandas",
+          "config",
+          "os",
+          "sys",
+          "requests",
+          "pathlib",
+          "json",
+          "argparse"
+        ]
+      },
+      "functions": {
+        "total": 1,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 68.0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 11,
+        "max_function": 10,
+        "average_function": 10.0
+      }
+    },
+    "scripts\\migrate_enhanced_scoring.py": {
+      "filepath": "scripts\\migrate_enhanced_scoring.py",
+      "total_lines": 148,
+      "code_lines": 106,
+      "comment_lines": 12,
+      "blank_lines": 30,
+      "comment_ratio": 0.08108108108108109,
+      "imports": {
+        "total": 5,
+        "from_imports": 1,
+        "standard_imports": 4,
+        "modules": [
+          "os",
+          "sys",
+          "sqlite3",
+          "pathlib",
+          "argparse"
+        ]
+      },
+      "functions": {
+        "total": 3,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 40.0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 12,
+        "max_function": 9,
+        "average_function": 4.333333333333333
+      }
+    },
+    "scripts\\optimize_database.py": {
+      "filepath": "scripts\\optimize_database.py",
+      "total_lines": 403,
+      "code_lines": 295,
+      "comment_lines": 28,
+      "blank_lines": 80,
+      "comment_ratio": 0.06947890818858561,
+      "imports": {
+        "total": 9,
+        "from_imports": 5,
+        "standard_imports": 4,
+        "modules": [
+          "config",
+          "sys",
+          "sqlalchemy",
+          "typing",
+          "time",
+          "logging",
+          "pathlib",
+          "backend_api",
+          "argparse"
+        ]
+      },
+      "functions": {
+        "total": 11,
+        "methods": 10,
+        "async_functions": 0,
+        "average_length": 32.0
+      },
+      "classes": {
+        "total": 1,
+        "with_inheritance": 0,
+        "average_methods": 10.0
+      },
+      "complexity": {
+        "total": 42,
+        "max_function": 10,
+        "average_function": 4.636363636363637
+      }
+    },
+    "scripts\\parallel_test_executor.py": {
+      "filepath": "scripts\\parallel_test_executor.py",
+      "total_lines": 814,
+      "code_lines": 606,
+      "comment_lines": 62,
+      "blank_lines": 146,
+      "comment_ratio": 0.07616707616707617,
+      "imports": {
+        "total": 12,
+        "from_imports": 5,
+        "standard_imports": 7,
+        "modules": [
+          "config",
+          "multiprocessing",
+          "sys",
+          "psutil",
+          "collections",
+          "typing",
+          "threading",
+          "time",
+          "dataclasses",
+          "pathlib",
+          "asyncio",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 28,
+        "methods": 24,
+        "async_functions": 4,
+        "average_length": 22.291666666666668
+      },
+      "classes": {
+        "total": 6,
+        "with_inheritance": 0,
+        "average_methods": 4.5
+      },
+      "complexity": {
+        "total": 63,
+        "max_function": 9,
+        "average_function": 3.0416666666666665
+      }
+    },
+    "scripts\\parser.py": {
+      "filepath": "scripts\\parser.py",
+      "total_lines": 748,
+      "code_lines": 547,
+      "comment_lines": 56,
+      "blank_lines": 145,
+      "comment_ratio": 0.0748663101604278,
+      "imports": {
+        "total": 13,
+        "from_imports": 8,
+        "standard_imports": 5,
+        "modules": [
+          "pandas",
+          "config",
+          "os",
+          "sys",
+          "datetime",
+          "typing",
+          "scripts",
+          "pathlib",
+          "numpy",
+          "argparse"
+        ]
+      },
+      "functions": {
+        "total": 14,
+        "methods": 13,
+        "async_functions": 0,
+        "average_length": 49.785714285714285
+      },
+      "classes": {
+        "total": 1,
+        "with_inheritance": 0,
+        "average_methods": 11.0
+      },
+      "complexity": {
+        "total": 81,
+        "max_function": 12,
+        "average_function": 6.857142857142857
+      }
+    },
+    "scripts\\phase1b_completion_verifier.py": {
+      "filepath": "scripts\\phase1b_completion_verifier.py",
+      "total_lines": 847,
+      "code_lines": 664,
+      "comment_lines": 58,
+      "blank_lines": 125,
+      "comment_ratio": 0.06847697756788666,
+      "imports": {
+        "total": 13,
+        "from_imports": 9,
+        "standard_imports": 4,
+        "modules": [
+          "config",
+          "sys",
+          "typing",
+          "time",
+          "dataclasses",
+          "scripts",
+          "pathlib",
+          "asyncio",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 21,
+        "methods": 20,
+        "async_functions": 1,
+        "average_length": 36.0
+      },
+      "classes": {
+        "total": 3,
+        "with_inheritance": 0,
+        "average_methods": 6.666666666666667
+      },
+      "complexity": {
+        "total": 86,
+        "max_function": 14,
+        "average_function": 5.0
+      }
+    },
+    "scripts\\scraper.py": {
+      "filepath": "scripts\\scraper.py",
+      "total_lines": 560,
+      "code_lines": 412,
+      "comment_lines": 35,
+      "blank_lines": 113,
+      "comment_ratio": 0.0625,
+      "imports": {
+        "total": 15,
+        "from_imports": 7,
+        "standard_imports": 8,
+        "modules": [
+          "pandas",
+          "config",
+          "bs4",
+          "re",
+          "sys",
+          "pathlib",
+          "random",
+          "typing",
+          "time",
+          "requests",
+          "scripts",
+          "urllib",
+          "argparse"
+        ]
+      },
+      "functions": {
+        "total": 11,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 35.72727272727273
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 53,
+        "max_function": 13,
+        "average_function": 5.363636363636363
+      }
+    },
+    "scripts\\utils.py": {
+      "filepath": "scripts\\utils.py",
+      "total_lines": 381,
+      "code_lines": 271,
+      "comment_lines": 27,
+      "blank_lines": 83,
+      "comment_ratio": 0.07086614173228346,
+      "imports": {
+        "total": 7,
+        "from_imports": 3,
+        "standard_imports": 4,
+        "modules": [
+          "pandas",
+          "config",
+          "re",
+          "typing",
+          "csv",
+          "numpy"
+        ]
+      },
+      "functions": {
+        "total": 12,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 28.166666666666668
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 58,
+        "max_function": 19,
+        "average_function": 5.75
+      }
+    },
+    "scripts\\__init__.py": {
+      "filepath": "scripts\\__init__.py",
+      "total_lines": 1,
+      "code_lines": 0,
+      "comment_lines": 1,
+      "blank_lines": 0,
+      "comment_ratio": 1.0,
+      "imports": {
+        "total": 0,
+        "from_imports": 0,
+        "standard_imports": 0,
+        "modules": []
+      },
+      "functions": {
+        "total": 0,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 1,
+        "max_function": 0
+      }
+    },
+    "streamlit_app\\app.py": {
+      "filepath": "streamlit_app\\app.py",
+      "total_lines": 578,
+      "code_lines": 440,
+      "comment_lines": 42,
+      "blank_lines": 96,
+      "comment_ratio": 0.0726643598615917,
+      "imports": {
+        "total": 14,
+        "from_imports": 9,
+        "standard_imports": 5,
+        "modules": [
+          "pandas",
+          "config",
+          "sys",
+          "streamlit_app",
+          "streamlit",
+          "typing",
+          "plotly",
+          "requests",
+          "scripts",
+          "pathlib"
+        ]
+      },
+      "functions": {
+        "total": 7,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 69.71428571428571
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 55,
+        "max_function": 17,
+        "average_function": 8.571428571428571
+      }
+    },
+    "streamlit_app\\__init__.py": {
+      "filepath": "streamlit_app\\__init__.py",
+      "total_lines": 1,
+      "code_lines": 0,
+      "comment_lines": 1,
+      "blank_lines": 0,
+      "comment_ratio": 1.0,
+      "imports": {
+        "total": 0,
+        "from_imports": 0,
+        "standard_imports": 0,
+        "modules": []
+      },
+      "functions": {
+        "total": 0,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 1,
+        "max_function": 0
+      }
+    },
+    "tests\\ai_test_executor.py": {
+      "filepath": "tests\\ai_test_executor.py",
+      "total_lines": 567,
+      "code_lines": 432,
+      "comment_lines": 30,
+      "blank_lines": 105,
+      "comment_ratio": 0.05291005291005291,
+      "imports": {
+        "total": 15,
+        "from_imports": 8,
+        "standard_imports": 7,
+        "modules": [
+          "pytest",
+          "psutil",
+          "typing",
+          "importlib",
+          "enum",
+          "time",
+          "dataclasses",
+          "scripts",
+          "inspect",
+          "pathlib",
+          "traceback",
+          "schemas",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 23,
+        "methods": 22,
+        "async_functions": 0,
+        "average_length": 20.565217391304348
+      },
+      "classes": {
+        "total": 4,
+        "with_inheritance": 1,
+        "average_methods": 5.5
+      },
+      "complexity": {
+        "total": 55,
+        "max_function": 8,
+        "average_function": 3.3043478260869565
+      }
+    },
+    "tests\\conftest.py": {
+      "filepath": "tests\\conftest.py",
+      "total_lines": 322,
+      "code_lines": 264,
+      "comment_lines": 8,
+      "blank_lines": 50,
+      "comment_ratio": 0.024844720496894408,
+      "imports": {
+        "total": 18,
+        "from_imports": 11,
+        "standard_imports": 7,
+        "modules": [
+          "pandas",
+          "pytest",
+          "os",
+          "factory",
+          "sys",
+          "unittest",
+          "typing",
+          "requests_mock",
+          "tempfile",
+          "faker",
+          "freezegun",
+          "pathlib",
+          "scripts",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 23,
+        "methods": 4,
+        "async_functions": 0,
+        "average_length": 10.0
+      },
+      "classes": {
+        "total": 2,
+        "with_inheritance": 1,
+        "average_methods": 2.0
+      },
+      "complexity": {
+        "total": 11,
+        "max_function": 5,
+        "average_function": 1.434782608695652
+      }
+    },
+    "tests\\__init__.py": {
+      "filepath": "tests\\__init__.py",
+      "total_lines": 28,
+      "code_lines": 22,
+      "comment_lines": 2,
+      "blank_lines": 4,
+      "comment_ratio": 0.07142857142857142,
+      "imports": {
+        "total": 0,
+        "from_imports": 0,
+        "standard_imports": 0,
+        "modules": []
+      },
+      "functions": {
+        "total": 0,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 1,
+        "max_function": 0
+      }
+    },
+    "tests\\benchmarks\\__init__.py": {
+      "filepath": "tests\\benchmarks\\__init__.py",
+      "total_lines": 1,
+      "code_lines": 1,
+      "comment_lines": 0,
+      "blank_lines": 0,
+      "comment_ratio": 0.0,
+      "imports": {
+        "total": 0,
+        "from_imports": 0,
+        "standard_imports": 0,
+        "modules": []
+      },
+      "functions": {
+        "total": 0,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 1,
+        "max_function": 0
+      }
+    },
+    "tests\\e2e\\test_complete_user_journeys.py": {
+      "filepath": "tests\\e2e\\test_complete_user_journeys.py",
+      "total_lines": 749,
+      "code_lines": 548,
+      "comment_lines": 76,
+      "blank_lines": 125,
+      "comment_ratio": 0.10146862483311081,
+      "imports": {
+        "total": 19,
+        "from_imports": 8,
+        "standard_imports": 11,
+        "modules": [
+          "pytest",
+          "subprocess",
+          "os",
+          "pandas",
+          "config",
+          "psutil",
+          "unittest",
+          "typing",
+          "time",
+          "csv",
+          "tempfile",
+          "scripts",
+          "requests",
+          "pathlib",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 16,
+        "methods": 16,
+        "async_functions": 0,
+        "average_length": 43.0
+      },
+      "classes": {
+        "total": 5,
+        "with_inheritance": 0,
+        "average_methods": 2.8
+      },
+      "complexity": {
+        "total": 56,
+        "max_function": 11,
+        "average_function": 4.5625
+      }
+    },
+    "tests\\e2e\\test_streamlit_dashboard.py": {
+      "filepath": "tests\\e2e\\test_streamlit_dashboard.py",
+      "total_lines": 715,
+      "code_lines": 544,
+      "comment_lines": 42,
+      "blank_lines": 129,
+      "comment_ratio": 0.05874125874125874,
+      "imports": {
+        "total": 16,
+        "from_imports": 7,
+        "standard_imports": 9,
+        "modules": [
+          "pytest",
+          "pandas",
+          "os",
+          "config",
+          "sys",
+          "streamlit_app",
+          "unittest",
+          "typing",
+          "streamlit",
+          "time",
+          "csv",
+          "tempfile",
+          "scripts",
+          "pathlib",
+          "numpy"
+        ]
+      },
+      "functions": {
+        "total": 27,
+        "methods": 27,
+        "async_functions": 0,
+        "average_length": 21.40740740740741
+      },
+      "classes": {
+        "total": 6,
+        "with_inheritance": 0,
+        "average_methods": 4.5
+      },
+      "complexity": {
+        "total": 23,
+        "max_function": 4,
+        "average_function": 1.7037037037037037
+      }
+    },
+    "tests\\e2e\\__init__.py": {
+      "filepath": "tests\\e2e\\__init__.py",
+      "total_lines": 1,
+      "code_lines": 1,
+      "comment_lines": 0,
+      "blank_lines": 0,
+      "comment_ratio": 0.0,
+      "imports": {
+        "total": 0,
+        "from_imports": 0,
+        "standard_imports": 0,
+        "modules": []
+      },
+      "functions": {
+        "total": 0,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 1,
+        "max_function": 0
+      }
+    },
+    "tests\\fixtures\\data_factories.py": {
+      "filepath": "tests\\fixtures\\data_factories.py",
+      "total_lines": 510,
+      "code_lines": 419,
+      "comment_lines": 16,
+      "blank_lines": 75,
+      "comment_ratio": 0.03137254901960784,
+      "imports": {
+        "total": 11,
+        "from_imports": 7,
+        "standard_imports": 4,
+        "modules": [
+          "factory",
+          "pandas",
+          "config",
+          "sys",
+          "datetime",
+          "random",
+          "typing",
+          "faker",
+          "scripts",
+          "pathlib"
+        ]
+      },
+      "functions": {
+        "total": 15,
+        "methods": 13,
+        "async_functions": 0,
+        "average_length": 24.4
+      },
+      "classes": {
+        "total": 12,
+        "with_inheritance": 6,
+        "average_methods": 1.0833333333333333
+      },
+      "complexity": {
+        "total": 11,
+        "max_function": 3,
+        "average_function": 1.6666666666666667
+      }
+    },
+    "tests\\fixtures\\test_factory_validation.py": {
+      "filepath": "tests\\fixtures\\test_factory_validation.py",
+      "total_lines": 403,
+      "code_lines": 290,
+      "comment_lines": 28,
+      "blank_lines": 85,
+      "comment_ratio": 0.06947890818858561,
+      "imports": {
+        "total": 6,
+        "from_imports": 3,
+        "standard_imports": 3,
+        "modules": [
+          "pytest",
+          "pandas",
+          "re",
+          "typing",
+          "data_factories"
+        ]
+      },
+      "functions": {
+        "total": 22,
+        "methods": 21,
+        "async_functions": 0,
+        "average_length": 12.772727272727273
+      },
+      "classes": {
+        "total": 8,
+        "with_inheritance": 0,
+        "average_methods": 2.625
+      },
+      "complexity": {
+        "total": 22,
+        "max_function": 3,
+        "average_function": 1.9545454545454546
+      }
+    },
+    "tests\\fixtures\\__init__.py": {
+      "filepath": "tests\\fixtures\\__init__.py",
+      "total_lines": 1,
+      "code_lines": 1,
+      "comment_lines": 0,
+      "blank_lines": 0,
+      "comment_ratio": 0.0,
+      "imports": {
+        "total": 0,
+        "from_imports": 0,
+        "standard_imports": 0,
+        "modules": []
+      },
+      "functions": {
+        "total": 0,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 1,
+        "max_function": 0
+      }
+    },
+    "tests\\integration\\test_csv_processing_pipelines.py": {
+      "filepath": "tests\\integration\\test_csv_processing_pipelines.py",
+      "total_lines": 706,
+      "code_lines": 502,
+      "comment_lines": 58,
+      "blank_lines": 146,
+      "comment_ratio": 0.0821529745042493,
+      "imports": {
+        "total": 20,
+        "from_imports": 9,
+        "standard_imports": 11,
+        "modules": [
+          "pytest",
+          "pandas",
+          "os",
+          "config",
+          "concurrent",
+          "unittest",
+          "typing",
+          "io",
+          "threading",
+          "time",
+          "csv",
+          "tempfile",
+          "scripts",
+          "pathlib",
+          "numpy",
+          "psutil"
+        ]
+      },
+      "functions": {
+        "total": 28,
+        "methods": 28,
+        "async_functions": 0,
+        "average_length": 20.928571428571427
+      },
+      "classes": {
+        "total": 7,
+        "with_inheritance": 0,
+        "average_methods": 3.857142857142857
+      },
+      "complexity": {
+        "total": 37,
+        "max_function": 4,
+        "average_function": 2.25
+      }
+    },
+    "tests\\integration\\test_scraper_workflows.py": {
+      "filepath": "tests\\integration\\test_scraper_workflows.py",
+      "total_lines": 655,
+      "code_lines": 470,
+      "comment_lines": 61,
+      "blank_lines": 124,
+      "comment_ratio": 0.09312977099236641,
+      "imports": {
+        "total": 18,
+        "from_imports": 9,
+        "standard_imports": 9,
+        "modules": [
+          "pytest",
+          "pandas",
+          "config",
+          "os",
+          "psutil",
+          "unittest",
+          "typing",
+          "time",
+          "dataclasses",
+          "tempfile",
+          "scripts",
+          "logging",
+          "pathlib",
+          "requests",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 24,
+        "methods": 24,
+        "async_functions": 0,
+        "average_length": 23.458333333333332
+      },
+      "classes": {
+        "total": 7,
+        "with_inheritance": 0,
+        "average_methods": 3.0
+      },
+      "complexity": {
+        "total": 46,
+        "max_function": 9,
+        "average_function": 3.0416666666666665
+      }
+    },
+    "tests\\integration\\__init__.py": {
+      "filepath": "tests\\integration\\__init__.py",
+      "total_lines": 1,
+      "code_lines": 1,
+      "comment_lines": 0,
+      "blank_lines": 0,
+      "comment_ratio": 0.0,
+      "imports": {
+        "total": 0,
+        "from_imports": 0,
+        "standard_imports": 0,
+        "modules": []
+      },
+      "functions": {
+        "total": 0,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 1,
+        "max_function": 0
+      }
+    },
+    "tests\\schemas\\specification_validator.py": {
+      "filepath": "tests\\schemas\\specification_validator.py",
+      "total_lines": 551,
+      "code_lines": 439,
+      "comment_lines": 6,
+      "blank_lines": 106,
+      "comment_ratio": 0.010889292196007259,
+      "imports": {
+        "total": 6,
+        "from_imports": 4,
+        "standard_imports": 2,
+        "modules": [
+          "typing",
+          "enum",
+          "jsonschema",
+          "dataclasses",
+          "pathlib",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 23,
+        "methods": 20,
+        "async_functions": 0,
+        "average_length": 18.956521739130434
+      },
+      "classes": {
+        "total": 9,
+        "with_inheritance": 3,
+        "average_methods": 2.2222222222222223
+      },
+      "complexity": {
+        "total": 29,
+        "max_function": 4,
+        "average_function": 2.217391304347826
+      }
+    },
+    "tests\\schemas\\test_specification_system.py": {
+      "filepath": "tests\\schemas\\test_specification_system.py",
+      "total_lines": 544,
+      "code_lines": 447,
+      "comment_lines": 15,
+      "blank_lines": 82,
+      "comment_ratio": 0.027573529411764705,
+      "imports": {
+        "total": 5,
+        "from_imports": 3,
+        "standard_imports": 2,
+        "modules": [
+          "pytest",
+          "typing",
+          "pathlib",
+          "json",
+          "specification_validator"
+        ]
+      },
+      "functions": {
+        "total": 38,
+        "methods": 36,
+        "async_functions": 0,
+        "average_length": 9.973684210526315
+      },
+      "classes": {
+        "total": 6,
+        "with_inheritance": 0,
+        "average_methods": 6.0
+      },
+      "complexity": {
+        "total": 16,
+        "max_function": 4,
+        "average_function": 1.394736842105263
+      }
+    },
+    "tests\\schemas\\__init__.py": {
+      "filepath": "tests\\schemas\\__init__.py",
+      "total_lines": 1,
+      "code_lines": 1,
+      "comment_lines": 0,
+      "blank_lines": 0,
+      "comment_ratio": 0.0,
+      "imports": {
+        "total": 0,
+        "from_imports": 0,
+        "standard_imports": 0,
+        "modules": []
+      },
+      "functions": {
+        "total": 0,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 1,
+        "max_function": 0
+      }
+    },
+    "tests\\unit\\test_ai_exceptions.py": {
+      "filepath": "tests\\unit\\test_ai_exceptions.py",
+      "total_lines": 592,
+      "code_lines": 465,
+      "comment_lines": 17,
+      "blank_lines": 110,
+      "comment_ratio": 0.028716216216216218,
+      "imports": {
+        "total": 5,
+        "from_imports": 2,
+        "standard_imports": 3,
+        "modules": [
+          "pytest",
+          "unittest",
+          "time",
+          "scripts",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 36,
+        "methods": 34,
+        "async_functions": 0,
+        "average_length": 11.444444444444445
+      },
+      "classes": {
+        "total": 10,
+        "with_inheritance": 1,
+        "average_methods": 3.4
+      },
+      "complexity": {
+        "total": 11,
+        "max_function": 3,
+        "average_function": 1.2777777777777777
+      }
+    },
+    "tests\\unit\\test_ai_logging.py": {
+      "filepath": "tests\\unit\\test_ai_logging.py",
+      "total_lines": 728,
+      "code_lines": 571,
+      "comment_lines": 42,
+      "blank_lines": 115,
+      "comment_ratio": 0.057692307692307696,
+      "imports": {
+        "total": 12,
+        "from_imports": 5,
+        "standard_imports": 7,
+        "modules": [
+          "pytest",
+          "config",
+          "sys",
+          "unittest",
+          "io",
+          "time",
+          "tempfile",
+          "scripts",
+          "logging",
+          "pathlib",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 36,
+        "methods": 34,
+        "async_functions": 0,
+        "average_length": 15.5
+      },
+      "classes": {
+        "total": 7,
+        "with_inheritance": 0,
+        "average_methods": 4.857142857142857
+      },
+      "complexity": {
+        "total": 11,
+        "max_function": 4,
+        "average_function": 1.2777777777777777
+      }
+    },
+    "tests\\unit\\test_caching.py": {
+      "filepath": "tests\\unit\\test_caching.py",
+      "total_lines": 464,
+      "code_lines": 299,
+      "comment_lines": 54,
+      "blank_lines": 111,
+      "comment_ratio": 0.11637931034482758,
+      "imports": {
+        "total": 7,
+        "from_imports": 4,
+        "standard_imports": 3,
+        "modules": [
+          "pytest",
+          "config",
+          "unittest",
+          "typing",
+          "time",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 33,
+        "methods": 33,
+        "async_functions": 0,
+        "average_length": 12.06060606060606
+      },
+      "classes": {
+        "total": 6,
+        "with_inheritance": 0,
+        "average_methods": 4.833333333333333
+      },
+      "complexity": {
+        "total": 6,
+        "max_function": 3,
+        "average_function": 1.121212121212121
+      }
+    },
+    "tests\\unit\\test_config.py": {
+      "filepath": "tests\\unit\\test_config.py",
+      "total_lines": 698,
+      "code_lines": 538,
+      "comment_lines": 19,
+      "blank_lines": 141,
+      "comment_ratio": 0.027220630372492838,
+      "imports": {
+        "total": 16,
+        "from_imports": 6,
+        "standard_imports": 10,
+        "modules": [
+          "pytest",
+          "config",
+          "os",
+          "sys",
+          "unittest",
+          "typing",
+          "importlib",
+          "time",
+          "dataclasses",
+          "tempfile",
+          "logging",
+          "pathlib",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 51,
+        "methods": 51,
+        "async_functions": 0,
+        "average_length": 10.96078431372549
+      },
+      "classes": {
+        "total": 6,
+        "with_inheritance": 0,
+        "average_methods": 8.5
+      },
+      "complexity": {
+        "total": 16,
+        "max_function": 3,
+        "average_function": 1.2745098039215685
+      }
+    },
+    "tests\\unit\\test_database_optimization.py": {
+      "filepath": "tests\\unit\\test_database_optimization.py",
+      "total_lines": 463,
+      "code_lines": 311,
+      "comment_lines": 39,
+      "blank_lines": 113,
+      "comment_ratio": 0.08423326133909287,
+      "imports": {
+        "total": 6,
+        "from_imports": 4,
+        "standard_imports": 2,
+        "modules": [
+          "pytest",
+          "config",
+          "sqlalchemy",
+          "unittest",
+          "time"
+        ]
+      },
+      "functions": {
+        "total": 36,
+        "methods": 36,
+        "async_functions": 0,
+        "average_length": 11.055555555555555
+      },
+      "classes": {
+        "total": 3,
+        "with_inheritance": 0,
+        "average_methods": 11.0
+      },
+      "complexity": {
+        "total": 6,
+        "max_function": 4,
+        "average_function": 1.1111111111111112
+      }
+    },
+    "tests\\unit\\test_exceptions.py": {
+      "filepath": "tests\\unit\\test_exceptions.py",
+      "total_lines": 819,
+      "code_lines": 641,
+      "comment_lines": 0,
+      "blank_lines": 178,
+      "comment_ratio": 0.0,
+      "imports": {
+        "total": 4,
+        "from_imports": 2,
+        "standard_imports": 2,
+        "modules": [
+          "pytest",
+          "unittest",
+          "scripts",
+          "math"
+        ]
+      },
+      "functions": {
+        "total": 120,
+        "methods": 120,
+        "async_functions": 0,
+        "average_length": 6.208333333333333
+      },
+      "classes": {
+        "total": 11,
+        "with_inheritance": 0,
+        "average_methods": 9.0
+      },
+      "complexity": {
+        "total": 50,
+        "max_function": 5,
+        "average_function": 1.4833333333333334
+      }
+    },
+    "tests\\unit\\test_infrastructure_validation.py": {
+      "filepath": "tests\\unit\\test_infrastructure_validation.py",
+      "total_lines": 288,
+      "code_lines": 204,
+      "comment_lines": 34,
+      "blank_lines": 50,
+      "comment_ratio": 0.11805555555555555,
+      "imports": {
+        "total": 8,
+        "from_imports": 5,
+        "standard_imports": 3,
+        "modules": [
+          "pytest",
+          "tests",
+          "unittest",
+          "requests",
+          "scripts",
+          "pathlib",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 15,
+        "methods": 13,
+        "async_functions": 0,
+        "average_length": 14.0
+      },
+      "classes": {
+        "total": 2,
+        "with_inheritance": 0,
+        "average_methods": 6.0
+      },
+      "complexity": {
+        "total": 11,
+        "max_function": 5,
+        "average_function": 1.6666666666666667
+      }
+    },
+    "tests\\unit\\test_parser.py": {
+      "filepath": "tests\\unit\\test_parser.py",
+      "total_lines": 1103,
+      "code_lines": 811,
+      "comment_lines": 0,
+      "blank_lines": 292,
+      "comment_ratio": 0.0,
+      "imports": {
+        "total": 20,
+        "from_imports": 9,
+        "standard_imports": 11,
+        "modules": [
+          "pytest",
+          "pandas",
+          "os",
+          "config",
+          "tests",
+          "unittest",
+          "io",
+          "time",
+          "shutil",
+          "tempfile",
+          "scripts",
+          "pathlib",
+          "numpy",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 101,
+        "methods": 101,
+        "async_functions": 0,
+        "average_length": 8.881188118811881
+      },
+      "classes": {
+        "total": 14,
+        "with_inheritance": 0,
+        "average_methods": 7.142857142857143
+      },
+      "complexity": {
+        "total": 37,
+        "max_function": 4,
+        "average_function": 1.3663366336633664
+      }
+    },
+    "tests\\unit\\test_rate_limiting.py": {
+      "filepath": "tests\\unit\\test_rate_limiting.py",
+      "total_lines": 449,
+      "code_lines": 283,
+      "comment_lines": 60,
+      "blank_lines": 106,
+      "comment_ratio": 0.133630289532294,
+      "imports": {
+        "total": 7,
+        "from_imports": 4,
+        "standard_imports": 3,
+        "modules": [
+          "pytest",
+          "config",
+          "unittest",
+          "time",
+          "backend_api",
+          "asyncio"
+        ]
+      },
+      "functions": {
+        "total": 23,
+        "methods": 23,
+        "async_functions": 0,
+        "average_length": 17.0
+      },
+      "classes": {
+        "total": 3,
+        "with_inheritance": 0,
+        "average_methods": 7.666666666666667
+      },
+      "complexity": {
+        "total": 17,
+        "max_function": 3,
+        "average_function": 1.6521739130434783
+      }
+    },
+    "tests\\unit\\test_scraper.py": {
+      "filepath": "tests\\unit\\test_scraper.py",
+      "total_lines": 957,
+      "code_lines": 729,
+      "comment_lines": 0,
+      "blank_lines": 228,
+      "comment_ratio": 0.0,
+      "imports": {
+        "total": 19,
+        "from_imports": 10,
+        "standard_imports": 9,
+        "modules": [
+          "pytest",
+          "pandas",
+          "os",
+          "bs4",
+          "config",
+          "tests",
+          "unittest",
+          "io",
+          "time",
+          "shutil",
+          "requests",
+          "tempfile",
+          "scripts",
+          "pathlib",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 76,
+        "methods": 76,
+        "async_functions": 0,
+        "average_length": 9.855263157894736
+      },
+      "classes": {
+        "total": 9,
+        "with_inheritance": 0,
+        "average_methods": 8.222222222222221
+      },
+      "complexity": {
+        "total": 38,
+        "max_function": 5,
+        "average_function": 1.5
+      }
+    },
+    "tests\\unit\\test_utils.py": {
+      "filepath": "tests\\unit\\test_utils.py",
+      "total_lines": 1178,
+      "code_lines": 902,
+      "comment_lines": 18,
+      "blank_lines": 258,
+      "comment_ratio": 0.015280135823429542,
+      "imports": {
+        "total": 13,
+        "from_imports": 5,
+        "standard_imports": 8,
+        "modules": [
+          "pytest",
+          "pandas",
+          "os",
+          "config",
+          "tests",
+          "unittest",
+          "io",
+          "csv",
+          "shutil",
+          "tempfile",
+          "scripts",
+          "numpy",
+          "math"
+        ]
+      },
+      "functions": {
+        "total": 119,
+        "methods": 119,
+        "async_functions": 0,
+        "average_length": 8.61344537815126
+      },
+      "classes": {
+        "total": 11,
+        "with_inheritance": 0,
+        "average_methods": 10.181818181818182
+      },
+      "complexity": {
+        "total": 15,
+        "max_function": 3,
+        "average_function": 1.1260504201680672
+      }
+    },
+    "tests\\unit\\test_validation.py": {
+      "filepath": "tests\\unit\\test_validation.py",
+      "total_lines": 426,
+      "code_lines": 336,
+      "comment_lines": 7,
+      "blank_lines": 83,
+      "comment_ratio": 0.01643192488262911,
+      "imports": {
+        "total": 2,
+        "from_imports": 1,
+        "standard_imports": 1,
+        "modules": [
+          "pytest",
+          "config"
+        ]
+      },
+      "functions": {
+        "total": 34,
+        "methods": 34,
+        "async_functions": 0,
+        "average_length": 10.470588235294118
+      },
+      "classes": {
+        "total": 5,
+        "with_inheritance": 0,
+        "average_methods": 6.8
+      },
+      "complexity": {
+        "total": 28,
+        "max_function": 3,
+        "average_function": 1.7647058823529411
+      }
+    },
+    "tests\\unit\\__init__.py": {
+      "filepath": "tests\\unit\\__init__.py",
+      "total_lines": 1,
+      "code_lines": 1,
+      "comment_lines": 0,
+      "blank_lines": 0,
+      "comment_ratio": 0.0,
+      "imports": {
+        "total": 0,
+        "from_imports": 0,
+        "standard_imports": 0,
+        "modules": []
+      },
+      "functions": {
+        "total": 0,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 1,
+        "max_function": 0
+      }
+    },
+    "streamlit_app\\components\\analytics_dashboard.py": {
+      "filepath": "streamlit_app\\components\\analytics_dashboard.py",
+      "total_lines": 466,
+      "code_lines": 360,
+      "comment_lines": 27,
+      "blank_lines": 79,
+      "comment_ratio": 0.05793991416309013,
+      "imports": {
+        "total": 8,
+        "from_imports": 3,
+        "standard_imports": 5,
+        "modules": [
+          "pandas",
+          "config",
+          "investment_insights",
+          "streamlit",
+          "typing",
+          "plotly",
+          "requests",
+          "logging"
+        ]
+      },
+      "functions": {
+        "total": 5,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 88.0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 36,
+        "max_function": 21,
+        "average_function": 7.8
+      }
+    },
+    "streamlit_app\\components\\comparison_view.py": {
+      "filepath": "streamlit_app\\components\\comparison_view.py",
+      "total_lines": 52,
+      "code_lines": 41,
+      "comment_lines": 3,
+      "blank_lines": 8,
+      "comment_ratio": 0.057692307692307696,
+      "imports": {
+        "total": 2,
+        "from_imports": 0,
+        "standard_imports": 2,
+        "modules": [
+          "pandas",
+          "streamlit"
+        ]
+      },
+      "functions": {
+        "total": 1,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 48.0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 8,
+        "max_function": 8,
+        "average_function": 8.0
+      }
+    },
+    "streamlit_app\\components\\county_view.py": {
+      "filepath": "streamlit_app\\components\\county_view.py",
+      "total_lines": 53,
+      "code_lines": 38,
+      "comment_lines": 4,
+      "blank_lines": 11,
+      "comment_ratio": 0.07547169811320754,
+      "imports": {
+        "total": 4,
+        "from_imports": 1,
+        "standard_imports": 3,
+        "modules": [
+          "pandas",
+          "streamlit",
+          "plotly",
+          "scripts"
+        ]
+      },
+      "functions": {
+        "total": 1,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 42.0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 5,
+        "max_function": 5,
+        "average_function": 5.0
+      }
+    },
+    "streamlit_app\\components\\investment_insights.py": {
+      "filepath": "streamlit_app\\components\\investment_insights.py",
+      "total_lines": 491,
+      "code_lines": 363,
+      "comment_lines": 33,
+      "blank_lines": 95,
+      "comment_ratio": 0.06720977596741344,
+      "imports": {
+        "total": 8,
+        "from_imports": 4,
+        "standard_imports": 4,
+        "modules": [
+          "pandas",
+          "config",
+          "streamlit",
+          "typing",
+          "requests",
+          "visualizations",
+          "logging",
+          "scripts"
+        ]
+      },
+      "functions": {
+        "total": 6,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 75.83333333333333
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 49,
+        "max_function": 30,
+        "average_function": 8.833333333333334
+      }
+    },
+    "streamlit_app\\components\\visualizations.py": {
+      "filepath": "streamlit_app\\components\\visualizations.py",
+      "total_lines": 418,
+      "code_lines": 322,
+      "comment_lines": 17,
+      "blank_lines": 79,
+      "comment_ratio": 0.04066985645933014,
+      "imports": {
+        "total": 5,
+        "from_imports": 2,
+        "standard_imports": 3,
+        "modules": [
+          "pandas",
+          "numpy",
+          "plotly",
+          "typing"
+        ]
+      },
+      "functions": {
+        "total": 8,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 49.875
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 17,
+        "max_function": 5,
+        "average_function": 3.0
+      }
+    },
+    "streamlit_app\\components\\__init__.py": {
+      "filepath": "streamlit_app\\components\\__init__.py",
+      "total_lines": 1,
+      "code_lines": 0,
+      "comment_lines": 1,
+      "blank_lines": 0,
+      "comment_ratio": 1.0,
+      "imports": {
+        "total": 0,
+        "from_imports": 0,
+        "standard_imports": 0,
+        "modules": []
+      },
+      "functions": {
+        "total": 0,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 1,
+        "max_function": 0
+      }
+    },
+    "backend_api\\database\\connection.py": {
+      "filepath": "backend_api\\database\\connection.py",
+      "total_lines": 118,
+      "code_lines": 87,
+      "comment_lines": 14,
+      "blank_lines": 17,
+      "comment_ratio": 0.11864406779661017,
+      "imports": {
+        "total": 7,
+        "from_imports": 5,
+        "standard_imports": 2,
+        "modules": [
+          "os",
+          "sqlalchemy",
+          "databases",
+          "logging"
+        ]
+      },
+      "functions": {
+        "total": 7,
+        "methods": 0,
+        "async_functions": 5,
+        "average_length": 6.5
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 12,
+        "max_function": 2,
+        "average_function": 1.5
+      }
+    },
+    "backend_api\\database\\models.py": {
+      "filepath": "backend_api\\database\\models.py",
+      "total_lines": 221,
+      "code_lines": 166,
+      "comment_lines": 21,
+      "blank_lines": 34,
+      "comment_ratio": 0.09502262443438914,
+      "imports": {
+        "total": 5,
+        "from_imports": 4,
+        "standard_imports": 1,
+        "modules": [
+          "uuid",
+          "connection",
+          "sqlalchemy"
+        ]
+      },
+      "functions": {
+        "total": 6,
+        "methods": 5,
+        "async_functions": 0,
+        "average_length": 14.166666666666666
+      },
+      "classes": {
+        "total": 3,
+        "with_inheritance": 3,
+        "average_methods": 1.6666666666666667
+      },
+      "complexity": {
+        "total": 5,
+        "max_function": 5,
+        "average_function": 1.6666666666666667
+      }
+    },
+    "backend_api\\database\\__init__.py": {
+      "filepath": "backend_api\\database\\__init__.py",
+      "total_lines": 1,
+      "code_lines": 0,
+      "comment_lines": 0,
+      "blank_lines": 1,
+      "comment_ratio": 0.0,
+      "imports": {
+        "total": 0,
+        "from_imports": 0,
+        "standard_imports": 0,
+        "modules": []
+      },
+      "functions": {
+        "total": 0,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 1,
+        "max_function": 0
+      }
+    },
+    "backend_api\\middleware\\caching.py": {
+      "filepath": "backend_api\\middleware\\caching.py",
+      "total_lines": 356,
+      "code_lines": 258,
+      "comment_lines": 24,
+      "blank_lines": 74,
+      "comment_ratio": 0.06741573033707865,
+      "imports": {
+        "total": 9,
+        "from_imports": 4,
+        "standard_imports": 5,
+        "modules": [
+          "hashlib",
+          "config",
+          "sys",
+          "typing",
+          "time",
+          "logging",
+          "pathlib",
+          "fastapi",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 20,
+        "methods": 6,
+        "async_functions": 8,
+        "average_length": 13.083333333333334
+      },
+      "classes": {
+        "total": 2,
+        "with_inheritance": 0,
+        "average_methods": 6.0
+      },
+      "complexity": {
+        "total": 39,
+        "max_function": 6,
+        "average_function": 2.0
+      }
+    },
+    "backend_api\\middleware\\rate_limiting.py": {
+      "filepath": "backend_api\\middleware\\rate_limiting.py",
+      "total_lines": 279,
+      "code_lines": 198,
+      "comment_lines": 26,
+      "blank_lines": 55,
+      "comment_ratio": 0.0931899641577061,
+      "imports": {
+        "total": 8,
+        "from_imports": 4,
+        "standard_imports": 4,
+        "modules": [
+          "config",
+          "sys",
+          "typing",
+          "time",
+          "logging",
+          "pathlib",
+          "fastapi",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 11,
+        "methods": 5,
+        "async_functions": 4,
+        "average_length": 13.714285714285714
+      },
+      "classes": {
+        "total": 2,
+        "with_inheritance": 0,
+        "average_methods": 4.0
+      },
+      "complexity": {
+        "total": 23,
+        "max_function": 6,
+        "average_function": 2.857142857142857
+      }
+    },
+    "backend_api\\middleware\\validation.py": {
+      "filepath": "backend_api\\middleware\\validation.py",
+      "total_lines": 278,
+      "code_lines": 211,
+      "comment_lines": 17,
+      "blank_lines": 50,
+      "comment_ratio": 0.06115107913669065,
+      "imports": {
+        "total": 5,
+        "from_imports": 3,
+        "standard_imports": 2,
+        "modules": [
+          "config",
+          "typing",
+          "logging",
+          "fastapi",
+          "json"
+        ]
+      },
+      "functions": {
+        "total": 10,
+        "methods": 2,
+        "async_functions": 5,
+        "average_length": 31.8
+      },
+      "classes": {
+        "total": 1,
+        "with_inheritance": 0,
+        "average_methods": 6.0
+      },
+      "complexity": {
+        "total": 41,
+        "max_function": 10,
+        "average_function": 6.8
+      }
+    },
+    "backend_api\\models\\county.py": {
+      "filepath": "backend_api\\models\\county.py",
+      "total_lines": 160,
+      "code_lines": 128,
+      "comment_lines": 4,
+      "blank_lines": 28,
+      "comment_ratio": 0.025,
+      "imports": {
+        "total": 3,
+        "from_imports": 3,
+        "standard_imports": 0,
+        "modules": [
+          "typing",
+          "pydantic",
+          "datetime"
+        ]
+      },
+      "functions": {
+        "total": 8,
+        "methods": 2,
+        "async_functions": 0,
+        "average_length": 8.125
+      },
+      "classes": {
+        "total": 9,
+        "with_inheritance": 8,
+        "average_methods": 0.2222222222222222
+      },
+      "complexity": {
+        "total": 10,
+        "max_function": 6,
+        "average_function": 2.125
+      }
+    },
+    "backend_api\\models\\property.py": {
+      "filepath": "backend_api\\models\\property.py",
+      "total_lines": 296,
+      "code_lines": 248,
+      "comment_lines": 12,
+      "blank_lines": 36,
+      "comment_ratio": 0.04054054054054054,
+      "imports": {
+        "total": 7,
+        "from_imports": 6,
+        "standard_imports": 1,
+        "modules": [
+          "config",
+          "sys",
+          "datetime",
+          "typing",
+          "pydantic",
+          "enum",
+          "pathlib"
+        ]
+      },
+      "functions": {
+        "total": 10,
+        "methods": 10,
+        "async_functions": 0,
+        "average_length": 7.3
+      },
+      "classes": {
+        "total": 12,
+        "with_inheritance": 11,
+        "average_methods": 0.8333333333333334
+      },
+      "complexity": {
+        "total": 16,
+        "max_function": 3,
+        "average_function": 2.5
+      }
+    },
+    "backend_api\\models\\sync.py": {
+      "filepath": "backend_api\\models\\sync.py",
+      "total_lines": 253,
+      "code_lines": 207,
+      "comment_lines": 10,
+      "blank_lines": 36,
+      "comment_ratio": 0.039525691699604744,
+      "imports": {
+        "total": 4,
+        "from_imports": 4,
+        "standard_imports": 0,
+        "modules": [
+          "enum",
+          "typing",
+          "pydantic",
+          "datetime"
+        ]
+      },
+      "functions": {
+        "total": 5,
+        "methods": 2,
+        "async_functions": 0,
+        "average_length": 11.6
+      },
+      "classes": {
+        "total": 19,
+        "with_inheritance": 18,
+        "average_methods": 0.10526315789473684
+      },
+      "complexity": {
+        "total": 8,
+        "max_function": 5,
+        "average_function": 2.4
+      }
+    },
+    "backend_api\\models\\__init__.py": {
+      "filepath": "backend_api\\models\\__init__.py",
+      "total_lines": 1,
+      "code_lines": 0,
+      "comment_lines": 0,
+      "blank_lines": 1,
+      "comment_ratio": 0.0,
+      "imports": {
+        "total": 0,
+        "from_imports": 0,
+        "standard_imports": 0,
+        "modules": []
+      },
+      "functions": {
+        "total": 0,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 1,
+        "max_function": 0
+      }
+    },
+    "backend_api\\routers\\auth.py": {
+      "filepath": "backend_api\\routers\\auth.py",
+      "total_lines": 364,
+      "code_lines": 291,
+      "comment_lines": 18,
+      "blank_lines": 55,
+      "comment_ratio": 0.04945054945054945,
+      "imports": {
+        "total": 10,
+        "from_imports": 9,
+        "standard_imports": 1,
+        "modules": [
+          "datetime",
+          "typing",
+          "pydantic",
+          "auth",
+          "logging",
+          "fastapi",
+          "slowapi"
+        ]
+      },
+      "functions": {
+        "total": 8,
+        "methods": 0,
+        "async_functions": 8,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 6,
+        "with_inheritance": 6,
+        "average_methods": 0.0
+      },
+      "complexity": {
+        "total": 36,
+        "max_function": 0
+      }
+    },
+    "backend_api\\routers\\counties.py": {
+      "filepath": "backend_api\\routers\\counties.py",
+      "total_lines": 338,
+      "code_lines": 282,
+      "comment_lines": 15,
+      "blank_lines": 41,
+      "comment_ratio": 0.04437869822485207,
+      "imports": {
+        "total": 10,
+        "from_imports": 9,
+        "standard_imports": 1,
+        "modules": [
+          "sqlalchemy",
+          "models",
+          "datetime",
+          "database",
+          "logging",
+          "fastapi",
+          "slowapi"
+        ]
+      },
+      "functions": {
+        "total": 7,
+        "methods": 0,
+        "async_functions": 7,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 34,
+        "max_function": 0
+      }
+    },
+    "backend_api\\routers\\properties.py": {
+      "filepath": "backend_api\\routers\\properties.py",
+      "total_lines": 393,
+      "code_lines": 335,
+      "comment_lines": 9,
+      "blank_lines": 49,
+      "comment_ratio": 0.022900763358778626,
+      "imports": {
+        "total": 12,
+        "from_imports": 9,
+        "standard_imports": 3,
+        "modules": [
+          "sqlalchemy",
+          "slowapi",
+          "models",
+          "typing",
+          "services",
+          "auth",
+          "time",
+          "database",
+          "logging",
+          "fastapi",
+          "math"
+        ]
+      },
+      "functions": {
+        "total": 11,
+        "methods": 0,
+        "async_functions": 10,
+        "average_length": 3.0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 41,
+        "max_function": 1,
+        "average_function": 1.0
+      }
+    },
+    "backend_api\\routers\\sync.py": {
+      "filepath": "backend_api\\routers\\sync.py",
+      "total_lines": 565,
+      "code_lines": 434,
+      "comment_lines": 46,
+      "blank_lines": 85,
+      "comment_ratio": 0.08141592920353982,
+      "imports": {
+        "total": 18,
+        "from_imports": 17,
+        "standard_imports": 1,
+        "modules": [
+          "config",
+          "sqlalchemy",
+          "datetime",
+          "slowapi",
+          "models",
+          "typing",
+          "services",
+          "database",
+          "scripts",
+          "logging",
+          "fastapi"
+        ]
+      },
+      "functions": {
+        "total": 9,
+        "methods": 0,
+        "async_functions": 7,
+        "average_length": 16.5
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 55,
+        "max_function": 6,
+        "average_function": 3.5
+      }
+    },
+    "backend_api\\routers\\__init__.py": {
+      "filepath": "backend_api\\routers\\__init__.py",
+      "total_lines": 1,
+      "code_lines": 0,
+      "comment_lines": 0,
+      "blank_lines": 1,
+      "comment_ratio": 0.0,
+      "imports": {
+        "total": 0,
+        "from_imports": 0,
+        "standard_imports": 0,
+        "modules": []
+      },
+      "functions": {
+        "total": 0,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 1,
+        "max_function": 0
+      }
+    },
+    "backend_api\\services\\property_service.py": {
+      "filepath": "backend_api\\services\\property_service.py",
+      "total_lines": 528,
+      "code_lines": 395,
+      "comment_lines": 44,
+      "blank_lines": 89,
+      "comment_ratio": 0.08333333333333333,
+      "imports": {
+        "total": 12,
+        "from_imports": 11,
+        "standard_imports": 1,
+        "modules": [
+          "config",
+          "sqlalchemy",
+          "datetime",
+          "models",
+          "typing",
+          "database",
+          "scripts",
+          "logging"
+        ]
+      },
+      "functions": {
+        "total": 11,
+        "methods": 11,
+        "async_functions": 0,
+        "average_length": 43.27272727272727
+      },
+      "classes": {
+        "total": 1,
+        "with_inheritance": 0,
+        "average_methods": 11.0
+      },
+      "complexity": {
+        "total": 55,
+        "max_function": 20,
+        "average_function": 5.909090909090909
+      }
+    },
+    "backend_api\\services\\sync_service.py": {
+      "filepath": "backend_api\\services\\sync_service.py",
+      "total_lines": 1,
+      "code_lines": 0,
+      "comment_lines": 0,
+      "blank_lines": 1,
+      "comment_ratio": 0.0,
+      "imports": {
+        "total": 0,
+        "from_imports": 0,
+        "standard_imports": 0,
+        "modules": []
+      },
+      "functions": {
+        "total": 0,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 1,
+        "max_function": 0
+      }
+    },
+    "backend_api\\services\\__init__.py": {
+      "filepath": "backend_api\\services\\__init__.py",
+      "total_lines": 1,
+      "code_lines": 0,
+      "comment_lines": 0,
+      "blank_lines": 1,
+      "comment_ratio": 0.0,
+      "imports": {
+        "total": 0,
+        "from_imports": 0,
+        "standard_imports": 0,
+        "modules": []
+      },
+      "functions": {
+        "total": 0,
+        "methods": 0,
+        "async_functions": 0,
+        "average_length": 0
+      },
+      "classes": {
+        "total": 0,
+        "with_inheritance": 0,
+        "average_methods": 0
+      },
+      "complexity": {
+        "total": 1,
+        "max_function": 0
+      }
+    }
+  },
+  "import_analysis": {},
+  "complexity_analysis": {},
+  "performance_issues": [
+    {
+      "type": "string_concatenation",
+      "line": 434,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 125,
+      "message": "Line length: 123 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 126,
+      "message": "Line length: 135 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 127,
+      "message": "Line length: 144 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 129,
+      "message": "Line length: 152 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 140,
+      "message": "Line length: 125 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 160,
+      "message": "Line length: 128 characters",
+      "severity": "low"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 160,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 162,
+      "message": "Line length: 142 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 125,
+      "message": "Line length: 123 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 126,
+      "message": "Line length: 125 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 127,
+      "message": "Line length: 145 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 128,
+      "message": "Line length: 139 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 130,
+      "message": "Line length: 152 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 141,
+      "message": "Line length: 145 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 175,
+      "message": "Line length: 124 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 176,
+      "message": "Line length: 127 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 181,
+      "message": "Line length: 203 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 183,
+      "message": "Line length: 212 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 185,
+      "message": "Line length: 233 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 187,
+      "message": "Line length: 161 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 200,
+      "message": "Line length: 145 characters",
+      "severity": "low"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 200,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 247,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 162,
+      "message": "Line length: 175 characters",
+      "severity": "low"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 243,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 677,
+      "message": "Line length: 149 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 684,
+      "message": "Line length: 125 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 1002,
+      "message": "Line length: 121 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 1042,
+      "message": "Line length: 123 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 1102,
+      "message": "Line length: 127 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 1116,
+      "message": "Line length: 121 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 1135,
+      "message": "Line length: 122 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 1470,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 144,
+      "message": "Line length: 165 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 148,
+      "message": "Line length: 141 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 152,
+      "message": "Line length: 122 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 302,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 324,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 325,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 103,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 113,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 173,
+      "message": "Line length: 125 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 482,
+      "message": "Line length: 122 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 112,
+      "message": "Line length: 136 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 117,
+      "message": "Line length: 122 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 130,
+      "message": "Line length: 159 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 133,
+      "message": "Line length: 125 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 146,
+      "message": "Line length: 197 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 106,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 113,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 233,
+      "message": "Line length: 135 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 52,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 76,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 101,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 228,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 265,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 80,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 101,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 155,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 249,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 250,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 252,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 253,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 254,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 308,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 314,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 323,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 340,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 350,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 357,
+      "message": "Line length: 121 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 501,
+      "message": "Line length: 127 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 504,
+      "message": "Line length: 127 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 521,
+      "message": "Line length: 132 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 539,
+      "message": "Line length: 132 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 569,
+      "message": "Line length: 133 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 579,
+      "message": "Line length: 142 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 580,
+      "message": "Line length: 128 characters",
+      "severity": "low"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 619,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 641,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 644,
+      "message": "Line length: 145 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 650,
+      "message": "Line length: 125 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 89,
+      "message": "Line length: 133 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 104,
+      "message": "Line length: 121 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 266,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 273,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 279,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 58,
+      "message": "Line length: 154 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 132,
+      "message": "Line length: 127 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 133,
+      "message": "Line length: 123 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 272,
+      "message": "Line length: 125 characters",
+      "severity": "low"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 315,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 334,
+      "message": "Line length: 124 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 436,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 780,
+      "message": "Line length: 121 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 120,
+      "message": "Line length: 129 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 299,
+      "message": "Line length: 134 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 443,
+      "message": "Line length: 134 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 515,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 530,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 570,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 584,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 344,
+      "message": "Line length: 123 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 532,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 685,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 741,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 743,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 747,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 756,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 766,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 768,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 775,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 784,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 787,
+      "message": "Line length: 122 characters",
+      "severity": "low"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 794,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 800,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 807,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 829,
+      "message": "Line length: 123 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 169,
+      "message": "Line length: 140 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 65,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 71,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 196,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 201,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 351,
+      "message": "Line length: 131 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 29,
+      "message": "Line length: 121 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 191,
+      "message": "Line length: 740 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 468,
+      "message": "Line length: 169 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 512,
+      "message": "Line length: 125 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 112,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 117,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 401,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 158,
+      "message": "Line length: 122 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 317,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 353,
+      "message": "Line length: 132 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 354,
+      "message": "Line length: 130 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 357,
+      "message": "Line length: 127 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 358,
+      "message": "Line length: 133 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 366,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 395,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 519,
+      "message": "Line length: 127 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 521,
+      "message": "Line length: 127 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 522,
+      "message": "Line length: 121 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 523,
+      "message": "Line length: 121 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 656,
+      "message": "Line length: 125 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 691,
+      "message": "Line length: 129 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 692,
+      "message": "Line length: 125 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 693,
+      "message": "Line length: 122 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 628,
+      "message": "Line length: 148 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 629,
+      "message": "Line length: 147 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 630,
+      "message": "Line length: 150 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 631,
+      "message": "Line length: 147 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 63,
+      "message": "Line length: 123 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 139,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 72,
+      "message": "Line length: 122 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 231,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 247,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 261,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 142,
+      "message": "Line length: 130 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 143,
+      "message": "Line length: 125 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 194,
+      "message": "Line length: 135 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 196,
+      "message": "Line length: 148 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 197,
+      "message": "Line length: 141 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 198,
+      "message": "Line length: 143 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 252,
+      "message": "Line length: 121 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 300,
+      "message": "Line length: 128 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 301,
+      "message": "Line length: 121 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 302,
+      "message": "Line length: 130 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 326,
+      "message": "Line length: 148 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 327,
+      "message": "Line length: 147 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 328,
+      "message": "Line length: 142 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 390,
+      "message": "Line length: 136 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 391,
+      "message": "Line length: 139 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 392,
+      "message": "Line length: 134 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 393,
+      "message": "Line length: 134 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 394,
+      "message": "Line length: 136 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 423,
+      "message": "Line length: 154 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 424,
+      "message": "Line length: 150 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 425,
+      "message": "Line length: 155 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 466,
+      "message": "Line length: 148 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 467,
+      "message": "Line length: 147 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 468,
+      "message": "Line length: 147 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 404,
+      "message": "Line length: 129 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 405,
+      "message": "Line length: 133 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 406,
+      "message": "Line length: 124 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 407,
+      "message": "Line length: 122 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 551,
+      "message": "Line length: 122 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 594,
+      "message": "Line length: 139 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 314,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 336,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 358,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 698,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 94,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 461,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 468,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 55,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 62,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 803,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 246,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 170,
+      "message": "Line length: 125 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 34,
+      "message": "Line length: 124 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 35,
+      "message": "Line length: 122 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 280,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 644,
+      "message": "Line length: 125 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 908,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 88,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 96,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 95,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 134,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 142,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 150,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 159,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 167,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 176,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 184,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 223,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 232,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 261,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 264,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "nested_loops",
+      "line": 273,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 113,
+      "message": "Line length: 121 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 354,
+      "message": "Line length: 121 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 452,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 454,
+      "message": "Line length: 133 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 36,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 358,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 225,
+      "message": "Line length: 150 characters",
+      "severity": "low"
+    },
+    {
+      "type": "nested_loops",
+      "line": 223,
+      "message": "Nested loops detected - consider optimization",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 201,
+      "message": "Line length: 124 characters",
+      "severity": "low"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 202,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 229,
+      "message": "Line length: 143 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 248,
+      "message": "Line length: 227 characters",
+      "severity": "low"
+    },
+    {
+      "type": "string_concatenation",
+      "line": 373,
+      "message": "Consider using f-strings or join() for multiple string concatenations",
+      "severity": "medium"
+    },
+    {
+      "type": "long_line",
+      "line": 370,
+      "message": "Line length: 121 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 384,
+      "message": "Line length: 125 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 61,
+      "message": "Line length: 122 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 72,
+      "message": "Line length: 240 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 132,
+      "message": "Line length: 291 characters",
+      "severity": "low"
+    },
+    {
+      "type": "long_line",
+      "line": 208,
+      "message": "Line length: 134 characters",
+      "severity": "low"
+    }
+  ],
+  "summary": {
+    "total_lines": 34577,
+    "total_code_lines": 25990,
+    "total_files": 89,
+    "total_functions": 1567,
+    "total_classes": 301,
+    "total_imports": 692,
+    "average_lines_per_file": 388.5056179775281,
+    "average_functions_per_file": 17.60674157303371,
+    "average_classes_per_file": 3.3820224719101124,
+    "code_to_total_ratio": 0.7516557249038378,
+    "total_performance_issues": 238
+  }
+}

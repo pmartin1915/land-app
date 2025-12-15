@@ -1,0 +1,281 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AI-Testable Specifications for Alabama Auction Watcher",
+  "description": "Machine-readable test specifications that enable AI systems to understand, generate, and validate tests",
+  "version": "1.0.0",
+
+  "definitions": {
+    "test_case": {
+      "type": "object",
+      "required": ["id", "description", "category", "input", "expected_output"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z_]+_test_[0-9]{3}$",
+          "description": "Unique test identifier following naming convention"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human and AI readable description of what the test validates"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["unit", "integration", "e2e", "benchmark", "error_handling", "ai_generated"],
+          "description": "Test category for AI classification"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "default": "medium",
+          "description": "Test priority for AI execution planning"
+        },
+        "input": {
+          "type": "object",
+          "description": "Test input parameters and data",
+          "properties": {
+            "function_name": {"type": "string"},
+            "parameters": {"type": "object"},
+            "mock_data": {"type": "object"},
+            "environment": {"type": "object"}
+          }
+        },
+        "expected_output": {
+          "type": "object",
+          "description": "Expected test results and validation criteria",
+          "properties": {
+            "return_value": {},
+            "side_effects": {"type": "array"},
+            "exceptions": {"type": "object"},
+            "performance_criteria": {"$ref": "#/definitions/performance_thresholds"}
+          }
+        },
+        "ai_instructions": {
+          "type": "object",
+          "description": "Special instructions for AI test execution",
+          "properties": {
+            "can_auto_retry": {"type": "boolean", "default": true},
+            "max_retries": {"type": "integer", "minimum": 0, "maximum": 5, "default": 3},
+            "retry_conditions": {"type": "array", "items": {"type": "string"}},
+            "escalate_on_failure": {"type": "boolean", "default": false},
+            "requires_human_validation": {"type": "boolean", "default": false}
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Test dependencies that must pass first"
+        },
+        "tags": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Tags for AI test filtering and organization"
+        }
+      }
+    },
+
+    "performance_thresholds": {
+      "type": "object",
+      "properties": {
+        "max_duration_seconds": {"type": "number", "minimum": 0},
+        "min_records_per_second": {"type": "number", "minimum": 0},
+        "max_memory_usage_mb": {"type": "number", "minimum": 0},
+        "max_cpu_usage_percent": {"type": "number", "minimum": 0, "maximum": 100},
+        "success_rate_percent": {"type": "number", "minimum": 0, "maximum": 100}
+      }
+    },
+
+    "error_specification": {
+      "type": "object",
+      "required": ["code", "category", "severity"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Z_]+_[0-9]{3}$",
+          "description": "Machine-readable error code"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["network", "parsing", "validation", "configuration", "system"],
+          "description": "Error category for AI classification"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"],
+          "description": "Error severity level for AI prioritization"
+        },
+        "recoverable": {
+          "type": "boolean",
+          "description": "Whether AI can attempt automatic recovery"
+        },
+        "context": {
+          "type": "object",
+          "description": "Additional context for AI error analysis"
+        },
+        "suggested_actions": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "AI-executable actions for error recovery"
+        },
+        "documentation_reference": {
+          "type": "string",
+          "description": "Link to troubleshooting documentation"
+        }
+      }
+    },
+
+    "ai_test_execution_plan": {
+      "type": "object",
+      "properties": {
+        "parallel_execution": {"type": "boolean", "default": true},
+        "execution_order": {"type": "array", "items": {"type": "string"}},
+        "resource_requirements": {
+          "type": "object",
+          "properties": {
+            "cpu_cores": {"type": "integer", "minimum": 1},
+            "memory_gb": {"type": "number", "minimum": 0.5},
+            "network_access": {"type": "boolean"},
+            "external_services": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        "timeout_strategy": {
+          "type": "object",
+          "properties": {
+            "global_timeout_minutes": {"type": "integer", "minimum": 1},
+            "per_test_timeout_seconds": {"type": "integer", "minimum": 1},
+            "cleanup_timeout_seconds": {"type": "integer", "minimum": 1}
+          }
+        }
+      }
+    }
+  },
+
+  "test_suites": {
+    "county_scraping": {
+      "description": "Tests for county data scraping functionality",
+      "test_cases": [
+        {
+          "id": "county_scraping_test_001",
+          "description": "Validate successful scraping of Baldwin County data",
+          "category": "integration",
+          "priority": "critical",
+          "input": {
+            "function_name": "scrape_county_data",
+            "parameters": {
+              "county_input": "Baldwin",
+              "max_pages": 5,
+              "save_raw": false
+            },
+            "mock_data": {
+              "html_response": "sample_baldwin_response.html",
+              "expected_records": 29
+            }
+          },
+          "expected_output": {
+            "return_value": {
+              "type": "DataFrame",
+              "min_records": 1,
+              "max_records": 1000,
+              "required_columns": ["parcel_id", "amount", "description", "county"]
+            },
+            "performance_criteria": {
+              "max_duration_seconds": 30,
+              "min_records_per_second": 1
+            }
+          },
+          "ai_instructions": {
+            "can_auto_retry": true,
+            "max_retries": 3,
+            "retry_conditions": ["network_timeout", "temporary_server_error"],
+            "escalate_on_failure": false
+          },
+          "tags": ["scraping", "integration", "network"]
+        }
+      ]
+    },
+
+    "data_processing": {
+      "description": "Tests for data parsing and processing functionality",
+      "test_cases": [
+        {
+          "id": "data_processing_test_001",
+          "description": "Validate CSV parsing with various formats",
+          "category": "unit",
+          "priority": "high",
+          "input": {
+            "function_name": "AuctionParser.load_csv_file",
+            "parameters": {
+              "file_path": "test_data.csv"
+            },
+            "mock_data": {
+              "csv_content": "sample_csv_data.csv"
+            }
+          },
+          "expected_output": {
+            "return_value": {
+              "type": "DataFrame",
+              "min_records": 1
+            }
+          },
+          "ai_instructions": {
+            "can_auto_retry": false,
+            "requires_human_validation": false
+          },
+          "tags": ["parsing", "unit", "data_validation"]
+        }
+      ]
+    },
+
+    "error_handling": {
+      "description": "Tests for error handling and recovery mechanisms",
+      "test_cases": [
+        {
+          "id": "error_handling_test_001",
+          "description": "Validate proper handling of invalid county codes",
+          "category": "error_handling",
+          "priority": "high",
+          "input": {
+            "function_name": "validate_county_code",
+            "parameters": {
+              "county_input": "99"
+            }
+          },
+          "expected_output": {
+            "exceptions": {
+              "type": "CountyValidationError",
+              "error_code": "COUNTY_001",
+              "recoverable": false
+            }
+          },
+          "ai_instructions": {
+            "can_auto_retry": false,
+            "escalate_on_failure": false
+          },
+          "tags": ["error_handling", "validation", "unit"]
+        }
+      ]
+    }
+  },
+
+  "ai_execution_configuration": {
+    "default_settings": {
+      "parallel_execution": true,
+      "max_concurrent_tests": 4,
+      "global_timeout_minutes": 60,
+      "retry_failed_tests": true,
+      "generate_detailed_reports": true
+    },
+    "performance_baselines": {
+      "county_scraping_rate": 50,
+      "csv_processing_rate": 1000,
+      "memory_usage_limit_mb": 512,
+      "test_execution_rate": 10
+    },
+    "reporting_format": {
+      "json_report": true,
+      "html_report": true,
+      "coverage_report": true,
+      "performance_metrics": true,
+      "ai_analysis_summary": true
+    }
+  }
+}

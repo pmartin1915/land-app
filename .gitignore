@@ -1,8 +1,32 @@
+# Database files (exclude large DBs and temp files)
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Log files (exclude large logs)
+*.log
+logs/*.log
+streamlit_error.log
+
+# Frontend / Node.js
+frontend/node_modules/
+frontend/dist/
+frontend/dist-electron/
+frontend/.vite/
+node_modules/
+
 # Data files (exclude raw and processed data)
 data/raw/*
 data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+
+# Test reports and artifacts
+*.json.bak
+*_report_*.json
+nul
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -109,12 +133,21 @@ celerybeat.pid
 
 # Environments
 .env
+.env.local
+.env.production
+.env.staging
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Security configuration files (NEVER commit these!)
+config/.env*
+config/secrets.py
+**/api_keys.json
+**/credentials.json
 
 # Spyder project settings
 .spyderproject

@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+
+  <!-- Product definition -->
+  <Product Id="*"
+           Name="Alabama Auction Watcher"
+           Language="1033"
+           Version="1.0.0.0"
+           Manufacturer="Alabama Auction Watcher Team"
+           UpgradeCode="12345678-1234-1234-1234-123456789012">
+
+    <!-- Package definition -->
+    <Package InstallerVersion="200"
+             Compressed="yes"
+             InstallScope="perMachine"
+             Description="Alabama Auction Watcher - Enterprise Real Estate Intelligence System"
+             Comments="Professional real estate auction tracking and analytics platform"
+             Manufacturer="Alabama Auction Watcher Team" />
+
+    <!-- Major upgrade handling -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+
+    <!-- Media definition -->
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Feature definition -->
+    <Feature Id="ProductFeature" Title="Alabama Auction Watcher" Level="1" Display="expand">
+      <ComponentGroupRef Id="ProductComponents" />
+      <ComponentGroupRef Id="DesktopShortcutComponents" />
+      <ComponentGroupRef Id="StartMenuComponents" />
+      <ComponentGroupRef Id="RegistryComponents" />
+    </Feature>
+
+    <!-- Custom properties -->
+    <Property Id="INSTALLDIR_SET" Value="1" />
+    <Property Id="APPLICATIONFOLDER" Secure="yes" />
+
+    <!-- Installation directory structure -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+
+      <!-- Program Files installation -->
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="INSTALLFOLDER" Name="Alabama Auction Watcher">
+
+          <!-- Main application files -->
+          <Directory Id="APPLICATIONFOLDER" Name="Application" />
+
+          <!-- Backend API service -->
+          <Directory Id="BACKENDFOLDER" Name="Backend" />
+
+          <!-- Configuration files -->
+          <Directory Id="CONFIGFOLDER" Name="Config" />
+
+          <!-- Logs directory -->
+          <Directory Id="LOGSFOLDER" Name="Logs" />
+
+          <!-- Icons and resources -->
+          <Directory Id="ICONSFOLDER" Name="Icons" />
+
+        </Directory>
+      </Directory>
+
+      <!-- Desktop shortcut -->
+      <Directory Id="DesktopFolder" Name="Desktop" />
+
+      <!-- Start Menu -->
+      <Directory Id="ProgramMenuFolder" Name="Programs">
+        <Directory Id="ApplicationProgramsFolder" Name="Alabama Auction Watcher" />
+      </Directory>
+
+      <!-- System folders -->
+      <Directory Id="System64Folder" Name="System64" />
+      <Directory Id="CommonAppDataFolder" Name="CommonAppData">
+        <Directory Id="CompanyDataFolder" Name="AlabamaAuctionWatcher">
+          <Directory Id="AppDataFolder" Name="Data" />
+        </Directory>
+      </Directory>
+
+    </Directory>
+
+    <!-- UI definition -->
+    <UIRef Id="WixUI_FeatureTree" />
+    <UIRef Id="WixUI_ErrorProgressText" />
+
+    <!-- Custom UI branding -->
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+    <WixVariable Id="WixUIBannerBmp" Value="Banner.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="Dialog.bmp" />
+
+    <!-- Custom actions for service management -->
+    <CustomAction Id="InstallPythonDependencies"
+                  Directory="APPLICATIONFOLDER"
+                  ExeCommand='cmd.exe /c "pip install -r requirements.txt"'
+                  Execute="deferred"
+                  Impersonate="no" />
+
+    <CustomAction Id="StartBackendService"
+                  Directory="BACKENDFOLDER"
+                  ExeCommand='cmd.exe /c "python start_backend_api.py --service"'
+                  Execute="deferred"
+                  Impersonate="no" />
+
+    <CustomAction Id="StopBackendService"
+                  Directory="BACKENDFOLDER"
+                  ExeCommand='cmd.exe /c "taskkill /f /im python.exe"'
+                  Execute="deferred"
+                  Impersonate="no" />
+
+    <!-- Installation sequence -->
+    <InstallExecuteSequence>
+      <Custom Action="InstallPythonDependencies" After="InstallFiles">NOT Installed</Custom>
+      <Custom Action="StartBackendService" After="InstallPythonDependencies">NOT Installed</Custom>
+      <Custom Action="StopBackendService" Before="RemoveFiles">REMOVE="ALL"</Custom>
+    </InstallExecuteSequence>
+
+  </Product>
+
+  <!-- Fragment for main application components -->
+  <Fragment>
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+
+      <!-- Main application launcher -->
+      <Component Id="MainLauncher" Guid="*">
+        <File Id="WindowsLauncher"
+              Source="..\..\Alabama Auction Watcher.bat"
+              KeyPath="yes" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\AlabamaAuctionWatcher"
+                       Name="InstallPath"
+                       Type="string"
+                       Value="[INSTALLFOLDER]" />
+      </Component>
+
+      <!-- Python application files -->
+      <Component Id="PythonApp" Guid="*">
+        <File Id="StreamlitApp"
+              Source="..\..\streamlit_app\app.py"
+              KeyPath="yes" />
+        <File Id="Requirements"
+              Source="..\..\requirements.txt" />
+      </Component>
+
+      <!-- Backend API files -->
+      <Component Id="BackendAPI" Guid="*">
+        <File Id="BackendLauncher"
+              Source="..\..\start_backend_api.py"
+              KeyPath="yes" />
+        <File Id="BackendApp"
+              Source="..\..\backend_api\app.py" />
+      </Component>
+
+      <!-- Configuration files -->
+      <Component Id="ConfigFiles" Guid="*">
+        <File Id="SettingsConfig"
+              Source="..\..\config\settings.py"
+              KeyPath="yes" />
+        <File Id="DatabaseConfig"
+              Source="..\..\config\database_optimization.py" />
+      </Component>
+
+      <!-- Application icons -->
+      <Component Id="ApplicationIcons" Guid="*">
+        <File Id="MainAppIcon"
+              Source="..\..\branding\generated\windows\alabama-auction-watcher.ico"
+              KeyPath="yes" />
+        <File Id="BackendIcon"
+              Source="..\..\branding\generated\windows\aaw-backend.ico" />
+        <File Id="AnalyticsIcon"
+              Source="..\..\branding\generated\windows\aaw-analytics.ico" />
+        <File Id="HealthIcon"
+              Source="..\..\branding\generated\windows\aaw-health.ico" />
+        <File Id="SettingsIcon"
+              Source="..\..\branding\generated\windows\aaw-settings.ico" />
+      </Component>
+
+    </ComponentGroup>
+  </Fragment>
+
+  <!-- Fragment for desktop shortcuts -->
+  <Fragment>
+    <ComponentGroup Id="DesktopShortcutComponents" Directory="DesktopFolder">
+      <Component Id="DesktopShortcut" Guid="*">
+        <Shortcut Id="ApplicationDesktopShortcut"
+                  Name="Alabama Auction Watcher"
+                  Description="Professional Real Estate Auction Intelligence"
+                  Target="[INSTALLFOLDER]Alabama Auction Watcher.bat"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="ProductIcon" />
+        <RemoveFolder Id="DesktopFolder" On="uninstall" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\AlabamaAuctionWatcher\Shortcuts"
+                       Name="Desktop"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+
+  <!-- Fragment for Start Menu shortcuts -->
+  <Fragment>
+    <ComponentGroup Id="StartMenuComponents" Directory="ApplicationProgramsFolder">
+
+      <!-- Main application shortcut -->
+      <Component Id="StartMenuShortcut" Guid="*">
+        <Shortcut Id="ApplicationStartMenuShortcut"
+                  Name="Alabama Auction Watcher"
+                  Description="Launch Alabama Auction Watcher Application"
+                  Target="[INSTALLFOLDER]Alabama Auction Watcher.bat"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="ProductIcon" />
+        <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\AlabamaAuctionWatcher\Shortcuts"
+                       Name="StartMenu"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
+      </Component>
+
+      <!-- Backend service shortcut -->
+      <Component Id="BackendServiceShortcut" Guid="*">
+        <Shortcut Id="BackendServiceStartMenuShortcut"
+                  Name="Backend Service Manager"
+                  Description="Manage Alabama Auction Watcher Backend Service"
+                  Target="[BACKENDFOLDER]start_backend_api.py"
+                  WorkingDirectory="BACKENDFOLDER"
+                  Icon="BackendIcon" />
+      </Component>
+
+      <!-- Analytics dashboard shortcut -->
+      <Component Id="AnalyticsShortcut" Guid="*">
+        <Shortcut Id="AnalyticsStartMenuShortcut"
+                  Name="Analytics Dashboard"
+                  Description="Advanced Analytics and Market Intelligence"
+                  Target="cmd.exe"
+                  Arguments='/c "cd /d [INSTALLFOLDER] && start http://localhost:8501"'
+                  Icon="AnalyticsIcon" />
+      </Component>
+
+      <!-- Uninstall shortcut -->
+      <Component Id="UninstallShortcut" Guid="*">
+        <Shortcut Id="UninstallProduct"
+                  Name="Uninstall Alabama Auction Watcher"
+                  Description="Remove Alabama Auction Watcher from your computer"
+                  Target="[System64Folder]msiexec.exe"
+                  Arguments="/x [ProductCode]" />
+      </Component>
+
+    </ComponentGroup>
+  </Fragment>
+
+  <!-- Fragment for registry components -->
+  <Fragment>
+    <ComponentGroup Id="RegistryComponents">
+
+      <!-- Application registration -->
+      <Component Id="ApplicationRegistry" Guid="*" Directory="INSTALLFOLDER">
+        <RegistryKey Root="HKLM" Key="Software\AlabamaAuctionWatcher">
+          <RegistryValue Name="InstallLocation" Type="string" Value="[INSTALLFOLDER]" />
+          <RegistryValue Name="Version" Type="string" Value="1.0.0.0" />
+          <RegistryValue Name="Publisher" Type="string" Value="Alabama Auction Watcher Team" />
+          <RegistryValue Name="DisplayName" Type="string" Value="Alabama Auction Watcher" />
+          <RegistryValue Name="UninstallString" Type="string" Value="[System64Folder]msiexec.exe /x [ProductCode]" />
+        </RegistryKey>
+        <RegistryValue Root="HKLM"
+                       Key="Software\AlabamaAuctionWatcher"
+                       Name="Installed"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
+      </Component>
+
+      <!-- URL protocol registration for aaw:// links -->
+      <Component Id="URLProtocolRegistry" Guid="*" Directory="INSTALLFOLDER">
+        <RegistryKey Root="HKCR" Key="aaw">
+          <RegistryValue Type="string" Value="Alabama Auction Watcher Protocol" />
+          <RegistryValue Name="URL Protocol" Type="string" Value="" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="aaw\DefaultIcon">
+          <RegistryValue Type="string" Value="[ICONSFOLDER]alabama-auction-watcher.ico" />
+        </RegistryKey>
+        <RegistryKey Root="HKCR" Key="aaw\shell\open\command">
+          <RegistryValue Type="string" Value='"[INSTALLFOLDER]Alabama Auction Watcher.bat" "%1"' />
+        </RegistryKey>
+        <RegistryValue Root="HKCR"
+                       Key="aaw"
+                       Name="ProtocolHandler"
+                       Type="string"
+                       Value="AlabamaAuctionWatcher"
+                       KeyPath="yes" />
+      </Component>
+
+      <!-- Windows Firewall exception -->
+      <Component Id="FirewallRegistry" Guid="*" Directory="INSTALLFOLDER">
+        <RegistryKey Root="HKLM" Key="System\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\StandardProfile\AuthorizedApplications\List">
+          <RegistryValue Name="[INSTALLFOLDER]Alabama Auction Watcher.bat" Type="string" Value="[INSTALLFOLDER]Alabama Auction Watcher.bat:*:Enabled:Alabama Auction Watcher" />
+        </RegistryKey>
+        <RegistryValue Root="HKLM"
+                       Key="System\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy\StandardProfile\AuthorizedApplications\List"
+                       Name="FirewallConfigured"
+                       Type="string"
+                       Value="AlabamaAuctionWatcher"
+                       KeyPath="yes" />
+      </Component>
+
+      <!-- Auto-start service registration -->
+      <Component Id="ServiceRegistry" Guid="*" Directory="INSTALLFOLDER">
+        <RegistryKey Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Run">
+          <RegistryValue Name="AlabamaAuctionWatcherService" Type="string" Value='"[BACKENDFOLDER]start_backend_api.py" --service --startup' />
+        </RegistryKey>
+        <RegistryValue Root="HKLM"
+                       Key="Software\Microsoft\Windows\CurrentVersion\Run"
+                       Name="ServiceConfigured"
+                       Type="string"
+                       Value="AlabamaAuctionWatcher"
+                       KeyPath="yes" />
+      </Component>
+
+    </ComponentGroup>
+  </Fragment>
+
+  <!-- Icon definitions -->
+  <Icon Id="ProductIcon" SourceFile="..\..\branding\generated\windows\alabama-auction-watcher.ico" />
+  <Icon Id="BackendIcon" SourceFile="..\..\branding\generated\windows\aaw-backend.ico" />
+  <Icon Id="AnalyticsIcon" SourceFile="..\..\branding\generated\windows\aaw-analytics.ico" />
+  <Icon Id="HealthIcon" SourceFile="..\..\branding\generated\windows\aaw-health.ico" />
+  <Icon Id="SettingsIcon" SourceFile="..\..\branding\generated\windows\aaw-settings.ico" />
+
+  <!-- Set product icon in Add/Remove Programs -->
+  <Property Id="ARPPRODUCTICON" Value="ProductIcon" />
+  <Property Id="ARPHELPLINK" Value="https://github.com/Alabama-Auction-Watcher" />
+  <Property Id="ARPURLINFOABOUT" Value="https://github.com/Alabama-Auction-Watcher" />
+  <Property Id="ARPNOMODIFY" Value="1" />
+
+</Wix>

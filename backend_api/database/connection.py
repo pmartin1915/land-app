@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 # Database configuration
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "sqlite:///./alabama_auction_watcher.db"  # Default to SQLite for development
+    "sqlite:///C:/auction/alabama_auction_watcher.db"  # Absolute path to main database
 )
 
 # For production PostgreSQL, use format:

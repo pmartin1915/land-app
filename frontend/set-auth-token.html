@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Set Auth Token</title>
+</head>
+<body>
+    <h1>Setting Auth Token for React UI...</h1>
+    <script>
+        // Store the auth token in localStorage for the React app
+        const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZXZpY2U6ZGVza3RvcC1kZXYtMDAxIiwiZGV2aWNlX2lkIjoiZGVza3RvcC1kZXYtMDAxIiwiYXBwX3ZlcnNpb24iOiIxLjAuMCIsInNjb3BlcyI6WyJwcm9wZXJ0eTpyZWFkIiwicHJvcGVydHk6d3JpdGUiLCJzeW5jOmFsbCJdLCJleHAiOjE3NTg2Nzk1OTMsInR5cGUiOiJhY2Nlc3MifQ.VNwGWp7lFRvFhyKX4JW43Dpf_wEVOwQTwucAtPlgeSc";
+
+        localStorage.setItem('auth_token', token);
+        console.log('Auth token set in localStorage');
+        document.body.innerHTML += '<p>✅ Auth token set successfully!</p><p>You can now <a href="http://localhost:5174">open the React app</a> and it will have access to properties data.</p>';
+    </script>
+</body>
+</html>

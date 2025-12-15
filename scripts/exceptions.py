@@ -8,7 +8,6 @@ and more informative error messages throughout the application.
 
 class AuctionWatcherError(Exception):
     """Base exception class for all auction watcher errors."""
-    pass
 
 
 class DataValidationError(AuctionWatcherError):
@@ -35,7 +34,6 @@ class CountyValidationError(AuctionWatcherError):
 
 class ScrapingError(AuctionWatcherError):
     """Base class for web scraping related errors."""
-    pass
 
 
 class NetworkError(ScrapingError):

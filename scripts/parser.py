@@ -15,7 +15,10 @@ import sys
 from pathlib import Path
 import pandas as pd
 import numpy as np
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
+from datetime import datetime
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Add project root to Python path for imports
 project_root = Path(__file__).parent.parent
@@ -23,8 +26,7 @@ sys.path.insert(0, str(project_root))
 
 from config.settings import (
     MIN_ACRES, MAX_ACRES, MAX_PRICE, RECORDING_FEE, COUNTY_FEE_PERCENT,
-    MISC_FEES, INVESTMENT_SCORE_WEIGHTS, CSV_DELIMITERS, FILE_ENCODINGS,
-    OUTPUT_COLUMNS
+    MISC_FEES, INVESTMENT_SCORE_WEIGHTS, FILE_ENCODINGS, OUTPUT_COLUMNS
 )
 
 from scripts.utils import (
@@ -39,10 +41,9 @@ from scripts.scraper import (
     list_available_counties
 )
 
-from config.logging_config import get_logger, log_processing_metrics, log_error_with_context
+from config.logging_config import get_logger
 from scripts.exceptions import (
-    CountyValidationError, ScrapingError, DataValidationError,
-    FileOperationError, DataProcessingError
+    CountyValidationError, ScrapingError
 )
 
 # Set up logger
@@ -118,12 +119,14 @@ class AuctionParser:
 
         return df
 
-    def map_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+    def map_columns(self, df: pd.DataFrame, input_path: Optional[str] = None, county_name: Optional[str] = None) -> pd.DataFrame:
         """
         Map DataFrame columns to standardized field names.
 
         Args:
             df: Raw DataFrame
+            input_path: Path to the input file to infer metadata
+            county_name: Name of the county if not inferring from path
 
         Returns:
             DataFrame with mapped column names
@@ -136,7 +139,7 @@ class AuctionParser:
 
         # Map each field type
         fields_to_map = ['parcel_id', 'amount', 'assessed_value', 'description',
-                        'acreage', 'year_sold', 'owner_name', 'county']
+                         'acreage', 'year_sold', 'owner_name'] # Removed county
 
         for field in fields_to_map:
             mapped_col = find_column_mapping(df.columns.tolist(), field)
@@ -149,6 +152,34 @@ class AuctionParser:
         # Rename columns in DataFrame
         rename_dict = {v: k for k, v in self.column_mapping.items()}
         mapped_df = mapped_df.rename(columns=rename_dict)
+
+        # --- County and Acreage Correction ---
+        inferred_county = None
+        if county_name:
+            inferred_county = county_name
+            print(f"  county: Using provided county '{inferred_county}'")
+        elif input_path:
+            # Extract county from filename
+            try:
+                filename = os.path.basename(input_path)
+                county_name_from_file = filename.split('_')[1].capitalize()
+                if validate_county_code(county_name_from_file):
+                     inferred_county = county_name_from_file
+                     print(f"  county: Inferred '{inferred_county}' from filename")
+            except Exception:
+                print("  county: NOT FOUND in filename, will be empty")
+        
+        if inferred_county:
+            mapped_df['county'] = inferred_county
+        else:
+            print("  county: NOT FOUND, will be empty")
+            mapped_df['county'] = None
+            
+        # Ensure acreage column exists
+        if 'acreage' not in mapped_df.columns:
+            mapped_df['acreage'] = 0.0
+            print("  acreage: Column not found, initialized with 0.0")
+
 
         return mapped_df
 
@@ -177,10 +208,30 @@ class AuctionParser:
             print("  Normalizing assessed values...")
             df_norm['assessed_value'] = df_norm['assessed_value'].apply(normalize_price)
 
+        # Normalize year_sold
+        if 'year_sold' in df_norm.columns:
+            print("  Normalizing year sold...")
+            current_year = datetime.now().year
+            current_two_digit_year = current_year % 100
+
+            def format_year(y):
+                y = str(y).strip()
+                if not y or not y.isdigit() or y.lower() in ['nan', 'na']:
+                    return None
+                if len(y) == 2:
+                    year_int = int(y)
+                    if year_int > current_two_digit_year:
+                        return str(1900 + year_int)  # e.g. 89 -> 1989
+                    else:
+                        return str(2000 + year_int)  # e.g. 21 -> 2021
+                return y
+            
+            df_norm['year_sold'] = df_norm['year_sold'].apply(format_year)
+
         # Handle acreage
         if 'acreage' in df_norm.columns:
             print("  Normalizing acreage from direct column...")
-            df_norm['acreage'] = df_norm['acreage'].apply(normalize_price)  # Reuse price normalization for numbers
+            df_norm['acreage'] = pd.to_numeric(df_norm['acreage'], errors='coerce')
 
         # Infer acreage from descriptions if requested and no direct acreage column
         if self.infer_acres and ('acreage' not in df_norm.columns or df_norm['acreage'].isna().all()):
@@ -224,8 +275,8 @@ class AuctionParser:
             df_filtered = df_filtered[price_mask]
             print(f"  After price filter (<=${self.max_price:,.0f}): {len(df_filtered)} records")
 
-        # Filter by acreage
-        if 'acreage' in df_filtered.columns:
+        # Filter by acreage only if it was a mapped column
+        if 'acreage' in self.column_mapping and 'acreage' in df_filtered.columns:
             acreage_mask = (
                 (df_filtered['acreage'].notna()) &
                 (df_filtered['acreage'] >= self.min_acres) &
@@ -233,6 +284,8 @@ class AuctionParser:
             )
             df_filtered = df_filtered[acreage_mask]
             print(f"  After acreage filter ({self.min_acres}-{self.max_acres} acres): {len(df_filtered)} records")
+        elif 'acreage' in df_filtered.columns:
+            print("  Skipping acreage filter as the column was not in the original file.")
 
         # Remove records without essential data
         essential_cols = ['amount', 'description']
@@ -451,7 +504,7 @@ class AuctionParser:
             self.original_records = len(df)
 
             # Process the scraped data through the same pipeline as CSV files
-            df = self.map_columns(df)
+            df = self.map_columns(df, county_name=county_name)
             df = self.normalize_data(df)
             df = self.apply_filters(df)
             df = self.calculate_metrics(df)
@@ -506,7 +559,7 @@ class AuctionParser:
         try:
             # Load and process the data
             df = self.load_csv_file(input_path)
-            df = self.map_columns(df)
+            df = self.map_columns(df, input_path=input_path)
             df = self.normalize_data(df)
             df = self.apply_filters(df)
             df = self.calculate_metrics(df)
@@ -544,6 +597,194 @@ class AuctionParser:
             raise
 
 
+def process_single_county(county: str, auction_parser: 'AuctionParser', max_pages: int, output_dir: str) -> Dict[str, Any]:
+    """
+    Process a single county with error handling.
+
+    Args:
+        county: County code or name
+        auction_parser: AuctionParser instance
+        max_pages: Maximum pages to scrape
+        output_dir: Directory to save individual county files
+
+    Returns:
+        Dictionary with processing results
+    """
+    try:
+        from scripts.scraper import scrape_county_data, get_county_name, validate_county_code
+
+        # Validate county and get info
+        county_code = validate_county_code(county)
+        county_name = get_county_name(county_code)
+
+        print(f"Processing {county_name} County ({county_code})...")
+
+        # Scrape data
+        raw_df = scrape_county_data(county, max_pages=max_pages, save_raw=True)
+
+        if raw_df.empty:
+            return {
+                'county': county_name,
+                'status': 'empty',
+                'properties': 0,
+                'data': None,
+                'error': None
+            }
+
+        # Process data using the same pipeline as single county processing
+        processed_df = auction_parser.map_columns(raw_df, county_name=county_name)
+        processed_df = auction_parser.normalize_data(processed_df)
+        processed_df = auction_parser.apply_filters(processed_df)
+        processed_df = auction_parser.calculate_metrics(processed_df)
+        processed_df = auction_parser.rank_properties(processed_df)
+
+        # Save individual county file
+        county_output = f"{output_dir}/{county_name.lower()}_watchlist.csv"
+        processed_df.to_csv(county_output, index=False)
+
+        print(f"SUCCESS {county_name}: {len(processed_df)} properties processed")
+
+        return {
+            'county': county_name,
+            'status': 'success',
+            'properties': len(processed_df),
+            'data': processed_df,
+            'error': None,
+            'file': county_output
+        }
+
+    except Exception as e:
+        print(f"ERROR {county}: {str(e)}")
+        return {
+            'county': county,
+            'status': 'error',
+            'properties': 0,
+            'data': None,
+            'error': str(e)
+        }
+
+
+def process_batch_counties(counties: List[str], auction_parser: 'AuctionParser', output_path: str,
+                         max_pages: int, batch_delay: float, max_workers: int) -> Dict[str, Any]:
+    """
+    Process multiple counties in batch with rate limiting and progress reporting.
+
+    Args:
+        counties: List of county codes or names
+        auction_parser: AuctionParser instance
+        output_path: Path for combined output file
+        max_pages: Maximum pages to scrape per county
+        batch_delay: Delay between counties in seconds
+        max_workers: Maximum concurrent workers
+
+    Returns:
+        Dictionary with batch processing summary
+    """
+    import os
+    from pathlib import Path
+
+    print(f"\n{'='*60}")
+    print(f"BATCH PROCESSING: {len(counties)} counties")
+    print(f"Max workers: {max_workers}, Delay: {batch_delay}s, Max pages: {max_pages}")
+    print(f"{'='*60}")
+
+    # Create output directory for individual county files
+    output_dir = Path(output_path).parent / "batch_results"
+    output_dir.mkdir(exist_ok=True)
+
+    results = []
+    combined_data = []
+    start_time = time.time()
+
+    # Process counties with controlled concurrency and rate limiting
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all tasks
+        future_to_county = {}
+        for i, county in enumerate(counties):
+            if i > 0:  # Add delay between submissions
+                time.sleep(batch_delay)
+
+            future = executor.submit(
+                process_single_county,
+                county,
+                auction_parser,
+                max_pages,
+                str(output_dir)
+            )
+            future_to_county[future] = county
+
+        # Collect results as they complete
+        completed = 0
+        for future in as_completed(future_to_county):
+            county = future_to_county[future]
+            result = future.result()
+            results.append(result)
+
+            if result['data'] is not None:
+                combined_data.append(result['data'])
+
+            completed += 1
+            print(f"Progress: {completed}/{len(counties)} counties completed")
+
+    # Combine all successful results
+    if combined_data:
+        combined_df = pd.concat(combined_data, ignore_index=True)
+
+        # Re-rank the combined data
+        if 'investment_score' in combined_df.columns:
+            combined_df = combined_df.sort_values('investment_score', ascending=False).reset_index(drop=True)
+            # Remove existing rank column if it exists, then add new one
+            if 'rank' in combined_df.columns:
+                combined_df = combined_df.drop('rank', axis=1)
+            combined_df.insert(0, 'rank', range(1, len(combined_df) + 1))
+
+        # Save combined file
+        combined_df.to_csv(output_path, index=False)
+    else:
+        combined_df = pd.DataFrame()
+
+    # Calculate summary statistics
+    successful_counties = [r for r in results if r['status'] == 'success']
+    failed_counties = [r for r in results if r['status'] == 'error']
+    empty_counties = [r for r in results if r['status'] == 'empty']
+
+    total_time = time.time() - start_time
+    total_properties = sum(r['properties'] for r in results)
+
+    # Print summary
+    print(f"\n{'='*60}")
+    print(f"BATCH PROCESSING COMPLETE")
+    print(f"{'='*60}")
+    print(f"Total time: {total_time:.1f}s")
+    print(f"Successful: {len(successful_counties)} counties")
+    print(f"Empty: {len(empty_counties)} counties")
+    print(f"Failed: {len(failed_counties)} counties")
+    print(f"Total properties: {total_properties}")
+
+    if failed_counties:
+        print(f"\nFailed counties:")
+        for result in failed_counties:
+            print(f"  - {result['county']}: {result['error']}")
+
+    if empty_counties:
+        print(f"\nEmpty counties:")
+        for result in empty_counties:
+            print(f"  - {result['county']}")
+
+    print(f"\nIndividual county files saved to: {output_dir}")
+    print(f"Combined watchlist saved to: {output_path}")
+
+    return {
+        'total_counties': len(counties),
+        'successful_counties': len(successful_counties),
+        'failed_counties': len(failed_counties),
+        'empty_counties': len(empty_counties),
+        'total_properties': total_properties,
+        'total_time': total_time,
+        'results': results
+    }
+
+
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -574,12 +815,29 @@ Examples:
         '--scrape-county',
         help='Scrape data directly from ADOR website. Use county code (e.g., "05") or name (e.g., "Baldwin")'
     )
+    parser.add_argument(
+        '--scrape-counties',
+        nargs='+',
+        help='Batch scrape multiple counties. Use county codes or names separated by spaces (e.g., "05 37 49" or "Baldwin Jefferson Mobile")'
+    )
 
     parser.add_argument(
         '--max-pages',
         type=int,
         default=10,
         help='Maximum pages to scrape from ADOR website (default: 10)'
+    )
+    parser.add_argument(
+        '--batch-delay',
+        type=float,
+        default=2.0,
+        help='Delay between counties in batch processing (seconds, default: 2.0)'
+    )
+    parser.add_argument(
+        '--max-workers',
+        type=int,
+        default=3,
+        help='Maximum concurrent workers for batch processing (default: 3)'
     )
 
     parser.add_argument(
@@ -632,14 +890,16 @@ Examples:
         print(f"\nTotal: {len(counties)} counties")
         return
 
-    # Validate that either input or scrape-county is provided
-    if not args.input and not args.scrape_county:
-        print("Error: Must specify either --input (CSV file) or --scrape-county")
+    # Validate that exactly one input method is provided
+    input_methods = [args.input, args.scrape_county, args.scrape_counties]
+    provided_methods = sum(1 for method in input_methods if method)
+
+    if provided_methods == 0:
+        print("Error: Must specify either --input (CSV file), --scrape-county (single), or --scrape-counties (batch)")
         print("Use --help for usage examples")
         sys.exit(1)
-
-    if args.input and args.scrape_county:
-        print("Error: Cannot specify both --input and --scrape-county. Choose one.")
+    if provided_methods > 1:
+        print("Error: Cannot specify multiple input methods. Choose one of: --input, --scrape-county, or --scrape-counties")
         sys.exit(1)
 
     # Set default output path if not provided
@@ -656,7 +916,7 @@ Examples:
 
     try:
         if args.scrape_county:
-            # Scrape data from ADOR website
+            # Scrape data from ADOR website (single county)
             summary = auction_parser.process_scraped_data(
                 county_input=args.scrape_county,
                 output_path=args.output,
@@ -665,13 +925,27 @@ Examples:
             print(f"\nScraping and processing completed successfully!")
             print(f"Watchlist saved to: {args.output}")
 
+        elif args.scrape_counties:
+            # Batch scrape multiple counties
+            combined_summary = process_batch_counties(
+                counties=args.scrape_counties,
+                auction_parser=auction_parser,
+                output_path=args.output,
+                max_pages=args.max_pages,
+                batch_delay=args.batch_delay,
+                max_workers=args.max_workers
+            )
+            print(f"\nBatch processing completed successfully!")
+            print(f"Combined watchlist saved to: {args.output}")
+            print(f"Processed {len(args.scrape_counties)} counties with {combined_summary['total_properties']} total properties")
+
         else:
             # Process CSV file
             if not os.path.exists(args.input):
                 print(f"Error: Input file does not exist: {args.input}")
                 sys.exit(1)
 
-            summary = auction_parser.process_file(args.input, args.output)
+            auction_parser.process_file(args.input, args.output)
             print(f"\nProcessing completed successfully!")
             print(f"Watchlist saved to: {args.output}")
 

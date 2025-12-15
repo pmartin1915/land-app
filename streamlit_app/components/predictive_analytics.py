@@ -39,12 +39,12 @@ from streamlit_app.core.cache_manager import smart_cache
 logger = logging.getLogger(__name__)
 
 
-@st.cache_data(ttl=1800)  # Cache for 30 minutes
+@st.cache_data(ttl=1800, max_entries=3)  # Cache for 30 minutes, limit entries
 @smart_cache(cache_type="computed_result", ttl_seconds=1800, key_prefix="predictive_dashboard")
 @monitor_performance("predictive_dashboard_data_loading")
 def load_predictive_analytics_data(properties_data: List[Dict]) -> Dict[str, Any]:
     """
-    Load and process data for predictive analytics dashboard.
+    Load and process data for predictive analytics dashboard with chunking for large datasets.
 
     Args:
         properties_data: List of property data from the main app
@@ -62,79 +62,96 @@ def load_predictive_analytics_data(properties_data: List[Dict]) -> Dict[str, Any
             "performance_metrics": {}
         }
 
-    engine = get_predictive_engine()
+    # Limit dataset size to prevent connection timeouts
+    max_properties = min(len(properties_data), 25)  # Reduced from 50 to 25
+    sample_data = properties_data[:max_properties]
 
-    # Process appreciation forecasts for top properties
-    forecasts = []
-    for prop in properties_data[:50]:  # Limit to top 50 for performance
-        county = prop.get("county", "")
-        if county:
+    try:
+        engine = get_predictive_engine()
+
+        # Process appreciation forecasts for top properties with error handling
+        forecasts = []
+        for i, prop in enumerate(sample_data):
             try:
-                forecast = engine.predict_property_appreciation(
-                    prop, county, prop.get("investment_score", 50)
-                )
+                county = prop.get("county", "")
+                if county:
+                    forecast = engine.predict_property_appreciation(
+                        prop, county, prop.get("investment_score", 50)
+                    )
 
-                forecasts.append({
-                    "property_id": prop.get("id", ""),
-                    "county": county,
-                    "current_score": prop.get("investment_score", 50),
-                    "price_per_acre": prop.get("price_per_acre", 0),
-                    "acreage": prop.get("acreage", 0),
-                    "one_year": forecast.one_year_appreciation,
-                    "three_year": forecast.three_year_appreciation,
-                    "five_year": forecast.five_year_appreciation,
-                    "confidence": forecast.confidence_level.value,
-                    "risk_score": forecast.risk_score,
-                    "market_trend": forecast.market_trend.value
-                })
+                    forecasts.append({
+                        "property_id": prop.get("id", ""),
+                        "county": county,
+                        "current_score": prop.get("investment_score", 50),
+                        "price_per_acre": prop.get("price_per_acre", 0),
+                        "acreage": prop.get("acreage", 0),
+                        "one_year": forecast.one_year_appreciation,
+                        "three_year": forecast.three_year_appreciation,
+                        "five_year": forecast.five_year_appreciation,
+                        "confidence": forecast.confidence_level.value,
+                        "risk_score": forecast.risk_score,
+                        "market_trend": forecast.market_trend.value
+                    })
             except Exception as e:
                 logger.warning(f"Failed to generate forecast for property {prop.get('id')}: {e}")
+                # Continue processing other properties
 
-    # Analyze market timing by county
-    counties = list(set(prop.get("county", "") for prop in properties_data if prop.get("county")))
-    market_timing = {}
+        # Analyze market timing by county (limit to prevent timeouts)
+        counties = list(set(prop.get("county", "") for prop in sample_data if prop.get("county")))
+        market_timing = {}
 
-    for county in counties[:10]:  # Limit to top 10 counties
+        for county in counties[:5]:  # Reduced from 10 to 5 counties
+            try:
+                timing = engine.analyze_market_timing(county)
+                market_timing[county] = {
+                    "market_phase": timing.current_market_phase,
+                    "buy_window": timing.optimal_buy_window,
+                    "sell_window": timing.optimal_sell_window,
+                    "price_momentum": timing.price_momentum,
+                    "volatility": timing.market_volatility,
+                    "confidence": timing.confidence_score
+                }
+            except Exception as e:
+                logger.warning(f"Failed to analyze market timing for {county}: {e}")
+
+        # Detect emerging opportunities (reduced dataset)
+        opportunities = []
         try:
-            timing = engine.analyze_market_timing(county)
-            market_timing[county] = {
-                "market_phase": timing.current_market_phase,
-                "buy_window": timing.optimal_buy_window,
-                "sell_window": timing.optimal_sell_window,
-                "price_momentum": timing.price_momentum,
-                "volatility": timing.market_volatility,
-                "confidence": timing.confidence_score
-            }
+            opportunities_data = engine.detect_emerging_opportunities(sample_data, top_n=10)  # Reduced from 20 to 10
+            for opp in opportunities_data:
+                opportunities.append({
+                    "property_id": opp.property_id,
+                    "county": opp.county,
+                    "opportunity_type": opp.opportunity_type,
+                    "score": opp.opportunity_score,
+                    "potential_appreciation": opp.potential_appreciation,
+                    "risk_adjusted_return": opp.risk_adjusted_return,
+                    "timeline_months": opp.expected_timeline_months,
+                    "confidence": opp.confidence_level.value,
+                    "primary_drivers": opp.primary_drivers,
+                    "risk_factors": opp.risk_factors
+                })
         except Exception as e:
-            logger.warning(f"Failed to analyze market timing for {county}: {e}")
+            logger.warning(f"Failed to detect opportunities: {e}")
 
-    # Detect emerging opportunities
-    opportunities = []
-    try:
-        opportunities_data = engine.detect_emerging_opportunities(properties_data, top_n=20)
-        for opp in opportunities_data:
-            opportunities.append({
-                "property_id": opp.property_id,
-                "county": opp.county,
-                "opportunity_type": opp.opportunity_type,
-                "score": opp.opportunity_score,
-                "potential_appreciation": opp.potential_appreciation,
-                "risk_adjusted_return": opp.risk_adjusted_return,
-                "timeline_months": opp.expected_timeline_months,
-                "confidence": opp.confidence_level.value,
-                "primary_drivers": opp.primary_drivers,
-                "risk_factors": opp.risk_factors
-            })
+        return {
+            "appreciation_forecasts": forecasts,
+            "market_timing": market_timing,
+            "opportunities": opportunities,
+            "county_insights": _analyze_county_insights(forecasts, market_timing),
+            "performance_metrics": _calculate_performance_metrics(forecasts)
+        }
+
     except Exception as e:
-        logger.warning(f"Failed to detect opportunities: {e}")
-
-    return {
-        "appreciation_forecasts": forecasts,
-        "market_timing": market_timing,
-        "opportunities": opportunities,
-        "county_insights": _analyze_county_insights(forecasts, market_timing),
-        "performance_metrics": _calculate_performance_metrics(forecasts)
-    }
+        # Return fallback data structure if main processing fails
+        logger.error(f"Predictive analytics processing failed: {e}")
+        return {
+            "appreciation_forecasts": [],
+            "market_timing": {},
+            "opportunities": [],
+            "county_insights": {"error": "Failed to load insights"},
+            "performance_metrics": {"error": "Failed to calculate metrics"}
+        }
 
 
 def _analyze_county_insights(forecasts: List[Dict], market_timing: Dict) -> Dict[str, Any]:
@@ -335,7 +352,7 @@ def display_emerging_opportunities(opportunities: List[Dict]) -> None:
         st.warning("No emerging opportunities detected in current dataset.")
         return
 
-    st.subheader(f"🎯 Top {len(opportunities)} Emerging Opportunities")
+    st.subheader(f"Top {len(opportunities)} Emerging Opportunities")
 
     # Create opportunities DataFrame
     df = pd.DataFrame(opportunities)
@@ -378,33 +395,75 @@ def display_emerging_opportunities(opportunities: List[Dict]) -> None:
             if opp['risk_factors']:
                 st.write("**Risk Factors:**")
                 for risk in opp['risk_factors']:
-                    st.write(f"⚠️ {risk}")
+                    st.write(f"Risk: {risk}")
 
 
 @monitor_performance("predictive_analytics_dashboard")
 def display_predictive_analytics_dashboard(properties_data: List[Dict]) -> None:
     """
-    Main function to display the predictive analytics dashboard.
+    Main function to display the predictive analytics dashboard with robust error handling.
 
     Args:
         properties_data: List of property data from the main application
     """
 
-    st.title("🔮 Market Intelligence Dashboard")
+    st.title("Market Intelligence Dashboard")
     st.markdown("Advanced predictive analytics for Alabama property investments")
 
-    # Load analytics data
-    with st.spinner("Generating market intelligence predictions..."):
-        analytics_data = load_predictive_analytics_data(properties_data)
+    # Check data size and warn user if large
+    data_size = len(properties_data) if properties_data else 0
+    if data_size > 100:
+        st.info(f"Processing {data_size:,} properties. Using optimized sample of top 25 properties for analysis.")
 
-    if not analytics_data["appreciation_forecasts"]:
-        st.error("Unable to generate predictive analytics. Please ensure property data is available.")
+    # Load analytics data with error handling
+    try:
+        with st.spinner("Generating market intelligence predictions..."):
+            analytics_data = load_predictive_analytics_data(properties_data)
+
+        # Check for error conditions
+        if analytics_data.get("county_insights", {}).get("error"):
+            st.warning("Some analytics features are experiencing issues. Showing available data.")
+
+        if not analytics_data["appreciation_forecasts"] and not analytics_data.get("county_insights", {}).get("error"):
+            st.error("Unable to generate predictive analytics. Please ensure property data is available and try refreshing.")
+            return
+
+        # Show partial results even if some components failed
+        if analytics_data["appreciation_forecasts"] or analytics_data["market_timing"] or analytics_data["opportunities"]:
+            st.success(f"Successfully analyzed {len(analytics_data['appreciation_forecasts'])} properties")
+        else:
+            st.error("No analytics data could be generated. The system may be experiencing high load.")
+            return
+
+    except Exception as e:
+        st.error(f"Market Intelligence temporarily unavailable: Connection timeout with large dataset.")
+        st.info("**Solutions**: Try reducing data size with filters, or refresh the page to retry.")
+
+        # Show simplified fallback information
+        with st.expander("Alternative Analysis Options", expanded=True):
+            st.markdown("""
+            **While Market Intelligence loads, you can:**
+
+            1. **Use Main Dashboard** - View property scores and basic analytics
+            2. **Apply Filters** - Reduce dataset size (try county-specific or price range filters)
+            3. **County Deep Dive** - Analyze specific counties in detail
+            4. **Property Application Assistant** - Calculate ROI for individual properties
+
+            **Technical Info**: The Market Intelligence tab requires significant processing power.
+            Large datasets (1,000+ properties) may experience timeout issues.
+            """)
+
+            if data_size > 0:
+                st.write(f"**Current Dataset**: {data_size:,} properties")
+                st.write(f"**Recommended**: Use filters to reduce to < 500 properties")
+
+        logger.error(f"Dashboard display error: {e}")
         return
 
     # Display performance metrics
     metrics = analytics_data["performance_metrics"]
     if metrics:
-        st.subheader("📊 Analytics Overview")
+        st.subheader("Analytics Overview")
 
         col1, col2, col3, col4 = st.columns(4)
 
@@ -437,10 +496,10 @@ def display_predictive_analytics_dashboard(properties_data: List[Dict]) -> None:
 
     # Create tabs for different analytics views
     tab1, tab2, tab3, tab4 = st.tabs([
-        "📈 Appreciation Forecasts",
-        "⏰ Market Timing",
-        "💎 Emerging Opportunities",
-        "🗺️ County Insights"
+        "Appreciation Forecasts",
+        "Market Timing",
+        "Emerging Opportunities",
+        "County Insights"
     ])
 
     with tab1:
@@ -471,11 +530,11 @@ def display_predictive_analytics_dashboard(properties_data: List[Dict]) -> None:
                     st.write(f"**{county}**")
                 with col2:
                     phase_color = {
-                        "buyer_market": "🟢",
-                        "seller_market": "🔴",
-                        "balanced": "🟡"
+                        "buyer_market": "Good",
+                        "seller_market": "High",
+                        "balanced": "Neutral"
                     }
-                    st.write(f"{phase_color.get(timing['market_phase'], '⚪')} {timing['market_phase'].replace('_', ' ').title()}")
+                    st.write(f"{phase_color.get(timing['market_phase'], 'Normal')} {timing['market_phase'].replace('_', ' ').title()}")
                 with col3:
                     st.write(f"Buy: {timing['buy_window'][0]}-{timing['buy_window'][1]}")
 
@@ -514,7 +573,7 @@ def display_predictive_analytics_dashboard(properties_data: List[Dict]) -> None:
             st.dataframe(county_df_sorted, use_container_width=True)
 
     # Add refresh button
-    if st.button("🔄 Refresh Predictions", type="primary"):
+    if st.button("Refresh Predictions", type="primary"):
         st.cache_data.clear()
         st.rerun()
 

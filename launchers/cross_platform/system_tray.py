@@ -45,8 +45,8 @@ try:
 except ImportError:
     TRAY_AVAILABLE = False
 
-# Import our service monitor from the main launcher
-from smart_launcher import ServiceMonitor, ServiceStatus
+# Import our service components from the main launcher
+from smart_launcher import ServiceMonitor, ServiceStatus, ServiceOrchestrator, PortManager
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +57,7 @@ class SystemTrayManager:
         self.monitor = ServiceMonitor()
         self.icon = None
         self.is_running = False
+        self.orchestrator = None
         self.script_dir = Path(__file__).parent.parent.parent.absolute()
 
         if not TRAY_AVAILABLE:
@@ -143,6 +144,15 @@ class SystemTrayManager:
             ),
             item("─" * 20, lambda: None, enabled=False),  # Separator
             item(
+                "⚡ Full Stack Launch",
+                self.launch_full_stack
+            ),
+            item(
+                "🖥️ Desktop Application",
+                self.launch_desktop_app
+            ),
+            item("─" * 15, lambda: None, enabled=False),  # Sub-separator
+            item(
                 "🏠 Launch Main Dashboard",
                 self.launch_main_dashboard
             ),
@@ -203,6 +213,72 @@ class SystemTrayManager:
             return [item("Error loading status", lambda: None, enabled=False)]
 
     # Action methods
+    def launch_full_stack(self, icon=None, item=None):
+        """Launch the complete Alabama Auction Watcher stack with orchestration"""
+        try:
+            # Create orchestrator with status callback
+            if not self.orchestrator:
+                self.orchestrator = ServiceOrchestrator(
+                    self.script_dir,
+                    lambda msg: self.show_notification("Alabama Auction Watcher", msg.replace("🚀", "").replace("✅", "").strip())
+                )
+
+            # Show starting notification
+            self.show_notification("Alabama Auction Watcher", "Starting full stack launch...")
+
+            # Run orchestration in background thread
+            def run_orchestration():
+                try:
+                    success = self.orchestrator.launch_full_stack()
+                    if success:
+                        self.show_notification("Alabama Auction Watcher", f"🎉 Ready! Open: http://localhost:{self.orchestrator.ports['frontend']}")
+                        # Auto-open browser
+                        import webbrowser
+                        webbrowser.open(f"http://localhost:{self.orchestrator.ports['frontend']}")
+                    else:
+                        self.show_notification("Alabama Auction Watcher", "❌ Launch failed - check system resources")
+                except Exception as e:
+                    self.show_notification("Error", f"Launch error: {str(e)}")
+
+            import threading
+            orchestration_thread = threading.Thread(target=run_orchestration, daemon=True)
+            orchestration_thread.start()
+
+        except Exception as e:
+            logger.error(f"Error launching full stack: {e}")
+            self.show_notification("Error", f"Failed to start full stack: {e}")
+
+    def launch_desktop_app(self, icon=None, item=None):
+        """Launch the Electron desktop application"""
+        try:
+            # Check if frontend is running first
+            frontend_port = 5173  # Default port
+            if self.orchestrator and self.orchestrator.ports.get('frontend'):
+                frontend_port = self.orchestrator.ports['frontend']
+
+            import requests
+            try:
+                requests.get(f"http://localhost:{frontend_port}", timeout=2)
+                # Frontend is running, launch Electron
+                frontend_dir = self.script_dir / "frontend"
+
+                if platform.system() == "Windows":
+                    import subprocess
+                    subprocess.Popen(["npm.cmd", "run", "electron"], cwd=str(frontend_dir))
+                else:
+                    import subprocess
+                    subprocess.Popen(["npm", "run", "electron"], cwd=str(frontend_dir))
+
+                self.show_notification("Alabama Auction Watcher", "Desktop application launching...")
+
+            except requests.exceptions.RequestException:
+                # Frontend not running, suggest full stack launch
+                self.show_notification("Alabama Auction Watcher", "Please use 'Full Stack Launch' first to start all services")
+
+        except Exception as e:
+            logger.error(f"Error launching desktop app: {e}")
+            self.show_notification("Error", f"Failed to launch desktop app: {e}")
+
     def launch_main_dashboard(self, icon=None, item=None):
         """Launch the main Streamlit dashboard"""
         try:
