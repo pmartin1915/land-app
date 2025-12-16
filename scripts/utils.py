@@ -160,20 +160,55 @@ def parse_acreage_from_description(description: str) -> Optional[float]:
         except ValueError:
             pass
 
-    # Try rectangular dimensions
-    rect_match = re.search(ACREAGE_PATTERNS['rectangular'], description, re.IGNORECASE)
-    if rect_match:
+    # Try rectangular dimensions with improved patterns
+    # Pattern 1: Handles "75' X 150'", "75'X150'", "75X150", "75 X 150", "75 BY 150"
+    dimension_patterns = [
+        r'(\d+\.?\d*)\s*[\'\"]?\s*[Xx×BY]+\s*[\'\"]?\s*(\d+\.?\d*)',  # Flexible pattern
+        r'(\d+\.?\d*)\s*[\'\"\-]\s*[Xx×]\s*[\'\"\-]\s*(\d+\.?\d*)',   # With dashes
+        ACREAGE_PATTERNS['rectangular']  # Original pattern as fallback
+    ]
+    
+    for pattern in dimension_patterns:
+        rect_match = re.search(pattern, description, re.IGNORECASE)
+        if rect_match:
+            try:
+                dim1 = float(rect_match.group(1))
+                dim2 = float(rect_match.group(2))
+                
+                # Validate dimensions are reasonable for a lot (10-2000 feet)
+                if (10 <= dim1 <= 2000) and (10 <= dim2 <= 2000):
+                    sq_ft = dim1 * dim2
+                    acres = sq_ft / 43560  # Convert square feet to acres
+                    
+                    # Validate calculated acreage is reasonable
+                    if MIN_REASONABLE_ACRES <= acres <= MAX_REASONABLE_ACRES:
+                        return acres
+            except (ValueError, IndexError):
+                continue
+
+    # Fallback: Look for two consecutive numbers that could be dimensions
+    # This catches cases like "LOT 100 200" or "PARCEL 75 150"
+    number_pattern = r'\b(\d{2,4})\s+(\d{2,4})\b'
+    number_matches = re.findall(number_pattern, description)
+    
+    for match in number_matches:
         try:
-            dim1 = float(rect_match.group(1))
-            dim2 = float(rect_match.group(2))
-            sq_ft = dim1 * dim2
-            acres = sq_ft / 43560  # Convert square feet to acres
-            if MIN_REASONABLE_ACRES <= acres <= MAX_REASONABLE_ACRES:
-                return acres
-        except ValueError:
-            pass
+            dim1 = float(match[0])
+            dim2 = float(match[1])
+            
+            # Only use if they look like lot dimensions (not parcel IDs, etc.)
+            if (10 <= dim1 <= 2000) and (10 <= dim2 <= 2000):
+                sq_ft = dim1 * dim2
+                acres = sq_ft / 43560
+                
+                # Be more strict with fallback - must be in very reasonable range
+                if 0.05 <= acres <= 10.0:  # 0.05 to 10 acres for fallback
+                    return acres
+        except (ValueError, IndexError):
+            continue
 
     return None
+
 
 
 def calculate_water_score(description: str) -> float:
@@ -253,11 +288,23 @@ def calculate_investment_score(price_per_acre: float,
     Returns:
         Composite investment score (higher is better)
     """
+    # Validate inputs - return 0 for invalid properties
+    if not isinstance(price_per_acre, (int, float)) or not np.isfinite(price_per_acre):
+        price_per_acre = 0
+    if not isinstance(acreage, (int, float)) or not np.isfinite(acreage) or acreage <= 0:
+        return 0.0  # Invalid property - no acreage data
+    if not isinstance(water_score, (int, float)) or not np.isfinite(water_score):
+        water_score = 0
+    if not isinstance(assessed_value_ratio, (int, float)) or not np.isfinite(assessed_value_ratio):
+        assessed_value_ratio = 1.0
+    
     score = 0.0
 
     # Price per acre score (lower is better, so invert)
     if price_per_acre > 0:
         # Normalize to 0-100 scale, with lower prices getting higher scores
+        # Cap at minimum to prevent extremely low prices from dominating score
+        price_per_acre = max(price_per_acre, 1.0)
         max_price_score = min(100, 10000 / price_per_acre)
         score += max_price_score * weights.get('price_per_acre', 0.0)
 
@@ -320,12 +367,37 @@ def validate_data_quality(df: pd.DataFrame) -> Dict[str, Any]:
         if null_parcels > 0:
             results['warnings'].append(f"{null_parcels} records missing parcel ID")
 
-    # Check for unrealistic values
+    # Check for acreage issues
+    if 'acreage' in df.columns:
+        zero_acreage = (df['acreage'] == 0).sum()
+        null_acreage = df['acreage'].isna().sum()
+        tiny_acreage = ((df['acreage'] > 0) & (df['acreage'] < 0.01)).sum()
+        
+        if zero_acreage > 0:
+            pct = (zero_acreage / len(df)) * 100
+            results['warnings'].append(f"{zero_acreage} records ({pct:.1f}%) have zero acreage")
+        
+        if null_acreage > 0:
+            pct = (null_acreage / len(df)) * 100
+            results['warnings'].append(f"{null_acreage} records ({pct:.1f}%) missing acreage")
+            
+        if tiny_acreage > 0:
+            pct = (tiny_acreage / len(df)) * 100
+            results['warnings'].append(f"{tiny_acreage} records ({pct:.1f}%) have very small acreage (<0.01 acres)")
+
+    # Check for unrealistic price per acre values
     if 'price_per_acre' in df.columns:
+        # Check for infinite values
+        inf_ppa = np.isinf(df['price_per_acre']).sum()
+        if inf_ppa > 0:
+            results['issues'].append(f"{inf_ppa} records have infinite price per acre")
+        
+        # Check for extremely high values
         high_price_per_acre = (df['price_per_acre'] > MAX_REASONABLE_PRICE_PER_ACRE).sum()
         if high_price_per_acre > 0:
+            pct = (high_price_per_acre / len(df)) * 100
             results['warnings'].append(
-                f"{high_price_per_acre} records have unusually high price per acre"
+                f"{high_price_per_acre} records ({pct:.1f}%) have unusually high price per acre (>${MAX_REASONABLE_PRICE_PER_ACRE:,.0f})"
             )
 
     return results

@@ -315,10 +315,22 @@ class AuctionParser:
         print("Calculating investment metrics...")
         df_metrics = df.copy()
 
-        # Calculate price per acre
+        # Calculate price per acre with zero-division protection
         if 'amount' in df_metrics.columns and 'acreage' in df_metrics.columns:
-            df_metrics['price_per_acre'] = df_metrics['amount'] / df_metrics['acreage']
-            print(f"  Calculated price per acre for {df_metrics['price_per_acre'].notna().sum()} properties")
+            # Safe division - avoid division by zero or near-zero
+            df_metrics['price_per_acre'] = np.where(
+                df_metrics['acreage'] > 0.001,  # Minimum threshold (1/1000th acre)
+                df_metrics['amount'] / df_metrics['acreage'],
+                np.nan  # Mark as invalid instead of infinity
+            )
+            
+            valid_ppa = df_metrics['price_per_acre'].notna().sum()
+            invalid_acreage = (df_metrics['acreage'] <= 0.001).sum()
+            
+            print(f"  Calculated price per acre for {valid_ppa} properties")
+            if invalid_acreage > 0:
+                pct_invalid = (invalid_acreage / len(df_metrics)) * 100
+                print(f"  WARNING: {invalid_acreage} properties ({pct_invalid:.1f}%) have invalid acreage (<=0.001)")
 
         # Calculate estimated all-in cost
         if 'amount' in df_metrics.columns:
