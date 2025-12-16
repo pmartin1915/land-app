@@ -508,3 +508,25 @@ def generate_test_dataset(factory_name: str, method_name: str, **kwargs) -> Any:
 
     method = getattr(factory, method_name)
     return method(**kwargs)
+
+
+# Convenience functions for backwards compatibility
+def create_sample_property_data(**kwargs) -> Dict[str, Any]:
+    """Create a single sample property data dictionary."""
+    return PropertyDataFactory(**kwargs)
+
+
+def create_sample_csv_content(num_records: int = 10) -> str:
+    """Create sample CSV content as a string."""
+    df = CSVDataFactory.create_ador_csv_format(num_records=num_records)
+    return df.to_csv(index=False)
+
+
+def create_complex_property_data(num_records: int = 50) -> List[Dict[str, Any]]:
+    """Create a batch of complex property data with varied characteristics."""
+    return PropertyDataFactory.create_batch_with_distribution(num_records, water_percentage=0.4)
+
+
+def create_water_feature_data(water_type: str = "random", **kwargs) -> Dict[str, Any]:
+    """Create property data with specific water features."""
+    return PropertyDataFactory.with_water_features(water_type=water_type, **kwargs)
