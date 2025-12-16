@@ -201,6 +201,10 @@ def property_factory():
     return PropertyDataFactory
 
 
+# Store original open to avoid recursion
+_original_open = open
+
+
 @pytest.fixture(autouse=True)
 def mock_file_operations():
     """Auto-used fixture to prevent actual file operations during tests."""
@@ -212,13 +216,13 @@ def mock_safe_file_operations(*args, **kwargs):
     """Safe mock for file operations that prevents accidental file creation."""
     if len(args) > 0 and isinstance(args[0], (str, Path)):
         file_path = str(args[0])
-        # Allow reading test fixtures but prevent writing to real paths
-        if 'test' in file_path.lower() or 'fixture' in file_path.lower():
-            return open(*args, **kwargs)
+        # Allow reading test fixtures, temp files, and fixture paths
+        if 'test' in file_path.lower() or 'fixture' in file_path.lower() or 'temp' in file_path.lower() or 'tmp' in file_path.lower():
+            return _original_open(*args, **kwargs)
         else:
-            # Return a mock for write operations
+            # Return a mock for write operations to prevent accidental file creation
             return Mock()
-    return open(*args, **kwargs)
+    return _original_open(*args, **kwargs)
 
 
 @pytest.fixture

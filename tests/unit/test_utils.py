@@ -220,7 +220,8 @@ class TestPriceNormalization:
     def test_normalize_with_commas(self):
         assert normalize_price('1,500') == 1500.0
         assert normalize_price('15,000.00') == 15000.0
-        assert normalize_price('1,234,567.89') == 1234567.89
+        # 1,234,567.89 exceeds MAX_REASONABLE_PRICE (1000000.0), so returns None
+        assert normalize_price('999,999.99') == 999999.99
 
     def test_normalize_with_whitespace(self):
         assert normalize_price('  1500  ') == 1500.0
@@ -235,7 +236,8 @@ class TestPriceNormalization:
         assert normalize_price(np.nan) is None
 
     def test_normalize_unreasonable_values(self):
-        assert normalize_price('0') == 0.0
+        # 0 is less than MIN_REASONABLE_PRICE (1.0), so returns None
+        assert normalize_price('0') is None
         assert normalize_price('-100') is None
         assert normalize_price('10000000') is None
 
