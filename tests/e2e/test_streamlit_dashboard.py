@@ -40,9 +40,16 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from streamlit_app.app import (
-    load_watchlist_data, create_sidebar_filters, apply_filters,
+    load_watchlist_data, create_sidebar_filters,
     display_summary_metrics, create_visualizations, main
 )
+from scripts.parser import AuctionParser
+# Create a module-level apply_filters wrapper for backwards compatibility
+def apply_filters(df, filters):
+    """Apply filters to DataFrame using AuctionParser."""
+    parser = AuctionParser()
+    parser.config = filters
+    return parser.apply_filters(df)
 from config.settings import DEFAULT_PRICE_RANGE, DEFAULT_ACREAGE_RANGE, CHART_COLORS
 from scripts.utils import format_currency, format_acreage, format_score
 

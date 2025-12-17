@@ -371,12 +371,66 @@ def display_legal_disclaimer():
 def create_sidebar_filters() -> Dict:
     """
     Create optimized sidebar filters with intelligent caching and filter change detection.
+    Includes quick filter presets and sorting options.
 
     Returns:
         Dictionary with filter values
     """
     with performance_context("sidebar", "filter_creation"):
         st.sidebar.header("FILTERS")
+
+        # --- 1. Preset & Sort Configuration ---
+        sort_options = {
+            "Investment Score (High to Low)": ("investment_score", False),
+            "Price Per Acre (Low to High)": ("price_per_acre", True),
+            "Acreage (High to Low)": ("acreage", False),
+            "Water Score (High to Low)": ("water_score", False),
+            "Amount (Low to High)": ("amount", True)
+        }
+        sort_keys = list(sort_options.keys())
+
+        # --- 2. Initialize filter values with defaults ---
+        price_range_val = DEFAULT_PRICE_RANGE
+        acreage_range_val = DEFAULT_ACREAGE_RANGE
+        water_only_val = False
+        min_investment_score_val = 0.0
+        sort_index_val = 0  # Default to "Investment Score (High to Low)"
+
+        # --- 3. Apply preset logic if a preset is active ---
+        preset = st.session_state.get("preset_active")
+        if preset:
+            if preset == "water":
+                water_only_val = True
+                min_investment_score_val = 70.0
+                sort_index_val = sort_keys.index("Water Score (High to Low)")
+            elif preset == "score":
+                min_investment_score_val = 85.0
+                sort_index_val = sort_keys.index("Investment Score (High to Low)")
+            elif preset == "value":
+                price_range_val = (0.0, 10000.0)  # Lower price ceiling for value hunting
+                sort_index_val = sort_keys.index("Price Per Acre (Low to High)")
+            elif preset == "large":
+                acreage_range_val = (20.0, 100.0)
+                sort_index_val = sort_keys.index("Acreage (High to Low)")
+
+        # --- 4. Render UI components ---
+        st.sidebar.subheader("QUICK FILTERS")
+        preset_col1, preset_col2 = st.sidebar.columns(2)
+        with preset_col1:
+            if st.button("Best Water", key="preset_water_btn", use_container_width=True):
+                st.session_state.preset_active = "water"
+                st.rerun()
+            if st.button("High Score", key="preset_score_btn", use_container_width=True):
+                st.session_state.preset_active = "score"
+                st.rerun()
+        with preset_col2:
+            if st.button("Under $500/ac", key="preset_value_btn", use_container_width=True):
+                st.session_state.preset_active = "value"
+                st.rerun()
+            if st.button("Large Lots", key="preset_large_btn", use_container_width=True):
+                st.session_state.preset_active = "large"
+                st.rerun()
+        st.sidebar.markdown("---")
 
         # Check for previous filters to detect changes
         previous_filters = st.session_state.get('previous_filters', {})
@@ -387,7 +441,7 @@ def create_sidebar_filters() -> Dict:
             "Price Range ($)",
             min_value=0.0,
             max_value=50000.0,
-            value=DEFAULT_PRICE_RANGE,
+            value=price_range_val,
             step=100.0,
             format="$%.0f",
             key="price_range_slider"
@@ -398,7 +452,7 @@ def create_sidebar_filters() -> Dict:
             "Acreage Range",
             min_value=0.0,
             max_value=100.0,
-            value=DEFAULT_ACREAGE_RANGE,
+            value=acreage_range_val,
             step=0.1,
             format="%.1f",
             key="acreage_range_slider"
@@ -407,9 +461,18 @@ def create_sidebar_filters() -> Dict:
         # Water features filter
         filters['water_only'] = st.sidebar.checkbox(
             "Show only properties with water features",
-            value=False,
+            value=water_only_val,
             key="water_only_checkbox"
         )
+
+        # Sort options
+        sort_selection = st.sidebar.selectbox(
+            "Sort By",
+            options=sort_keys,
+            index=sort_index_val,
+            key="sort_selectbox"
+        )
+        filters['sort_by'] = sort_options[sort_selection]
 
         # County filter - cached for performance
         all_counties = ['All', 'Autauga', 'Baldwin', 'Barbour', 'Bibb', 'Blount', 'Bullock', 'Butler', 'Calhoun', 'Chambers', 'Cherokee', 'Chilton', 'Choctaw', 'Clarke', 'Clay', 'Cleburne', 'Coffee', 'Colbert', 'Conecuh', 'Coosa', 'Covington', 'Crenshaw', 'Cullman', 'Dale', 'Dallas', 'DeKalb', 'Elmore', 'Escambia', 'Etowah', 'Fayette', 'Franklin', 'Geneva', 'Greene', 'Hale', 'Henry', 'Houston', 'Jackson', 'Jefferson', 'Lamar', 'Lauderdale', 'Lawrence', 'Lee', 'Limestone', 'Lowndes', 'Macon', 'Madison', 'Marengo', 'Marion', 'Marshall', 'Monroe', 'Montgomery', 'Morgan', 'Perry', 'Pickens', 'Pike', 'Randolph', 'Russell', 'St. Clair', 'Shelby', 'Sumter', 'Talladega', 'Tallapoosa', 'Tuscaloosa', 'Walker', 'Washington', 'Wilcox', 'Winston']
@@ -425,11 +488,15 @@ def create_sidebar_filters() -> Dict:
             "Minimum Investment Score",
             min_value=0.0,
             max_value=100.0,
-            value=0.0,
+            value=min_investment_score_val,
             step=1.0,
             format="%.1f",
             key="min_investment_score_slider"
         )
+
+        # --- 5. Reset preset after applying it ---
+        if preset:
+            st.session_state.preset_active = None
 
         st.sidebar.markdown("---")
         st.sidebar.subheader("INTELLIGENCE SCORES")
@@ -455,14 +522,14 @@ def create_sidebar_filters() -> Dict:
         # Performance and cache controls
         col1, col2 = st.sidebar.columns(2)
         with col1:
-            if st.button("↻ Refresh", type="primary", key="refresh_button"):
+            if st.button("Refresh", type="primary", key="refresh_button"):
                 # Clear all caches and refresh
                 cache_manager = get_cache_manager()
                 cache_manager.memory_cache.clear()
                 st.rerun()
 
         with col2:
-            if st.button("▲ Optimize", key="optimize_button"):
+            if st.button("Optimize", key="optimize_button"):
                 # Trigger memory optimization
                 check_memory_and_optimize()
                 st.success("Optimized!")
@@ -804,6 +871,10 @@ def _build_table_column_config(df: pd.DataFrame) -> Tuple[List[str], Dict[str, A
             "Select": st.column_config.CheckboxColumn(required=True)
         }
 
+        # Add water indicator column if water_score exists
+        if 'water_score' in df.columns:
+            df['Water'] = df['water_score'].apply(lambda x: 'Y' if pd.notna(x) and x > 0 else '')
+
         # Column configuration mapping for performance
         column_mappings = {
             'rank': st.column_config.NumberColumn("Rank", format="%d", width="small"),
@@ -812,7 +883,7 @@ def _build_table_column_config(df: pd.DataFrame) -> Tuple[List[str], Dict[str, A
             'amount': st.column_config.NumberColumn("Price", format="$%.2f", width="small"),
             'acreage': st.column_config.NumberColumn("Acres", format="%.2f", width="small"),
             'price_per_acre': st.column_config.NumberColumn("$/Acre", format="$%.2f", width="small"),
-            'water_score': st.column_config.NumberColumn("Water", format="%.1f", width="small"),
+            'Water': st.column_config.TextColumn("Water", width="small", help="Y indicates water features present"),
             'investment_score': st.column_config.NumberColumn("Score", format="%.1f", width="small"),
             'description': st.column_config.TextColumn("Description", width="large")
         }

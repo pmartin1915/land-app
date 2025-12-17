@@ -9,7 +9,7 @@ import pytest
 import pandas as pd
 from typing import Dict, List, Any
 
-from data_factories import (
+from tests.fixtures.data_factories import (
     PropertyDataFactory, CountyFactory, CSVDataFactory, HTMLResponseFactory,
     ErrorTestDataFactory, PerformanceTestDataFactory, get_factory, generate_test_dataset
 )

@@ -1,0 +1,102 @@
+================================================================================
+DATABASE ANALYSIS: Property Scoring Issues
+================================================================================
+
+1. OVERALL STATISTICS:
+ total_properties  tiny_acreage  huge_acreage  expensive_per_acre  extreme_per_acre  min_acreage  max_acreage  avg_acreage  min_ppa   max_ppa       avg_ppa
+             2053          1385             1                 734                36          0.0      481.361     0.449681      0.0 5968910.0 107261.261421
+
+2. PROPERTIES WITH TINY ACREAGE (<0.01 acres) - 20 found:
+             parcel_id     county   amount  acreage  price_per_acre                                        description
+    381004183009018000  Jefferson  5968.91    0.001      5968910.00 LOTS 6-8 BLK 10 LINCOLN PARK & N 42' LOT 1 GREENVA
+    633003081012004000 Tuscaloosa 17293.74    0.003      5764580.00      LOT 10 IN BLK D HOLT REALTY CO SUBD SECTOR 15
+5203041830050330000000     Morgan  5931.03    0.001      5167113.34  SUB DLI&F #1 E 50'OF LOTS 15, 17, 19 BLK 4 PLAT B
+0304093210090010010000    Barbour  3472.09    0.001      3472090.00  T M JOHNSON PLAT LOT 10 BOOK 5 PAGE 69 2002 TAX S
+0310041740140140000000    Barbour  3416.29    0.001      3416290.00           UPLANDS LOT 15 BLOCK 4 BOOK 002 PAGE 050
+    031106133001027000    Barbour  3335.34    0.001      3335340.00 JOSEPH BLK 2 PEACOCK TRACT LOT 24 BLOCK C BOOK 2 P
+0232023700030330000000     Mobile  6578.23    0.002      3289115.00  LOT 23 BLK A DOG RIVER HGTS MBK 4 P 18 #SEC 37 T5
+0311073610030050000000    Barbour  3162.01    0.001      3162010.00  SOUTHERN MEADOWS SEC 6 PART B LOT 10 BOOK 13 PAGE
+0310083330030170000000    Barbour  6291.92    0.002      3145960.00                   ELSMEADE LOT 52 2 BOOK 9 PAGE 14
+    380906133007001002  Jefferson  3123.60    0.001      3123600.00  COM @ NE COR LOT 5 BLK 10 RESURVEY TINDELL ADD TH
+    520304192003022000     Morgan  2954.45    0.001      2797735.70         DLI&F #2 LOT 23 BLK 24 PLAT BOOK 1 PAGE 13
+    520304201018018000     Morgan  6308.71    0.002      2694190.27                  N'LY 3' OF LOT 34 AND LT 35 BLK 3
+    633002092009001000 Tuscaloosa 15608.25    0.006      2601375.00        LOT 42 IN HOLT REALTY COMPANY SUBD SECTOR 6
+    520304183002021000     Morgan  3922.31    0.002      2372997.55                            SUB DM&L LOT 12 BLOCK 6
+    031106243003003000    Barbour  2218.06    0.001      2218060.00  CARVER PARK A LOT 25 BLOCK 2 BOOK 10 PAGE 79 1999
+0232074000020250000000     Mobile  4307.71    0.002      2153855.00  PART LOT 31 BLK F RIVERSIDE SUB MBK 3 PG 296 BDED
+0311093120050940000000    Barbour  2032.55    0.001      2032550.00  ABRAHAM VINEYARD LOT 21 J BOOK 3 PAGE 50 1995 TAX
+    520206134012003000     Morgan  3348.69    0.002      1736534.96                    LT 6 BLK 14 ADD 1 DLI&FCO ADD#1
+    520305213002019000     Morgan  2806.38    0.002      1697859.90  SUB DLI&FC ADD #4 LOT 18 BLK 85 PLAT BK 1 PAGE 68
+    520304183007012000     Morgan  1899.18    0.001      1654565.62      LT 5 BLK 10 DLI&F CO ADD #1 PLAT 1-11 DECATUR
+
+3. PROPERTIES WITH EXTREME PRICE PER ACRE (>$50k/acre) - 20 found:
+             parcel_id     county   amount  acreage  price_per_acre                                        description
+    381004183009018000  Jefferson  5968.91    0.001      5968910.00 LOTS 6-8 BLK 10 LINCOLN PARK & N 42' LOT 1 GREENVA
+    633003081012004000 Tuscaloosa 17293.74    0.003      5764580.00      LOT 10 IN BLK D HOLT REALTY CO SUBD SECTOR 15
+5203041830050330000000     Morgan  5931.03    0.001      5167113.34  SUB DLI&F #1 E 50'OF LOTS 15, 17, 19 BLK 4 PLAT B
+0304093210090010010000    Barbour  3472.09    0.001      3472090.00  T M JOHNSON PLAT LOT 10 BOOK 5 PAGE 69 2002 TAX S
+0310041740140140000000    Barbour  3416.29    0.001      3416290.00           UPLANDS LOT 15 BLOCK 4 BOOK 002 PAGE 050
+    031106133001027000    Barbour  3335.34    0.001      3335340.00 JOSEPH BLK 2 PEACOCK TRACT LOT 24 BLOCK C BOOK 2 P
+0232023700030330000000     Mobile  6578.23    0.002      3289115.00  LOT 23 BLK A DOG RIVER HGTS MBK 4 P 18 #SEC 37 T5
+0311073610030050000000    Barbour  3162.01    0.001      3162010.00  SOUTHERN MEADOWS SEC 6 PART B LOT 10 BOOK 13 PAGE
+0310083330030170000000    Barbour  6291.92    0.002      3145960.00                   ELSMEADE LOT 52 2 BOOK 9 PAGE 14
+    380906133007001002  Jefferson  3123.60    0.001      3123600.00  COM @ NE COR LOT 5 BLK 10 RESURVEY TINDELL ADD TH
+    520304192003022000     Morgan  2954.45    0.001      2797735.70         DLI&F #2 LOT 23 BLK 24 PLAT BOOK 1 PAGE 13
+    520304201018018000     Morgan  6308.71    0.002      2694190.27                  N'LY 3' OF LOT 34 AND LT 35 BLK 3
+    633002092009001000 Tuscaloosa 15608.25    0.006      2601375.00        LOT 42 IN HOLT REALTY COMPANY SUBD SECTOR 6
+    520304183002021000     Morgan  3922.31    0.002      2372997.55                            SUB DM&L LOT 12 BLOCK 6
+    031106243003003000    Barbour  2218.06    0.001      2218060.00  CARVER PARK A LOT 25 BLOCK 2 BOOK 10 PAGE 79 1999
+0232074000020250000000     Mobile  4307.71    0.002      2153855.00  PART LOT 31 BLK F RIVERSIDE SUB MBK 3 PG 296 BDED
+0311093120050940000000    Barbour  2032.55    0.001      2032550.00  ABRAHAM VINEYARD LOT 21 J BOOK 3 PAGE 50 1995 TAX
+    520206134012003000     Morgan  3348.69    0.002      1736534.96                    LT 6 BLK 14 ADD 1 DLI&FCO ADD#1
+    520305213002019000     Morgan  2806.38    0.002      1697859.90  SUB DLI&FC ADD #4 LOT 18 BLK 85 PLAT BK 1 PAGE 68
+    520304183007012000     Morgan  1899.18    0.001      1654565.62      LT 5 BLK 10 DLI&F CO ADD #1 PLAT 1-11 DECATUR
+
+4. TOP 15 RANKED PROPERTIES (by investment_score):
+             parcel_id  county  amount  acreage  price_per_acre  investment_score  water_score                                                                       description
+    031106141012014000 Barbour   64.70    5.000       12.940000              77.0          0.0                                LOT BLOCK BOOK PAGE SEC 14 T16N R17E .05 AC IN NE1
+        FINAL-TEST-003 Baldwin 4800.00    2.200     2181.818182              71.9          9.0 120X180 NE COR LAKEFRONT SUBDIVISION LOT 22 WITH CREEK FRONTAGE AND STREAM ACCESS
+        FINAL-TEST-003 Baldwin 4800.00    2.200     2181.818182              71.9          9.0 120X180 NE COR LAKEFRONT SUBDIVISION LOT 22 WITH CREEK FRONTAGE AND STREAM ACCESS
+4608072540020410000000 Madison  102.02    1.111       91.827183              69.4          0.0                                 200X242X63X130 LOT B PINERIDGE S/D S 25 T 17 R 23
+4608072540020410000000 Madison  102.02    1.111       91.827183              69.4          0.0                                 200X242X63X130 LOT B PINERIDGE S/D S 25 T 17 R 23
+       460807354004020 Madison  831.98    1.047      794.632283              68.6          0.0                                 152 X 300 LOT IN SE1/4 SE1/4 COM W/S OLD MONTG RD
+       460807354004020 Madison  831.98    1.047      794.632283              68.6          0.0                                 152 X 300 LOT IN SE1/4 SE1/4 COM W/S OLD MONTG RD
+0115001540000070010000 Autauga  252.69    2.700       93.600000              66.3          0.0                                 POB 480 FT S OF & 245 FT W OF NE COR OF SE 1/4 SE
+0114000320000060020000 Autauga  274.75    2.279      120.540000              66.2          0.0                                 BEG 260.8 FT W OF & 380.7 FT S OF NE COR OF NW 1/
+    460803080000006000 Madison  167.65    1.450      115.620690              66.1          0.0                                 277 X 228 X 347 A LOT IN SW1/4 OF SE1/4 BEG AT NW
+    460803080000006000 Madison  167.65    1.450      115.620690              66.1          0.0                                 277 X 228 X 347 A LOT IN SW1/4 OF SE1/4 BEG AT NW
+     ENHANCED-TEST-001 Baldwin 8500.00    2.500     3400.000000              65.7          9.0 100X200 IRR NE COR LAKEFRONT SUBDIVISION LOT 15 CREEK FRONTAGE WITH STREAM ACCESS
+0223073510000170000000  Mobile  138.87    3.546       39.162437              65.3          0.0                                  #TAX DEED NO: 51492 #DTD 03/31/06 ISSUED TO #RON
+4608072540020470000000 Madison  118.32    0.855      138.385965              64.8          0.0                                 174 X 214 PINERDIGE S/D LOTS 13 & 14 LOT 160.00 X
+4608072540020470000000 Madison  118.32    0.855      138.385965              64.8          0.0                                 174 X 214 PINERDIGE S/D LOTS 13 & 14 LOT 160.00 X
+
+5. PROPERTIES WITH HUGE ACREAGE (>50 acres) - 1 found:
+          parcel_id  county  amount  acreage  price_per_acre                                       description
+2311082822030060000 Cullman 1561.15  481.361            3.24 DB/PG>2015/10406 QCD 7/24/15 BEG 270' (S) E OF SW
+
+6. PROPERTIES WITH DIMENSION PATTERNS (X) AND SUSPECT VALUES - 20 found:
+                                         description  acreage   amount  price_per_acre
+LOT 2 BLK 5 CREEK SUBDIVISION 75' X 150' NEAR SPRING      0.0  3200.50             0.0
+                 COMMERCIAL LOT 100' X 200' DOWNTOWN      0.0 15000.00             0.0
+                   VACANT LOT 50' X 100' RESIDENTIAL      0.0  1800.75             0.0
+                   RESIDENTIAL LOT 72' X 131' CORNER      0.0  3400.50             0.0
+           LOT 4 BLK 4 EXCEPT E 50 FT E G FIELDS SUR      0.0    91.07             0.0
+   P O B 371 FT S W OF SW INTER MAX ST & CHEEK RD TH      0.0    92.91             0.0
+                LOT 13 BLK 1 NANCY A WOOD EX N 25 FT      0.0    50.84             0.0
+   LOT 3 L W COXS RESURVEY OFLOTS 1 THUR 4 BLK 9-F E      0.0   212.28             0.0
+  E 31 FT LOT 9 BLK 3 EX S 6 FT PRATT LAND & IMPROVE      0.0   263.06             0.0
+   72' X 131' IRR LOT 34 UNIT 18 LAKE FOREST SUB PB7      0.0   152.48             0.0
+   68' X 120' LAKE FOREST SUB UNIT 19 LOT 20 PB7 P15      0.0   162.40             0.0
+  44' X 109' IRR LAKE FOREST SUBD UNIT 18 LOT 40 PLA      0.0   112.18             0.0
+   38' X 146' LOT 7 UNIT 29 LAKE FOREST SUB PB8 PG11      0.0   289.99             0.0
+   121' X 125' IRR LOT 134 UNIT 25 LAKE FOREST SUB P      0.0   324.46             0.0
+   60' X 225' IRR LAKE FOREST SUB UNIT 15 LOT 84 PB7      0.0   289.99             0.0
+   52' X 208' IRR LAKE FOREST SUB UNIT 10 LOT 78 MB7      0.0   619.52             0.0
+   81' X 123' IRR LAKE FOREST SUB UNIT 10 LOT 17 PB7      0.0   592.42             0.0
+   3' X 200' WEST 3' OF LOT 169 CYPRESS PARK SUB SEC      0.0    52.17             0.0
+  65' X 65' COM AT THE SE COR OF SE1/4 OF NW1/4 OF S      0.0    56.35             0.0
+   60' X 120' LOT 7 BLK 2 RESUB OF PT FT MORGAN ADDN      0.0   148.32             0.0
+
+================================================================================
+Analysis complete!
+================================================================================

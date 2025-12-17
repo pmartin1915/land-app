@@ -10,7 +10,7 @@ import pytest
 from pathlib import Path
 from typing import Dict, Any
 
-from specification_validator import (
+from tests.schemas.specification_validator import (
     SpecificationValidator, SpecificationLoader, AITestSpecificationGenerator,
     TestCase, ErrorSpecification, PerformanceThresholds,
     TestCategory, Priority, Severity,
