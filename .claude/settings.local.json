@@ -62,7 +62,9 @@
       "Bash(fi)",
       "Bash(del c:auctionpal_generated.code)",
       "Bash(grep:*)",
-      "Bash(del C:auctionpal_generated.code)"
+      "Bash(del C:auctionpal_generated.code)",
+      "Bash(playwright --version:*)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []
