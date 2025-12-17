@@ -275,6 +275,25 @@ class AsyncDataLoader:
             if filters.get(score_filter, 0) > 0:
                 params[score_filter] = filters[score_filter]
 
+        # Add sort_by filter to API parameters
+        # The filters['sort_by'] from app.py is a tuple like ('investment_score', False)
+        # We need to convert it to a string like "investment_score DESC" for the API.
+        allowed_api_sort_columns = {'amount', 'investment_score', 'acreage', 'price_per_acre', 'water_score'}
+        default_api_sort = "investment_score DESC"
+
+        if 'sort_by' in filters and isinstance(filters['sort_by'], tuple) and len(filters['sort_by']) == 2:
+            sort_column_raw, sort_asc_bool = filters['sort_by']
+
+            if sort_column_raw in allowed_api_sort_columns:
+                sort_direction = "ASC" if sort_asc_bool else "DESC"
+                params['sort_by'] = f"{sort_column_raw} {sort_direction}"
+            else:
+                # Fallback to default if an invalid column name is provided
+                params['sort_by'] = default_api_sort
+        else:
+            # Default sort if 'sort_by' is not present in filters or is malformed
+            params['sort_by'] = default_api_sort
+
         return params
 
 
@@ -432,8 +451,34 @@ class StreamlitDataLoader:
                     query += f" AND {column_name} >= ?"
                     params.append(filters[score_filter])
 
-            # Order by investment score for consistent results
-            query += " ORDER BY investment_score DESC"
+            # Dynamic ORDER BY clause based on sort_by filter
+            # Define allowed columns for sorting to prevent SQL injection
+            allowed_db_sort_columns = {
+                'amount', 'investment_score', 'acreage', 'price_per_acre', 'water_score',
+                'county_market_score', 'geographic_score', 'market_timing_score',
+                'total_description_score', 'road_access_score'
+            }
+
+            # Default sort tuple from app.py: ('investment_score', False) -> investment_score DESC
+            default_sort_tuple = ('investment_score', False)
+
+            # Get sort_by from filters, defaulting to the defined tuple
+            sort_by_filter_value = filters.get('sort_by', default_sort_tuple)
+
+            # Parse and validate the sort_by value
+            if isinstance(sort_by_filter_value, tuple) and len(sort_by_filter_value) == 2:
+                sort_column_raw, sort_asc_bool = sort_by_filter_value
+            else:
+                # Fallback to default if the filter value is not a valid tuple
+                sort_column_raw, sort_asc_bool = default_sort_tuple
+
+            # Validate column name against the whitelist
+            sort_column = sort_column_raw if sort_column_raw in allowed_db_sort_columns else default_sort_tuple[0]
+
+            # Determine sort direction based on the boolean
+            sort_direction = "ASC" if sort_asc_bool else "DESC"
+
+            query += f" ORDER BY {sort_column} {sort_direction}"
 
             # Execute query and return DataFrame
             df = pd.read_sql_query(query, conn, params=params)
