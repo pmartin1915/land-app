@@ -1,0 +1,3 @@
+# This directory stores baseline screenshots for visual regression testing.
+# This file ensures the directory is tracked by git.
+# To update snapshots, run: pytest tests/ui --update-snapshots
