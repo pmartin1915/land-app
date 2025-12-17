@@ -60,7 +60,9 @@
       "Bash(then grep -A 10 \"DATABASE STATUS\" c:/auction/scraping_output.log)",
       "Bash(else echo \"Still processing...\")",
       "Bash(fi)",
-      "Bash(del c:auctionpal_generated.code)"
+      "Bash(del c:auctionpal_generated.code)",
+      "Bash(grep:*)",
+      "Bash(del C:auctionpal_generated.code)"
     ],
     "deny": [],
     "ask": []
