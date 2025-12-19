@@ -142,6 +142,7 @@ ACREAGE_PATTERNS = {
 OUTPUT_COLUMNS = [
     'parcel_id', 'county', 'amount', 'acreage', 'price_per_acre',
     'estimated_all_in_cost', 'water_score', 'investment_score',
+    'should_bid', 'max_bid_amount', 'bid_reason',
     'assessed_value', 'description', 'owner_name', 'year_sold'
 ]
 

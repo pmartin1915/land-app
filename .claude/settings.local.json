@@ -64,7 +64,12 @@
       "Bash(grep:*)",
       "Bash(del C:auctionpal_generated.code)",
       "Bash(playwright --version:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(del \"C:\\auction\\pal_generated.code\")",
+      "Bash(echo $GEMINI_API_KEY)",
+      "Bash(setx GEMINI_API_KEY \"AIzaSyCmhQRea9WZ4OdkUzJktr5CYUgJbtqQTgc\")",
+      "Bash(del:*)",
+      "Bash(git mv:*)"
     ],
     "deny": [],
     "ask": []

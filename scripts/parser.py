@@ -45,6 +45,7 @@ from config.logging_config import get_logger
 from scripts.exceptions import (
     CountyValidationError, ScrapingError
 )
+from scripts.guardrails import apply_decision_engine, check_kill_switch
 
 # Set up logger
 logger = get_logger(__name__)
@@ -269,6 +270,12 @@ class AuctionParser:
 
         initial_count = len(df_filtered)
 
+        # Filter by guardrail decision FIRST
+        if 'should_bid' in df_filtered.columns:
+            guardrail_mask = (df_filtered['should_bid'] == True)
+            df_filtered = df_filtered[guardrail_mask]
+            print(f"  After guardrail filter: {len(df_filtered)} records")
+
         # Filter by price
         if 'amount' in df_filtered.columns:
             price_mask = (df_filtered['amount'].notna()) & (df_filtered['amount'] <= self.max_price)
@@ -434,8 +441,8 @@ class AuctionParser:
                 export_df[col] = export_df[col].round(2)
             elif col in ['acreage']:
                 export_df[col] = export_df[col].round(3)
-            elif col in ['water_score', 'investment_score']:
-                export_df[col] = export_df[col].round(1)
+            elif col in ['water_score', 'investment_score', 'max_bid_amount']:
+                export_df[col] = export_df[col].round(2)
 
         # Export to CSV
         export_df.to_csv(output_path, index=False)
@@ -510,7 +517,14 @@ class AuctionParser:
             df = scrape_county_data(county_input, max_pages=max_pages, save_raw=True)
 
             if df.empty:
-                raise Exception(f"No data found for {county_name} County")
+                print(f"No data found for {county_name} County. Skipping processing.")
+                return {
+                    'county': county_name,
+                    'status': 'no_data',
+                    'original_records': 0,
+                    'filtered_records': 0,
+                    'data_source': f"Scraped from ADOR website ({county_name} County)"
+                }
 
             print(f"Successfully scraped {len(df)} records")
             self.original_records = len(df)
@@ -518,6 +532,11 @@ class AuctionParser:
             # Process the scraped data through the same pipeline as CSV files
             df = self.map_columns(df, county_name=county_name)
             df = self.normalize_data(df)
+            
+            # Apply kill switch and guardrails
+            check_kill_switch()
+            df = apply_decision_engine(df)
+            
             df = self.apply_filters(df)
             df = self.calculate_metrics(df)
             df = self.rank_properties(df)
@@ -573,6 +592,11 @@ class AuctionParser:
             df = self.load_csv_file(input_path)
             df = self.map_columns(df, input_path=input_path)
             df = self.normalize_data(df)
+            
+            # Apply kill switch and guardrails
+            check_kill_switch()
+            df = apply_decision_engine(df)
+            
             df = self.apply_filters(df)
             df = self.calculate_metrics(df)
             df = self.rank_properties(df)
@@ -646,6 +670,11 @@ def process_single_county(county: str, auction_parser: 'AuctionParser', max_page
         # Process data using the same pipeline as single county processing
         processed_df = auction_parser.map_columns(raw_df, county_name=county_name)
         processed_df = auction_parser.normalize_data(processed_df)
+        
+        # Apply kill switch and guardrails
+        check_kill_switch()
+        processed_df = apply_decision_engine(processed_df)
+        
         processed_df = auction_parser.apply_filters(processed_df)
         processed_df = auction_parser.calculate_metrics(processed_df)
         processed_df = auction_parser.rank_properties(processed_df)

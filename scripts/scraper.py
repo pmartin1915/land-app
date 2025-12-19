@@ -34,66 +34,66 @@ logger = get_logger(__name__)
 # Alabama County Codes Mapping - ADOR System (Alphabetical Order, Not FIPS)
 # Note: ADOR uses alphabetical ordering, not standard FIPS county codes
 ALABAMA_COUNTY_CODES = {
-    # Verified through web scraping tests:
-    '01': 'Autauga',      # ✅ Tested - 200 records
-    '02': 'Mobile',       # ✅ Tested - 100+ records (was incorrectly mapped as Baldwin)
-    '03': 'Barbour',      # ✅ Tested - 999+ records
-    '04': 'Bibb',         # ✅ Tested - No data available
-    '05': 'Baldwin',      # ✅ Tested - 29 records (was incorrectly mapped as Blount)
-    '06': 'Blount',
-    '07': 'Bullock',
-    '08': 'Butler',
-    '09': 'Calhoun',
-    '10': 'Chambers',
-    '11': 'Cherokee',
-    '12': 'Chilton',
-    '13': 'Choctaw',
-    '14': 'Clarke',
-    '15': 'Clay',
-    '16': 'Cleburne',
-    '17': 'Coffee',
-    '18': 'Colbert',
-    '19': 'Conecuh',
-    '20': 'Coosa',
-    '21': 'Covington',
-    '22': 'Crenshaw',
-    '23': 'Cullman',
-    '24': 'Dale',
-    '25': 'Dallas',
-    '26': 'DeKalb',
-    '27': 'Elmore',
-    '28': 'Escambia',
-    '29': 'Etowah',
-    '30': 'Fayette',
-    '31': 'Franklin',
-    '32': 'Geneva',
-    '33': 'Greene',
-    '34': 'Hale',
-    '35': 'Henry',
-    '36': 'Houston',
-    '37': 'Jackson',
-    '38': 'Jefferson',  # Note: May be split into JEFFERSON-BESS and JEFFERSON-BHAM
-    '39': 'Lamar',
-    '40': 'Lauderdale',
-    '41': 'Lawrence',
-    '42': 'Lee',
-    '43': 'Limestone',
-    '44': 'Lowndes',
-    '45': 'Macon',
-    '46': 'Madison',
-    '47': 'Marengo',
-    '48': 'Marion',
-    '49': 'Marshall',
-    '50': 'Monroe',
-    '51': 'Montgomery',
+    '04': 'Autauga',
+    '05': 'Baldwin',
+    '06': 'Barbour',
+    '07': 'Bibb',
+    '08': 'Blount',
+    '09': 'Bullock',
+    '10': 'Butler',
+    '11': 'Calhoun',
+    '12': 'Chambers',
+    '13': 'Cherokee',
+    '14': 'Chilton',
+    '15': 'Choctaw',
+    '16': 'Clarke',
+    '17': 'Clay',
+    '18': 'Cleburne',
+    '19': 'Coffee',
+    '20': 'Colbert',
+    '21': 'Conecuh',
+    '22': 'Coosa',
+    '23': 'Covington',
+    '24': 'Crenshaw',
+    '25': 'Cullman',
+    '26': 'Dale',
+    '27': 'Dallas',
+    '28': 'DeKalb',
+    '29': 'Elmore',
+    '30': 'Escambia',
+    '31': 'Etowah',
+    '32': 'Fayette',
+    '33': 'Franklin',
+    '34': 'Geneva',
+    '35': 'Greene',
+    '36': 'Hale',
+    '37': 'Henry',
+    '38': 'Houston',
+    '39': 'Jackson',
+    '68': 'Jefferson-Bess',
+    '01': 'Jefferson-Bham',
+    '40': 'Lamar',
+    '41': 'Lauderdale',
+    '42': 'Lawrence',
+    '43': 'Lee',
+    '44': 'Limestone',
+    '45': 'Lowndes',
+    '46': 'Macon',
+    '47': 'Madison',
+    '48': 'Marengo',
+    '49': 'Marion',
+    '50': 'Marshall',
+    '02': 'Mobile',
+    '51': 'Monroe',
+    '03': 'Montgomery',
     '52': 'Morgan',
     '53': 'Perry',
     '54': 'Pickens',
     '55': 'Pike',
     '56': 'Randolph',
     '57': 'Russell',
-    '58': 'Saint Clair',
-    '59': 'Shelby',
+    '58': 'Shelby',
+    '59': 'St_Clair',
     '60': 'Sumter',
     '61': 'Talladega',
     '62': 'Tallapoosa',
@@ -472,16 +472,19 @@ def scrape_county_data(county_input: str,
                 df, pagination_info = scrape_single_page(session, current_url, params)
 
                 if df.empty:
-                    logger.warning(f"Page {page_count} returned no data")
-                    consecutive_failures += 1
-                    if consecutive_failures >= max_consecutive_failures:
-                        logger.error(f"Too many consecutive failures ({consecutive_failures}). Stopping.")
+                    logger.info(f"Page {page_count} returned no data, which is a valid result for counties with no delinquent properties.")
+                    # If the first page is empty, it means there are no results at all.
+                    if page_count == 1:
+                        logger.info(f"No data found for {county_name} County. This is a valid scenario. Stopping scrape for this county.")
+                        break # Exit the loop, as there's no data.
+                    else:
+                        # If a subsequent page is empty, it means we've reached the end of the results.
+                        logger.info("No more pages available.")
                         break
-                    continue
-
-                logger.info(f"Page {page_count}: extracted {len(df)} records")
-                all_data.append(df)
-                consecutive_failures = 0  # Reset failure counter on success
+                else:
+                    logger.info(f"Page {page_count}: extracted {len(df)} records")
+                    all_data.append(df)
+                    consecutive_failures = 0  # Reset failure counter on success
 
                 # Check for next page
                 if not pagination_info['has_more']:
