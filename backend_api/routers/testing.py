@@ -109,7 +109,7 @@ class ValidationHistoryResponse(BaseModel):
 
 # API Endpoints
 
-@router.get("/health", response_model=Dict[str, str])
+@router.get("/health", response_model=Dict[str, Any])
 @limiter.limit("100/minute")
 async def testing_system_health(request: Request):
     """Get AI testing system health status."""
