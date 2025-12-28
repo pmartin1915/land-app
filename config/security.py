@@ -39,8 +39,13 @@ def get_api_key() -> str:
         str: API key for backend authentication
 
     Raises:
-        ValueError: If no API key is configured
+        ValueError: If no API key is configured in production
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    environment = os.getenv("ENVIRONMENT", "development")
+
     # Try environment variable first
     api_key = os.getenv("AUCTION_WATCHER_API_KEY")
 
@@ -58,13 +63,18 @@ def get_api_key() -> str:
         except Exception:
             pass
 
-    # Generate a temporary development key if nothing is configured
+    # Fail fast in production - no fallback allowed
+    if environment == "production":
+        raise ValueError(
+            "AUCTION_WATCHER_API_KEY environment variable is required in production. "
+            "Set ENVIRONMENT=development for development mode with auto-generated keys."
+        )
+
+    # Development only: generate a temporary key (never print it)
     dev_key = os.getenv("DEV_API_KEY")
     if not dev_key:
-        # Generate a secure temporary key for development
         dev_key = f"AW_dev_{secrets.token_urlsafe(32)}"
-        print(f"⚠️  WARNING: Using temporary development API key: {dev_key}")
-        print("   Set AUCTION_WATCHER_API_KEY environment variable for production")
+        logger.warning("Using auto-generated development API key. Set AUCTION_WATCHER_API_KEY for production.")
 
     return dev_key
 

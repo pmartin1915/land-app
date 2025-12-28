@@ -3,6 +3,7 @@ Authentication endpoints for Alabama Auction Watcher API
 Handles JWT tokens and API keys for iOS device authentication
 """
 
+import os
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
@@ -13,8 +14,12 @@ from slowapi.util import get_remote_address
 
 from ..auth import (
     create_device_token, create_admin_token, create_api_key, verify_token,
-    verify_password, get_password_hash
+    verify_password, get_password_hash, ENVIRONMENT
 )
+
+# Admin credentials from environment variables
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
+ADMIN_PASSWORD_HASH = os.getenv("ADMIN_PASSWORD_HASH")
 
 logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
@@ -147,16 +152,26 @@ async def create_admin_token_endpoint(
     Used for administrative access to the API.
     """
     try:
-        # In production, validate against user database
-        # For this implementation, use default admin credentials
-        admin_username = "admin"
-        admin_password_hash = get_password_hash("AlabamaAuction2025!")  # Change in production
-
-        if credentials.username != admin_username:
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-
-        if not verify_password(credentials.password, admin_password_hash):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
+        # Validate admin credentials are configured
+        if not ADMIN_USERNAME or not ADMIN_PASSWORD_HASH:
+            if ENVIRONMENT == "production":
+                logger.error("Admin credentials not configured in production")
+                raise HTTPException(status_code=503, detail="Admin authentication not configured")
+            else:
+                # Development fallback - use default credentials
+                dev_username = "admin"
+                dev_password_hash = get_password_hash("dev_password_change_me")
+                logger.warning("Using development admin credentials - not for production use")
+                if credentials.username != dev_username:
+                    raise HTTPException(status_code=401, detail="Invalid credentials")
+                if not verify_password(credentials.password, dev_password_hash):
+                    raise HTTPException(status_code=401, detail="Invalid credentials")
+        else:
+            # Production: use environment-configured credentials
+            if credentials.username != ADMIN_USERNAME:
+                raise HTTPException(status_code=401, detail="Invalid credentials")
+            if not verify_password(credentials.password, ADMIN_PASSWORD_HASH):
+                raise HTTPException(status_code=401, detail="Invalid credentials")
 
         # Create admin token
         token = create_admin_token(credentials.username, "admin@alabamaauctionwatcher.com")

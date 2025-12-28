@@ -21,8 +21,11 @@ logger = logging.getLogger(__name__)
 # Security configuration
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", secrets.token_urlsafe(32))
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 15  # Short-lived for security
 REFRESH_TOKEN_EXPIRE_DAYS = 7
+
+# Environment detection
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 # API Key configuration for iOS app
 API_KEY_SECRET = os.getenv("API_KEY_SECRET", secrets.token_urlsafe(32))

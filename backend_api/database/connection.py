@@ -16,8 +16,21 @@ logger = logging.getLogger(__name__)
 # Database configuration
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "sqlite:///C:/auction/alabama_auction_watcher.db"  # Absolute path to main database
+    "sqlite:///./data/alabama_auction_watcher.db"  # Relative path, cross-platform
 )
+
+# Validate database URL scheme for security
+ALLOWED_DB_SCHEMES = (
+    "sqlite://",           # Sync SQLite
+    "sqlite+aiosqlite://", # Async SQLite (testing)
+    "postgresql://",       # Sync PostgreSQL
+    "postgresql+asyncpg://", # Async PostgreSQL
+)
+if not any(DATABASE_URL.startswith(scheme) for scheme in ALLOWED_DB_SCHEMES):
+    raise ValueError(
+        f"Unsupported database scheme in DATABASE_URL. "
+        f"Allowed schemes: {', '.join(ALLOWED_DB_SCHEMES)}"
+    )
 
 # For production PostgreSQL, use format:
 # postgresql://username:password@localhost/dbname

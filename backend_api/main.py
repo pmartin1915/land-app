@@ -6,6 +6,7 @@ FastAPI application entry point with authentication, rate limiting, and CORS con
 Maintains exact algorithm compatibility with existing Python scripts and iOS Swift implementation.
 """
 
+import os
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -18,7 +19,7 @@ from datetime import datetime
 from contextlib import asynccontextmanager
 
 # Import routers
-from .routers import properties, counties, sync, auth, predictions, testing, applications
+from .routers import properties, counties, sync, auth, predictions, testing, applications, ai
 from .database.connection import database, connect_db, disconnect_db
 from .auth import add_security_headers, require_sync_access
 
@@ -32,8 +33,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Rate limiter configuration
-limiter = Limiter(key_func=get_remote_address)
+# Rate limiter configuration - disabled in development mode
+IS_DEVELOPMENT = os.getenv("ENVIRONMENT", "development").lower() == "development"
+
+def get_rate_limit_key(request: Request) -> str:
+    """Return key for rate limiting, or empty string to bypass in development."""
+    if IS_DEVELOPMENT:
+        return ""  # Empty key bypasses rate limiting
+    return get_remote_address(request)
+
+limiter = Limiter(
+    key_func=get_rate_limit_key,
+    enabled=not IS_DEVELOPMENT  # Disable rate limiting entirely in development
+)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -66,16 +78,26 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Add security headers middleware
 app.middleware("http")(add_security_headers)
 
-# CORS configuration for iOS application
+# CORS configuration - use environment variable for production
+DEFAULT_CORS_ORIGINS = [
+    "http://localhost:3000",  # Development React
+    "http://localhost:5173",  # Vite dev server
+    "http://localhost:8501",  # Streamlit
+    "tauri://localhost",      # Tauri desktop app
+    "https://tauri.localhost", # Tauri HTTPS
+    "capacitor://localhost",  # iOS Capacitor
+    "ionic://localhost",      # Ionic
+]
+CORS_ORIGINS_ENV = os.getenv("CORS_ORIGINS")
+if CORS_ORIGINS_ENV:
+    # Production: use comma-separated list from environment
+    CORS_ORIGINS = [origin.strip() for origin in CORS_ORIGINS_ENV.split(",")]
+else:
+    CORS_ORIGINS = DEFAULT_CORS_ORIGINS
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # Development
-        "https://alabamaauctionwatcher.com",  # Production domain
-        "capacitor://localhost",  # iOS Capacitor
-        "ionic://localhost",  # Ionic
-        # Add your iOS app scheme here when available
-    ],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -250,6 +272,13 @@ app.include_router(
     applications.router,
     prefix=f"{API_V1_PREFIX}/applications",
     tags=["Application Assistant"],
+    dependencies=[]  # Auth applied per endpoint for granular control
+)
+
+app.include_router(
+    ai.router,
+    prefix=f"{API_V1_PREFIX}/ai",
+    tags=["AI Investment Triage"],
     dependencies=[]  # Auth applied per endpoint for granular control
 )
 
