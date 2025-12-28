@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "@executeautomation/playwright-mcp-server": "^1.0.12",
+    "@playwright/test": "^1.57.0"
+  }
+}
