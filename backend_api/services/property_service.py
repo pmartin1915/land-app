@@ -51,17 +51,17 @@ class PropertyService:
             water_score = calculate_water_score(description)
 
             # Enhanced Description Intelligence Analysis (Phase 1)
-            logger.info(f"Starting enhanced analysis for description: {description[:50]}...")
+            logger.debug(f"Starting enhanced analysis for description (length={len(description)})")
             analyzer = EnhancedDescriptionAnalyzer()
             intelligence = analyzer.analyze_description(description)
-            logger.info(f"Enhanced analysis complete. Total score: {intelligence.total_description_score}")
+            logger.debug(f"Enhanced analysis complete. Total score: {intelligence.total_description_score}")
 
             # County Intelligence Analysis (Phase 1)
             county_name = property_data.get('county', '')
             county_intelligence_scores = {'county_market_score': 0.0, 'geographic_score': 0.0, 'market_timing_score': 0.0}
 
             if county_name:
-                logger.info(f"Starting county intelligence analysis for: {county_name}")
+                logger.debug(f"Starting county intelligence analysis for: {county_name}")
                 county_analyzer = CountyIntelligenceAnalyzer()
                 county_intelligence = county_analyzer.analyze_county(county_name)
                 county_intelligence_scores = {
@@ -69,7 +69,7 @@ class PropertyService:
                     'geographic_score': county_intelligence.geographic_score,
                     'market_timing_score': county_intelligence.market_timing_score
                 }
-                logger.info(f"County analysis complete. Market: {county_intelligence_scores['county_market_score']}, Geographic: {county_intelligence_scores['geographic_score']}, Timing: {county_intelligence_scores['market_timing_score']}")
+                logger.debug(f"County analysis complete. Market score: {county_intelligence_scores['county_market_score']:.2f}")
             else:
                 logger.warning("No county specified for property - using default county intelligence scores")
 
@@ -129,7 +129,7 @@ class PropertyService:
                 'market_timing_score': county_intelligence_scores['market_timing_score']
             }
 
-            logger.info(f"Returning enhanced metrics. Corner bonus: {result['corner_lot_bonus']}, Total description score: {result['total_description_score']}, County market: {result['county_market_score']}, Geographic: {result['geographic_score']}, Timing: {result['market_timing_score']}")
+            logger.debug(f"Enhanced metrics calculated. Investment score: {result.get('investment_score', 0):.2f}")
             return result
 
         except Exception as e:

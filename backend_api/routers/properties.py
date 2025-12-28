@@ -16,8 +16,10 @@ from ..services.property_service import PropertyService
 from ..models.property import (
     PropertyCreate, PropertyUpdate, PropertyResponse, PropertyListResponse,
     PropertyFilters, PropertyCalculationRequest, PropertyCalculationResponse,
-    PropertyMetrics, PropertyBulkOperation, PropertyBulkResponse
+    PropertyMetrics, PropertyBulkOperation, PropertyBulkResponse,
+    PropertyStatusUpdate, PropertyStatusResponse
 )
+from datetime import datetime
 from ..auth import require_property_read, require_property_write
 
 logger = logging.getLogger(__name__)
@@ -109,6 +111,53 @@ async def list_properties(
     except Exception as e:
         logger.error(f"Failed to list properties: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to retrieve properties")
+
+
+@router.get("/workflow/stats")
+@limiter.limit("60/minute")
+async def get_workflow_stats(
+    request: Request,
+    auth_data: dict = Depends(require_property_read),
+    db: Session = Depends(get_db)
+):
+    """
+    Get property counts by research workflow status.
+    Returns counts for: new, reviewing, bid_ready, rejected, purchased
+    """
+    from ..database.models import Property
+    from sqlalchemy import func
+
+    try:
+        # Get counts by status
+        status_counts = db.query(
+            Property.status,
+            func.count(Property.id).label('count')
+        ).filter(
+            Property.is_deleted == False
+        ).group_by(Property.status).all()
+
+        # Convert to dict with defaults
+        stats = {
+            "new": 0,
+            "reviewing": 0,
+            "bid_ready": 0,
+            "rejected": 0,
+            "purchased": 0,
+            "total": 0
+        }
+
+        for status, count in status_counts:
+            status_key = status if status else "new"
+            if status_key in stats:
+                stats[status_key] = count
+            stats["total"] += count
+
+        return stats
+
+    except Exception as e:
+        logger.error(f"Failed to get workflow stats: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get workflow statistics")
+
 
 @router.get("/{property_id}", response_model=PropertyResponse)
 @limiter.limit("200/minute")
@@ -206,6 +255,57 @@ async def delete_property(
     except Exception as e:
         logger.error(f"Failed to delete property {property_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to delete property")
+
+
+@router.patch("/{property_id}/status", response_model=PropertyStatusResponse)
+@limiter.limit("100/minute")
+async def update_property_status(
+    request: Request,
+    property_id: str,
+    status_update: PropertyStatusUpdate,
+    auth_data: dict = Depends(require_property_write),
+    db: Session = Depends(get_db)
+):
+    """
+    Update property research status for triage workflow.
+    Status transitions: new -> reviewing -> bid_ready/rejected -> purchased
+    """
+    from ..database.models import Property
+
+    try:
+        # Find the property
+        property_obj = db.query(Property).filter(Property.id == property_id).first()
+        if not property_obj:
+            raise HTTPException(status_code=404, detail="Property not found")
+
+        # Update status and metadata
+        property_obj.status = status_update.status
+        if status_update.triage_notes:
+            property_obj.triage_notes = status_update.triage_notes
+        property_obj.triaged_at = datetime.utcnow()
+        property_obj.triaged_by = status_update.device_id
+
+        db.commit()
+        db.refresh(property_obj)
+
+        logger.info(f"Updated property {property_id} status to {status_update.status}")
+
+        return PropertyStatusResponse(
+            id=property_obj.id,
+            status=property_obj.status,
+            triage_notes=property_obj.triage_notes,
+            triaged_at=property_obj.triaged_at,
+            triaged_by=property_obj.triaged_by,
+            message=f"Property status updated to {property_obj.status}"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to update property status {property_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update property status")
+
 
 @router.post("/calculate", response_model=PropertyCalculationResponse)
 @limiter.limit("100/minute")

@@ -15,6 +15,7 @@ from ..models.prediction import (
     PropertyAppreciationRequest, PropertyAppreciationResponse,
     MarketTimingRequest, MarketTimingResponse,
     OpportunityDetectionRequest, OpportunityDetectionResponse,
+    EmergingOpportunityResponse,
     BatchAppreciationRequest, BatchAppreciationResponse,
     PredictionHealthResponse,
     PredictionConfidence, MarketTrend, OpportunityType, MarketPhase
