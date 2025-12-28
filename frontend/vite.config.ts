@@ -1,35 +1,20 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import electron from 'vite-plugin-electron'
 import { resolve } from 'path'
+
+// Detect if running in Tauri
+const isTauri = process.env.TAURI_PLATFORM !== undefined
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    react(),
-    electron([
-      {
-        // Main-Process entry file of the Electron App.
-        entry: 'electron/main.ts',
-      },
-      {
-        entry: 'electron/preload.ts',
-        onstart(options) {
-          // Notify the Renderer-Process to reload the page when the Preload-Scripts build is complete,
-          // instead of restarting the entire Electron App.
-          options.reload()
-        },
-      },
-    ])
-  ],
+  plugins: [react()],
   server: {
-    port: parseInt(process.env.VITE_DEV_PORT || '5173'),
+    port: 5173,
+    strictPort: true, // Tauri expects a fixed port
     host: true,
-    strictPort: false, // Allow Vite to try other ports if the preferred one is taken
-    open: false, // Don't auto-open browser - let the launcher handle this
+    open: false,
     cors: true,
     proxy: {
-      // Proxy API calls to backend during development
       '/api': {
         target: process.env.VITE_API_URL || 'http://localhost:8001',
         changeOrigin: true,
@@ -49,7 +34,10 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    // Tauri uses Chromium on Windows (WebView2), target accordingly
+    target: isTauri ? 'chrome105' : 'esnext',
   },
-  // Required for Electron
-  base: process.env.ELECTRON == 'true' ? './' : '/',
+  // Environment variables
+  envPrefix: ['VITE_', 'TAURI_'],
+  clearScreen: false,
 })

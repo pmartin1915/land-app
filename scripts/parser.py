@@ -9,6 +9,7 @@ Usage:
     python scripts/parser.py -i data/raw/baldwin.csv -o data/processed/watchlist.csv --infer-acres
 """
 
+import asyncio
 import argparse
 import os
 import sys
@@ -514,7 +515,7 @@ class AuctionParser:
             print(f"Scraping data for {county_name} County (code: {county_code})...")
 
             # Scrape data from ADOR website
-            df = scrape_county_data(county_input, max_pages=max_pages, save_raw=True)
+            df = asyncio.run(scrape_county_data(county_input, max_pages=max_pages, save_raw=True))
 
             if df.empty:
                 print(f"No data found for {county_name} County. Skipping processing.")
@@ -656,7 +657,7 @@ def process_single_county(county: str, auction_parser: 'AuctionParser', max_page
         print(f"Processing {county_name} County ({county_code})...")
 
         # Scrape data
-        raw_df = scrape_county_data(county, max_pages=max_pages, save_raw=True)
+        raw_df = asyncio.run(scrape_county_data(county, max_pages=max_pages, save_raw=True))
 
         if raw_df.empty:
             return {

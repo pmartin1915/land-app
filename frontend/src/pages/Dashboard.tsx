@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useComponentTheme } from '../lib/theme-provider'
-import { usePropertyStats, useTriageQueue, useCounties } from '../lib/hooks'
+import { usePropertyStats, useTriageQueue, useCounties, useWorkflowStats } from '../lib/hooks'
 import { PropertyFilters } from '../types'
 import { DashboardCharts } from '../components/DashboardCharts'
 
@@ -56,6 +56,7 @@ export function Dashboard() {
   const { data: stats, loading: statsLoading, error: statsError } = usePropertyStats(filters)
   const { data: triageQueue, loading: triageLoading } = useTriageQueue()
   const { data: counties, loading: countiesLoading } = useCounties()
+  const { data: workflowStats, loading: workflowLoading } = useWorkflowStats()
 
   // Calculate derived metrics
   const upcomingAuctions = stats?.upcoming_auctions || 0
@@ -182,6 +183,104 @@ export function Dashboard() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Research Pipeline */}
+      <div className="bg-card rounded-lg p-6 border border-neutral-1 shadow-card mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-text-primary">Research Pipeline</h2>
+            <p className="text-sm text-text-muted">Property workflow status breakdown</p>
+          </div>
+          {workflowStats && (
+            <span className="text-sm text-text-muted">
+              {workflowStats.total.toLocaleString()} total properties
+            </span>
+          )}
+        </div>
+
+        {workflowLoading ? (
+          <div className="animate-pulse">
+            <div className="h-8 bg-surface rounded mb-4"></div>
+            <div className="grid grid-cols-5 gap-4">
+              {Array(5).fill(0).map((_, i) => (
+                <div key={i} className="h-20 bg-surface rounded"></div>
+              ))}
+            </div>
+          </div>
+        ) : workflowStats ? (
+          <>
+            {/* Progress bar */}
+            <div className="h-4 bg-surface rounded-full overflow-hidden mb-6 flex">
+              {workflowStats.new > 0 && (
+                <div
+                  className="bg-neutral-2 transition-all duration-300"
+                  style={{ width: `${(workflowStats.new / workflowStats.total) * 100}%` }}
+                  title={`New: ${workflowStats.new}`}
+                />
+              )}
+              {workflowStats.reviewing > 0 && (
+                <div
+                  className="bg-warning transition-all duration-300"
+                  style={{ width: `${(workflowStats.reviewing / workflowStats.total) * 100}%` }}
+                  title={`Reviewing: ${workflowStats.reviewing}`}
+                />
+              )}
+              {workflowStats.bid_ready > 0 && (
+                <div
+                  className="bg-success transition-all duration-300"
+                  style={{ width: `${(workflowStats.bid_ready / workflowStats.total) * 100}%` }}
+                  title={`Bid Ready: ${workflowStats.bid_ready}`}
+                />
+              )}
+              {workflowStats.rejected > 0 && (
+                <div
+                  className="bg-danger transition-all duration-300"
+                  style={{ width: `${(workflowStats.rejected / workflowStats.total) * 100}%` }}
+                  title={`Rejected: ${workflowStats.rejected}`}
+                />
+              )}
+              {workflowStats.purchased > 0 && (
+                <div
+                  className="bg-accent-primary transition-all duration-300"
+                  style={{ width: `${(workflowStats.purchased / workflowStats.total) * 100}%` }}
+                  title={`Purchased: ${workflowStats.purchased}`}
+                />
+              )}
+            </div>
+
+            {/* Status cards */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="text-center p-4 bg-surface rounded-lg border border-neutral-1">
+                <div className="w-3 h-3 bg-neutral-2 rounded-full mx-auto mb-2"></div>
+                <p className="text-2xl font-bold text-text-primary">{workflowStats.new.toLocaleString()}</p>
+                <p className="text-sm text-text-muted">New</p>
+              </div>
+              <div className="text-center p-4 bg-surface rounded-lg border border-warning/30">
+                <div className="w-3 h-3 bg-warning rounded-full mx-auto mb-2"></div>
+                <p className="text-2xl font-bold text-text-primary">{workflowStats.reviewing.toLocaleString()}</p>
+                <p className="text-sm text-text-muted">Reviewing</p>
+              </div>
+              <div className="text-center p-4 bg-surface rounded-lg border border-success/30">
+                <div className="w-3 h-3 bg-success rounded-full mx-auto mb-2"></div>
+                <p className="text-2xl font-bold text-text-primary">{workflowStats.bid_ready.toLocaleString()}</p>
+                <p className="text-sm text-text-muted">Bid Ready</p>
+              </div>
+              <div className="text-center p-4 bg-surface rounded-lg border border-danger/30">
+                <div className="w-3 h-3 bg-danger rounded-full mx-auto mb-2"></div>
+                <p className="text-2xl font-bold text-text-primary">{workflowStats.rejected.toLocaleString()}</p>
+                <p className="text-sm text-text-muted">Rejected</p>
+              </div>
+              <div className="text-center p-4 bg-surface rounded-lg border border-accent-primary/30">
+                <div className="w-3 h-3 bg-accent-primary rounded-full mx-auto mb-2"></div>
+                <p className="text-2xl font-bold text-text-primary">{workflowStats.purchased.toLocaleString()}</p>
+                <p className="text-sm text-text-muted">Purchased</p>
+              </div>
+            </div>
+          </>
+        ) : (
+          <p className="text-text-muted text-center py-4">Unable to load workflow statistics</p>
+        )}
       </div>
 
       {/* Interactive Charts Section */}

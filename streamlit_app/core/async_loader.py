@@ -27,6 +27,20 @@ from config.security import get_security_config, create_secure_headers
 from streamlit_app.core.performance_monitor import get_performance_monitor, performance_context
 from streamlit_app.core.cache_manager import get_cache_manager
 
+# Core services for centralized filter logic (DDD)
+from core.services.property_filters import (
+    PropertyFilterSpec,
+    PropertySortSpec,
+    build_filter_params,
+    build_sql_where_clause,
+    ALLOWED_SORT_COLUMNS,
+)
+from backend_api.domain.value_objects import (
+    InvestmentScore,
+    WaterScore,
+    PricePerAcre,
+)
+
 
 @dataclass
 class DataLoadRequest:
@@ -242,57 +256,22 @@ class AsyncDataLoader:
         return requests
 
     def _build_api_params(self, filters: Dict[str, Any]) -> Dict[str, Any]:
-        """Build API parameters from filters."""
-        params = {
-            "page_size": 10000  # Fetch all data in single request
-        }
+        """Build API parameters from filters using centralized PropertyFilterSpec."""
+        # Convert UI filters to framework-agnostic specification
+        filter_spec = PropertyFilterSpec.from_ui_filters(filters)
 
-        # Map filter values to API parameters
-        if 'price_range' in filters and filters['price_range']:
-            min_price, max_price = filters['price_range']
-            if min_price > 0:
-                params['min_price'] = min_price
-            if max_price < 1000000:  # Only set if not at maximum
-                params['max_price'] = max_price
+        # Build base parameters from filter spec
+        params = build_filter_params(filter_spec)
 
-        if 'acreage_range' in filters and filters['acreage_range']:
-            min_acreage, max_acreage = filters['acreage_range']
-            if min_acreage > 0:
-                params['min_acreage'] = min_acreage
-            if max_acreage < 1000:  # Only set if not at maximum
-                params['max_acreage'] = max_acreage
+        # Add pagination (fetch all in single request for Streamlit)
+        params["page_size"] = 10000
 
-        if filters.get('water_only'):
-            params['water_features'] = True
-
-        if filters.get('county') and filters['county'] != 'All':
-            params['county'] = filters['county']
-
-        # Intelligence score filters
-        for score_filter in ['min_investment_score', 'min_county_market_score',
-                           'min_geographic_score', 'min_market_timing_score',
-                           'min_total_description_score', 'min_road_access_score']:
-            if filters.get(score_filter, 0) > 0:
-                params[score_filter] = filters[score_filter]
-
-        # Add sort_by filter to API parameters
-        # The filters['sort_by'] from app.py is a tuple like ('investment_score', False)
-        # We need to convert it to a string like "investment_score DESC" for the API.
-        allowed_api_sort_columns = {'amount', 'investment_score', 'acreage', 'price_per_acre', 'water_score'}
-        default_api_sort = "investment_score DESC"
-
+        # Handle sort specification
         if 'sort_by' in filters and isinstance(filters['sort_by'], tuple) and len(filters['sort_by']) == 2:
-            sort_column_raw, sort_asc_bool = filters['sort_by']
-
-            if sort_column_raw in allowed_api_sort_columns:
-                sort_direction = "ASC" if sort_asc_bool else "DESC"
-                params['sort_by'] = f"{sort_column_raw} {sort_direction}"
-            else:
-                # Fallback to default if an invalid column name is provided
-                params['sort_by'] = default_api_sort
+            sort_spec = PropertySortSpec.from_ui_tuple(filters['sort_by'])
+            params['sort_by'] = f"{sort_spec.column} {sort_spec.order.value.upper()}"
         else:
-            # Default sort if 'sort_by' is not present in filters or is malformed
-            params['sort_by'] = default_api_sort
+            params['sort_by'] = "investment_score DESC"
 
         return params
 
@@ -396,99 +375,42 @@ class StreamlitDataLoader:
         return pd.DataFrame()
 
     def _load_from_database_direct(self, filters: Dict[str, Any]) -> pd.DataFrame:
-        """Load data directly from the database as a fallback."""
-        # Database path - use the same path as the corrected API backend
+        """Load data directly from the database using centralized filter specs."""
         db_path = Path(__file__).parent.parent.parent / "alabama_auction_watcher.db"
 
         if not db_path.exists():
             raise FileNotFoundError(f"Database not found at {db_path}")
 
-        # Connect and query
         conn = sqlite3.connect(str(db_path))
 
         try:
-            # Build the base query
-            query = """
-            SELECT * FROM properties
-            WHERE 1=1
-            """
-            params = []
+            # Convert UI filters to framework-agnostic specification
+            filter_spec = PropertyFilterSpec.from_ui_filters(filters)
 
-            # Apply filters
-            if 'price_range' in filters and filters['price_range']:
-                min_price, max_price = filters['price_range']
-                if min_price > 0:
-                    query += " AND amount >= ?"
-                    params.append(min_price)
-                if max_price < 1000000:  # Only set if not at maximum
-                    query += " AND amount <= ?"
-                    params.append(max_price)
+            # Build WHERE clause using centralized function
+            where_clause, params = build_sql_where_clause(filter_spec)
 
-            if 'acreage_range' in filters and filters['acreage_range']:
-                min_acreage, max_acreage = filters['acreage_range']
-                if min_acreage > 0:
-                    query += " AND acreage >= ?"
-                    params.append(min_acreage)
-                if max_acreage < 1000:
-                    query += " AND acreage <= ?"
-                    params.append(max_acreage)
-
-            if filters.get('water_only'):
-                query += " AND water_score > 0"
-
-            if filters.get('county') and filters['county'] != 'All':
-                query += " AND county = ?"
-                params.append(filters['county'])
-
-            # Intelligence score filters
-            score_filters = ['min_investment_score', 'min_county_market_score',
-                           'min_geographic_score', 'min_market_timing_score',
-                           'min_total_description_score', 'min_road_access_score']
-
-            for score_filter in score_filters:
-                if filters.get(score_filter, 0) > 0:
-                    column_name = score_filter.replace('min_', '')
-                    query += f" AND {column_name} >= ?"
-                    params.append(filters[score_filter])
-
-            # Dynamic ORDER BY clause based on sort_by filter
-            # Define allowed columns for sorting to prevent SQL injection
-            allowed_db_sort_columns = {
-                'amount', 'investment_score', 'acreage', 'price_per_acre', 'water_score',
-                'county_market_score', 'geographic_score', 'market_timing_score',
-                'total_description_score', 'road_access_score'
-            }
-
-            # Default sort tuple from app.py: ('investment_score', False) -> investment_score DESC
-            default_sort_tuple = ('investment_score', False)
-
-            # Get sort_by from filters, defaulting to the defined tuple
-            sort_by_filter_value = filters.get('sort_by', default_sort_tuple)
-
-            # Parse and validate the sort_by value
-            if isinstance(sort_by_filter_value, tuple) and len(sort_by_filter_value) == 2:
-                sort_column_raw, sort_asc_bool = sort_by_filter_value
+            # Handle sort specification
+            if 'sort_by' in filters and isinstance(filters['sort_by'], tuple) and len(filters['sort_by']) == 2:
+                sort_spec = PropertySortSpec.from_ui_tuple(filters['sort_by'])
             else:
-                # Fallback to default if the filter value is not a valid tuple
-                sort_column_raw, sort_asc_bool = default_sort_tuple
+                sort_spec = PropertySortSpec()  # Default: investment_score DESC
 
-            # Validate column name against the whitelist
-            sort_column = sort_column_raw if sort_column_raw in allowed_db_sort_columns else default_sort_tuple[0]
+            # Build and execute query
+            query = f"""
+            SELECT * FROM properties
+            WHERE {where_clause}
+            ORDER BY {sort_spec.column} {sort_spec.order.value.upper()}
+            """
 
-            # Determine sort direction based on the boolean
-            sort_direction = "ASC" if sort_asc_bool else "DESC"
-
-            query += f" ORDER BY {sort_column} {sort_direction}"
-
-            # Execute query and return DataFrame
             df = pd.read_sql_query(query, conn, params=params)
             return df
 
         finally:
             conn.close()
 
-    def _process_properties_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Process and clean properties data."""
+    def _process_properties_data(self, df: pd.DataFrame, use_value_objects: bool = False) -> pd.DataFrame:
+        """Process and clean properties data with optional value object integration."""
         if df.empty:
             return df
 
@@ -508,6 +430,47 @@ class StreamlitDataLoader:
                 lambda row: row['amount'] / row['acreage'] if row['acreage'] > 0 else 0,
                 axis=1
             )
+
+        # Optional: Add value object-derived columns for enhanced display
+        if use_value_objects:
+            df = self._add_value_object_columns(df)
+
+        return df
+
+    def _add_value_object_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Add columns derived from value objects for enhanced display."""
+        # Investment score rating (A+, A, B, C, D, F)
+        def get_investment_rating(score):
+            try:
+                if pd.isna(score):
+                    return "N/A"
+                return InvestmentScore.create(float(score)).to_rating()
+            except (ValueError, TypeError):
+                return "N/A"
+
+        df['investment_rating'] = df['investment_score'].apply(get_investment_rating)
+
+        # Water category (none, minimal, moderate, excellent, exceptional)
+        def get_water_category(score):
+            try:
+                if pd.isna(score):
+                    return "none"
+                return WaterScore.create(float(score)).get_water_category()
+            except (ValueError, TypeError):
+                return "none"
+
+        df['water_category'] = df['water_score'].apply(get_water_category)
+
+        # High-value flag for investment score >= 70
+        def is_high_value(score):
+            try:
+                if pd.isna(score):
+                    return False
+                return InvestmentScore.create(float(score)).is_high_value()
+            except (ValueError, TypeError):
+                return False
+
+        df['is_high_value'] = df['investment_score'].apply(is_high_value)
 
         return df
 

@@ -7,37 +7,28 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
-      // Design tokens from specification
+      // Design tokens from specification - using CSS variables for theme switching
       colors: {
-        // Background colors (dark-first)
-        'bg': '#0B0F13',
-        'surface': '#0F1418',
-        'card': '#13171B',
+        // Background colors - switch based on theme
+        'bg': 'var(--color-bg)',
+        'surface': 'var(--color-surface)',
+        'card': 'var(--color-card)',
 
         // Text colors
-        'text-primary': '#E6EEF3',
-        'text-muted': '#A8B3BD',
+        'text-primary': 'var(--color-text-primary)',
+        'text-muted': 'var(--color-text-muted)',
 
         // Accent colors
-        'accent-primary': '#6C8EF5',  // indigo
-        'accent-alt': '#08A6A6',      // teal
+        'accent-primary': 'var(--color-accent-primary)',
+        'accent-alt': 'var(--color-accent-alt)',
 
         // Semantic colors
-        'success': '#16A34A',
-        'warning': '#F59E0B',
-        'danger': '#EF4444',
+        'success': 'var(--color-success)',
+        'warning': 'var(--color-warning)',
+        'danger': 'var(--color-danger)',
 
         // Neutral
-        'neutral-1': '#0C1114',
-
-        // Light mode overrides (when needed)
-        'light': {
-          'bg': '#FFFFFF',
-          'surface': '#F8FAFC',
-          'card': '#FFFFFF',
-          'text-primary': '#1F2937',
-          'text-muted': '#6B7280',
-        }
+        'neutral-1': 'var(--color-neutral-1)',
       },
 
       // Typography
