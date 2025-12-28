@@ -67,6 +67,12 @@ class Property(Base):
     sync_timestamp = Column(DateTime, default=func.now(), comment="Last sync timestamp")
     is_deleted = Column(Boolean, default=False, comment="Soft delete flag for sync")
 
+    # Research workflow status
+    status = Column(String, default="new", comment="Research status: new, reviewing, bid_ready, rejected, purchased")
+    triage_notes = Column(Text, nullable=True, comment="Research notes from triage review")
+    triaged_at = Column(DateTime, nullable=True, comment="When property was triaged")
+    triaged_by = Column(String, nullable=True, comment="Device/user that triaged this property")
+
     def __repr__(self):
         return f"<Property(id={self.id}, parcel_id={self.parcel_id}, amount={self.amount})>"
 
@@ -111,7 +117,12 @@ class Property(Base):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "device_id": self.device_id,
             "sync_timestamp": self.sync_timestamp.isoformat() if self.sync_timestamp else None,
-            "is_deleted": self.is_deleted
+            "is_deleted": self.is_deleted,
+            # Research workflow
+            "status": self.status or "new",
+            "triage_notes": self.triage_notes,
+            "triaged_at": self.triaged_at.isoformat() if self.triaged_at else None,
+            "triaged_by": self.triaged_by
         }
 
 class County(Base):

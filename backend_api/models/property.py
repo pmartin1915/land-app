@@ -19,7 +19,13 @@ from config.validation import (
 )
 
 class PropertyStatus(str, Enum):
-    """Property status enumeration."""
+    """Property status enumeration for research workflow."""
+    NEW = "new"              # Freshly imported, not yet reviewed
+    REVIEWING = "reviewing"  # Under active investigation
+    BID_READY = "bid_ready"  # Ready to bid on
+    REJECTED = "rejected"    # Not a good investment
+    PURCHASED = "purchased"  # Successfully acquired
+    # Legacy statuses for compatibility
     ACTIVE = "active"
     SOLD = "sold"
     PENDING = "pending"
@@ -165,6 +171,12 @@ class PropertyResponse(BaseModel):
     sync_timestamp: datetime = Field(..., description="Last sync timestamp")
     is_deleted: bool = Field(default=False, description="Soft delete flag for sync")
 
+    # Research workflow status
+    status: str = Field(default="new", description="Research status: new, reviewing, bid_ready, rejected, purchased")
+    triage_notes: Optional[str] = Field(None, description="Research notes from triage review")
+    triaged_at: Optional[datetime] = Field(None, description="When property was triaged")
+    triaged_by: Optional[str] = Field(None, description="Device/user that triaged this property")
+
     class Config:
         from_attributes = True  # Enable ORM mode for SQLAlchemy compatibility
         # Include fields with default values in serialization
@@ -194,6 +206,26 @@ class PropertyListResponse(BaseModel):
     total_pages: int = Field(..., description="Total number of pages")
     has_next: bool = Field(..., description="Whether there are more pages")
     has_previous: bool = Field(..., description="Whether there are previous pages")
+
+
+class PropertyStatusUpdate(BaseModel):
+    """Model for updating property research status."""
+    status: PropertyStatus = Field(..., description="New research status")
+    triage_notes: Optional[str] = Field(None, description="Research notes", max_length=2000)
+    device_id: Optional[str] = Field(None, description="Device/user making the update")
+
+    class Config:
+        use_enum_values = True
+
+
+class PropertyStatusResponse(BaseModel):
+    """Response after updating property status."""
+    id: str = Field(..., description="Property ID")
+    status: str = Field(..., description="New status")
+    triage_notes: Optional[str] = Field(None, description="Research notes")
+    triaged_at: datetime = Field(..., description="When status was updated")
+    triaged_by: Optional[str] = Field(None, description="Who updated the status")
+    message: str = Field(..., description="Success message")
 
 class PropertyFilters(BaseModel):
     """Model for property filtering and search parameters."""
