@@ -8,6 +8,7 @@ requests>=2.28.0
 beautifulsoup4>=4.11.0
 lxml>=4.9.0
 html5lib>=1.1
+playwright>=1.57.0
 
 # Testing & Development Dependencies
 pytest>=7.4.0
@@ -52,3 +53,4 @@ slowapi>=0.1.9
 sqlalchemy>=2.0.0
 databases[postgresql]>=0.8.0
 psycopg2-binary>=2.9.0
+alembic>=1.13.0
