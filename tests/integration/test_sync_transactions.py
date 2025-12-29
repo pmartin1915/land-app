@@ -10,6 +10,8 @@ from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, MagicMock
 from uuid import uuid4
 
+from sqlalchemy.exc import IntegrityError, NoResultFound, DataError
+
 from backend_api.services.sync.orchestrator import SyncOrchestrator
 from backend_api.services.sync.conflict_resolver import ConflictResolver
 from backend_api.services.sync.differ import SyncDiffer
@@ -208,29 +210,54 @@ class TestBatchProcessing:
 
 
 class TestErrorCategorization:
-    """Tests for error categorization logic."""
+    """Tests for error categorization logic using exception types."""
 
     @pytest.mark.unit
     def test_categorize_validation_error(self, orchestrator):
-        """Validation errors should be categorized correctly."""
+        """ValueError should be categorized as VALIDATION_ERROR."""
         error = ValueError("Invalid property data")
         assert orchestrator._categorize_error(error) == "VALIDATION_ERROR"
 
     @pytest.mark.unit
+    def test_categorize_type_error(self, orchestrator):
+        """TypeError should be categorized as VALIDATION_ERROR."""
+        error = TypeError("Expected int, got str")
+        assert orchestrator._categorize_error(error) == "VALIDATION_ERROR"
+
+    @pytest.mark.unit
     def test_categorize_constraint_violation(self, orchestrator):
-        """Constraint violations should be categorized correctly."""
-        error = Exception("UNIQUE constraint failed: duplicate key")
+        """IntegrityError should be categorized as CONSTRAINT_VIOLATION."""
+        # IntegrityError requires specific constructor args
+        error = IntegrityError("INSERT", {}, Exception("UNIQUE constraint failed"))
         assert orchestrator._categorize_error(error) == "CONSTRAINT_VIOLATION"
 
     @pytest.mark.unit
-    def test_categorize_not_found(self, orchestrator):
-        """Not found errors should be categorized correctly."""
+    def test_categorize_not_found_exception(self, orchestrator):
+        """NoResultFound should be categorized as NOT_FOUND."""
+        error = NoResultFound()
+        assert orchestrator._categorize_error(error) == "NOT_FOUND"
+
+    @pytest.mark.unit
+    def test_categorize_not_found_string_fallback(self, orchestrator):
+        """String containing 'not found' should fallback to NOT_FOUND."""
         error = Exception("Property not found: prop-123")
         assert orchestrator._categorize_error(error) == "NOT_FOUND"
 
     @pytest.mark.unit
+    def test_categorize_data_error(self, orchestrator):
+        """DataError should be categorized as VALIDATION_ERROR."""
+        error = DataError("INSERT", {}, Exception("Invalid data type"))
+        assert orchestrator._categorize_error(error) == "VALIDATION_ERROR"
+
+    @pytest.mark.unit
     def test_categorize_permission_denied(self, orchestrator):
-        """Permission errors should be categorized correctly."""
+        """PermissionError should be categorized as PERMISSION_DENIED."""
+        error = PermissionError("Access denied")
+        assert orchestrator._categorize_error(error) == "PERMISSION_DENIED"
+
+    @pytest.mark.unit
+    def test_categorize_permission_string_fallback(self, orchestrator):
+        """String containing 'permission' should fallback to PERMISSION_DENIED."""
         error = Exception("Permission denied for this operation")
         assert orchestrator._categorize_error(error) == "PERMISSION_DENIED"
 

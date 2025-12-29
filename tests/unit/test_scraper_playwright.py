@@ -86,13 +86,13 @@ class TestValidateCountyCode:
             validate_county_code('XYZ123NotACounty')
 
     @pytest.mark.unit
-    def test_validate_empty_string_matches_first_county(self):
-        """Empty string matches first county via substring (current behavior)."""
-        # Note: This is arguably a bug - empty string should probably raise error
-        # But we test actual behavior here
-        result = validate_county_code('')
-        # Empty string is substring of all names, matches first in iteration
-        assert result in ALABAMA_COUNTY_CODES
+    def test_validate_empty_string_raises_error(self):
+        """Empty string should raise CountyValidationError."""
+        with pytest.raises(CountyValidationError):
+            validate_county_code('')
+
+        with pytest.raises(CountyValidationError):
+            validate_county_code('   ')  # Whitespace-only also rejected
 
     @pytest.mark.unit
     def test_validate_case_insensitive(self):

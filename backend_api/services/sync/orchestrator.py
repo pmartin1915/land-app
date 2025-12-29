@@ -8,6 +8,7 @@ from typing import Optional
 from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError, NoResultFound, DataError
 
 from ...database.models import Property, SyncLog
 from ...models.sync import (
@@ -219,19 +220,33 @@ class SyncOrchestrator:
         return changes_applied, rejected_changes
 
     def _categorize_error(self, error: Exception) -> str:
-        """Categorize an error for client handling."""
-        error_str = str(error).lower()
-
-        if "validation" in error_str or "invalid" in error_str:
+        """Categorize an error for client handling using exception types."""
+        # Check exception types first (more reliable than string matching)
+        if isinstance(error, (ValueError, TypeError)):
             return "VALIDATION_ERROR"
-        elif "constraint" in error_str or "duplicate" in error_str:
+
+        if isinstance(error, IntegrityError):
+            # Unique constraint, foreign key violations
             return "CONSTRAINT_VIOLATION"
-        elif "not found" in error_str:
+
+        if isinstance(error, NoResultFound):
             return "NOT_FOUND"
-        elif "permission" in error_str or "unauthorized" in error_str:
+
+        if isinstance(error, DataError):
+            # Invalid data types, string too long, bad enum
+            return "VALIDATION_ERROR"
+
+        if isinstance(error, PermissionError):
             return "PERMISSION_DENIED"
-        else:
-            return "INTERNAL_ERROR"
+
+        # Fallback to string matching for edge cases
+        error_str = str(error).lower()
+        if "not found" in error_str:
+            return "NOT_FOUND"
+        if "permission" in error_str or "unauthorized" in error_str:
+            return "PERMISSION_DENIED"
+
+        return "INTERNAL_ERROR"
 
     # =========================================================================
     # FULL SYNC

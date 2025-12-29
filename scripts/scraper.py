@@ -65,16 +65,27 @@ MAX_RETRIES = 3
 def validate_county_code(county_input: str) -> str:
     """Validate and normalize county code input."""
     county_input = str(county_input).strip()
+
+    # Reject empty input
+    if not county_input:
+        raise CountyValidationError("empty string")
+
+    # Check if it's a numeric code
     if county_input.isdigit() and len(county_input) <= 2:
         county_code = county_input.zfill(2)
         if county_code in ALABAMA_COUNTY_CODES:
             return county_code
+
+    # Check exact name match
     county_name = county_input.upper()
     if county_name in COUNTY_NAME_TO_CODE:
         return COUNTY_NAME_TO_CODE[county_name]
+
+    # Check partial name match (prefix or substring)
     for name, code in COUNTY_NAME_TO_CODE.items():
         if county_name in name or name.startswith(county_name):
             return code
+
     raise CountyValidationError(county_input)
 
 

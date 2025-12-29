@@ -118,22 +118,22 @@ class SyncDiffer:
 
     def get_batch(
         self,
-        start_from: int = None,
+        start_from: str = None,
         batch_size: int = 100,
         include_calculations: bool = False,
         property_service=None
-    ) -> Tuple[List[dict], int, bool]:
+    ) -> Tuple[List[dict], str, bool]:
         """
         Get a batch of properties for paginated sync.
 
         Args:
-            start_from: Property ID to start after
+            start_from: Property UUID to start after (cursor pagination)
             batch_size: Number of properties per batch
             include_calculations: Whether to include calculated fields
             property_service: PropertyService for calculations
 
         Returns:
-            Tuple of (batch_data, next_start_id, has_more_data)
+            Tuple of (batch_data, next_start_uuid, has_more_data)
         """
         # Build query for active properties
         query = self.db.query(Property).filter(Property.is_deleted == False)
