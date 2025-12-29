@@ -31,11 +31,12 @@ class RateLimitingMiddleware:
         self.rate_limiter = get_rate_limiter()
 
         # Endpoint classifications for resource-specific limiting
+        # Note: Order matters for prefix matching - longer/more specific patterns first
         self.endpoint_resources = {
-            "/api/v1/properties/": "search",
             "/api/v1/properties/search": "search",
             "/api/v1/properties/bulk": "bulk_operations",
             "/api/v1/properties/export": "data_export",
+            "/api/v1/properties/": "search",  # Default for property list
             "/api/v1/sync/full": "bulk_operations",
             "/api/v1/sync/bulk": "bulk_operations"
         }

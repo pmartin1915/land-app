@@ -4,7 +4,7 @@ Thin layer that coordinates between differ, resolver, and logger.
 """
 
 import logging
-from typing import Optional
+from typing import Optional, Set, Tuple
 from datetime import timedelta
 
 from sqlalchemy.orm import Session
@@ -21,6 +21,7 @@ from ...models.sync import (
 from ...models.property import PropertyCreate, PropertyUpdate
 from ..property_service import PropertyService
 from ..scoring import validate_algorithm_compatibility
+from config.caching import get_cache_invalidator
 from .sync_logger import SyncLogger
 from .differ import SyncDiffer
 from .conflict_resolver import ConflictResolver
@@ -84,7 +85,7 @@ class SyncOrchestrator:
             raise ValueError(f"Algorithm compatibility error: {compatibility_message}")
 
         # Process client changes with transaction safety
-        changes_applied, changes_rejected, conflicts, rejected_details = self._process_client_changes(
+        changes_applied, changes_rejected, conflicts, rejected_details, affected_ids = self._process_client_changes(
             request.device_id,
             request.changes
         )
@@ -104,6 +105,10 @@ class SyncOrchestrator:
 
         new_sync_timestamp = utc_now()
         self.db.commit()
+
+        # Invalidate caches for modified properties after commit
+        # This is critical: PropertyService skips invalidation when auto_commit=False
+        self._invalidate_sync_caches(affected_ids)
 
         # Determine overall status
         if conflicts:
@@ -138,10 +143,14 @@ class SyncOrchestrator:
 
         Uses savepoints to allow partial rollback on batch failures.
         Returns detailed rejection information for failed changes.
+
+        Returns:
+            Tuple of (changes_applied, rejected_count, conflicts, rejected_details, affected_property_ids)
         """
         changes_applied = 0
         rejected_changes = []
         conflicts = []
+        affected_property_ids: Set[str] = set()
 
         # First pass: detect conflicts without modifying data
         non_conflicting, detected_conflicts = self.conflict_resolver.batch_detect_conflicts(
@@ -156,6 +165,7 @@ class SyncOrchestrator:
                 for change in non_conflicting:
                     self._apply_single_change(change, device_id)
                     changes_applied += 1
+                    affected_property_ids.add(change.property_id)
                 # Context manager commits on successful exit
 
         except (IntegrityError, DataError, ValueError) as batch_error:
@@ -169,11 +179,12 @@ class SyncOrchestrator:
 
             # Reset counter and process one by one
             changes_applied = 0
-            changes_applied, rejected_changes = self._process_changes_individually(
+            affected_property_ids.clear()
+            changes_applied, rejected_changes, affected_property_ids = self._process_changes_individually(
                 device_id, non_conflicting
             )
 
-        return changes_applied, len(rejected_changes), conflicts, rejected_changes
+        return changes_applied, len(rejected_changes), conflicts, rejected_changes, affected_property_ids
 
     def _apply_single_change(self, change: PropertyChange, device_id: str):
         """
@@ -200,13 +211,17 @@ class SyncOrchestrator:
                 change.property_id, device_id, auto_commit=False
             )
 
-    def _process_changes_individually(self, device_id: str, changes: list):
+    def _process_changes_individually(self, device_id: str, changes: list) -> Tuple[int, list, Set[str]]:
         """
         Process changes one at a time with individual error handling.
         Used as fallback when batch processing fails.
+
+        Returns:
+            Tuple of (changes_applied, rejected_changes, affected_property_ids)
         """
         changes_applied = 0
         rejected_changes = []
+        affected_property_ids: Set[str] = set()
 
         for change in changes:
             try:
@@ -214,6 +229,7 @@ class SyncOrchestrator:
                     self._apply_single_change(change, device_id)
                     # Context manager commits on successful exit
                 changes_applied += 1
+                affected_property_ids.add(change.property_id)
 
             except Exception as e:
                 # Context manager already rolled back on exception
@@ -232,7 +248,7 @@ class SyncOrchestrator:
                     recoverable=recoverable
                 ))
 
-        return changes_applied, rejected_changes
+        return changes_applied, rejected_changes, affected_property_ids
 
     def _categorize_error(self, error: Exception) -> str:
         """Categorize an error for client handling using exception types."""
@@ -262,6 +278,31 @@ class SyncOrchestrator:
             return "PERMISSION_DENIED"
 
         return "INTERNAL_ERROR"
+
+    def _invalidate_sync_caches(self, property_ids: Set[str]) -> None:
+        """
+        Invalidate caches for properties modified during sync.
+
+        This method exists because PropertyService only invalidates caches when
+        auto_commit=True, but the orchestrator uses auto_commit=False to control
+        transaction boundaries. Without explicit invalidation, stale data would
+        be served from cache until TTL expires (up to 15 minutes).
+
+        Args:
+            property_ids: Set of property IDs that were modified
+        """
+        if not property_ids:
+            return
+
+        try:
+            cache_invalidator = get_cache_invalidator()
+            for property_id in property_ids:
+                cache_invalidator.invalidate_property_caches(property_id=property_id)
+            logger.debug(f"Invalidated caches for {len(property_ids)} properties after sync")
+        except Exception as e:
+            # Cache invalidation failure should not fail the sync operation
+            # Properties will eventually be refreshed when cache TTL expires
+            logger.warning(f"Failed to invalidate caches after sync: {e}")
 
     # =========================================================================
     # FULL SYNC

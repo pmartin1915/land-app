@@ -94,7 +94,7 @@ class TestBatchProcessing:
 
         orchestrator.conflict_resolver.batch_detect_conflicts.return_value = (changes, [])
 
-        applied, rejected, conflicts, rejected_details = orchestrator._process_client_changes(
+        applied, rejected, conflicts, rejected_details, affected_ids = orchestrator._process_client_changes(
             "test-device", changes
         )
 
@@ -102,6 +102,7 @@ class TestBatchProcessing:
         assert rejected == 0
         assert len(conflicts) == 0
         assert len(rejected_details) == 0
+        assert len(affected_ids) == 2
         # Verify context manager was used (begin_nested called, __enter__ invoked)
         mock_db.begin_nested.assert_called()
         mock_db.begin_nested.return_value.__enter__.assert_called()
@@ -140,7 +141,7 @@ class TestBatchProcessing:
 
         mock_property_service.create_property.side_effect = create_side_effect
 
-        applied, rejected, conflicts, rejected_details = orchestrator._process_client_changes(
+        applied, rejected, conflicts, rejected_details, affected_ids = orchestrator._process_client_changes(
             "test-device", changes
         )
 
@@ -195,13 +196,15 @@ class TestBatchProcessing:
         with patch.object(orchestrator, '_apply_single_change') as mock_apply:
             mock_apply.side_effect = [None, ValueError("Invalid data validation error")]
 
-            # _process_changes_individually returns (applied, rejected_changes)
-            applied, rejected_changes = orchestrator._process_changes_individually(
+            # _process_changes_individually returns (applied, rejected_changes, affected_ids)
+            applied, rejected_changes, affected_ids = orchestrator._process_changes_individually(
                 "test-device", changes
             )
 
         assert applied == 1
         assert len(rejected_changes) == 1
+        assert len(affected_ids) == 1
+        assert "prop-1" in affected_ids
 
         rejection = rejected_changes[0]
         assert rejection.property_id == "prop-2"
@@ -296,7 +299,8 @@ class TestDeltaSyncResponse:
                     reason="Test error",
                     error_code="INTERNAL_ERROR",
                     recoverable=True
-                )]
+                )],
+                {"prop-1"}  # affected_ids
             )
 
             # Mock other dependencies
@@ -326,7 +330,7 @@ class TestDeltaSyncResponse:
         )
 
         with patch.object(orchestrator, '_process_client_changes') as mock_process:
-            mock_process.return_value = (2, 0, [], [])
+            mock_process.return_value = (2, 0, [], [], {"prop-1", "prop-2"})  # added affected_ids
 
             orchestrator.differ.get_server_changes.return_value = []
             orchestrator.sync_logger.create_log.return_value = Mock()
@@ -364,10 +368,11 @@ class TestConflictDetection:
             [mock_conflict]  # conflicts
         )
 
-        applied, rejected, conflicts, rejected_details = orchestrator._process_client_changes(
+        applied, rejected, conflicts, rejected_details, affected_ids = orchestrator._process_client_changes(
             "test-device", changes
         )
 
         assert applied == 0
         assert len(conflicts) == 1
         assert conflicts[0].property_id == "prop-1"
+        assert len(affected_ids) == 0  # No changes applied due to conflicts

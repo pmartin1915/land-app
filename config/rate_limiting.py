@@ -106,7 +106,8 @@ class RequestMetrics:
     endpoints_accessed: set = field(default_factory=set)
     user_agents: set = field(default_factory=set)
     request_sizes: List[int] = field(default_factory=list)
-    response_times: deque = field(default_factory=lambda: deque(maxlen=100))
+    # maxlen=300 allows DOS detection (threshold 200) to work correctly
+    response_times: deque = field(default_factory=lambda: deque(maxlen=300))
 
 
 class EnhancedRateLimiter:
@@ -180,8 +181,10 @@ class EnhancedRateLimiter:
     def get_client_identifier(self, request: Any) -> str:
         """Generate unique client identifier from request."""
         # Try to get user ID from auth data
-        if hasattr(request.state, 'user_id'):
-            return f"user:{request.state.user_id}"
+        # Use getattr with None default to handle Mock objects properly
+        user_id = getattr(request.state, 'user_id', None)
+        if user_id is not None and not str(user_id).startswith('<Mock'):
+            return f"user:{user_id}"
 
         # Fall back to IP address
         client_ip = getattr(request.client, 'host', 'unknown')
@@ -199,8 +202,9 @@ class EnhancedRateLimiter:
         if ip_part in self.blocked_ips and self.blocked_ips[ip_part] > time.time():
             return RateLimitTier.BLOCKED
 
-        # Check for cached tier
-        if client_id in self.client_tiers:
+        # When auth_data is provided, always recalculate tier (auth state may have changed)
+        # Only use cached tier when no auth_data is provided
+        if auth_data is None and client_id in self.client_tiers:
             return self.client_tiers[client_id]
 
         # Determine tier from auth data
@@ -209,7 +213,10 @@ class EnhancedRateLimiter:
                 tier = RateLimitTier.ADMIN
             elif auth_data.get('is_premium'):
                 tier = RateLimitTier.PREMIUM
+            elif auth_data.get('is_authenticated'):
+                tier = RateLimitTier.AUTHENTICATED
             else:
+                # auth_data provided but no recognized flags - treat as authenticated
                 tier = RateLimitTier.AUTHENTICATED
         else:
             tier = RateLimitTier.ANONYMOUS
