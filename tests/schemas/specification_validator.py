@@ -117,7 +117,10 @@ class SpecificationValidator:
             raise ValueError("Test case schema not found in specifications")
 
         try:
-            jsonschema.validate(test_case_data, test_case_schema)
+            # Use the full schema as resolver to handle $ref resolution
+            resolver = jsonschema.RefResolver.from_schema(self.schema)
+            validator = jsonschema.Draft7Validator(test_case_schema, resolver=resolver)
+            validator.validate(test_case_data)
             return True
         except jsonschema.ValidationError as e:
             raise ValueError(f"Test case validation failed: {e.message}")
