@@ -3,7 +3,7 @@ Pydantic models for Property Application Assistant
 Legal compliance focused models for helping users organize data for manual government form submission
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -50,22 +50,25 @@ class UserProfile(BaseModel):
     updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
     is_active: bool = Field(True, description="Profile active status")
 
-    @validator('email')
-    def validate_email(cls, v):
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v: str) -> str:
         """Validate email format."""
         if '@' not in v or '.' not in v:
             raise ValueError("Invalid email format")
         return v.lower()
 
-    @validator('state')
-    def validate_state(cls, v):
+    @field_validator('state')
+    @classmethod
+    def validate_state(cls, v: str) -> str:
         """Ensure state is Alabama for state land applications."""
         if v.upper() not in ['ALABAMA', 'AL']:
             raise ValueError("Applications are only available for Alabama residents")
         return v.upper()
 
-    @validator('zip_code')
-    def validate_zip_code(cls, v):
+    @field_validator('zip_code')
+    @classmethod
+    def validate_zip_code(cls, v: str) -> str:
         """Validate ZIP code format."""
         if not v.isdigit() or len(v) not in [5, 9]:
             raise ValueError("ZIP code must be 5 or 9 digits")

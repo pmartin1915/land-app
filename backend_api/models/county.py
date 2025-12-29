@@ -3,7 +3,7 @@ Pydantic models for Alabama County API operations
 CRITICAL: County codes and names must exactly match iOS CountyValidator.swift
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
 from datetime import datetime
 
@@ -27,8 +27,9 @@ class CountyValidationRequest(BaseModel):
     code: Optional[str] = Field(None, description="County code to validate (01-67)")
     name: Optional[str] = Field(None, description="County name to validate")
 
-    @validator('code')
-    def validate_county_code(cls, v):
+    @field_validator('code')
+    @classmethod
+    def validate_county_code(cls, v: Optional[str]) -> Optional[str]:
         """Validate ADOR county code format and range."""
         if v is None:
             return v
@@ -46,8 +47,9 @@ class CountyValidationRequest(BaseModel):
 
         return v
 
-    @validator('name')
-    def validate_county_name(cls, v):
+    @field_validator('name')
+    @classmethod
+    def validate_county_name(cls, v: Optional[str]) -> Optional[str]:
         """Validate Alabama county name against official list."""
         if v is None:
             return v

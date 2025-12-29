@@ -3,7 +3,7 @@ Pydantic models for synchronization operations between iOS and backend
 Implements delta sync protocol with conflict resolution (last-write-wins)
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -40,13 +40,12 @@ class PropertyChange(BaseModel):
     device_id: str = Field(..., description="Device that made the change")
     checksum: Optional[str] = Field(None, description="Data checksum for integrity verification")
 
-    @validator('data')
-    def validate_data_for_operation(cls, v, values):
+    @model_validator(mode='after')
+    def validate_data_for_operation(self):
         """Validate that data is provided for create/update operations."""
-        operation = values.get('operation')
-        if operation in [SyncOperation.CREATE, SyncOperation.UPDATE] and v is None:
-            raise ValueError(f"Data is required for {operation} operations")
-        return v
+        if self.operation in [SyncOperation.CREATE, SyncOperation.UPDATE] and self.data is None:
+            raise ValueError(f"Data is required for {self.operation} operations")
+        return self
 
 class SyncConflict(BaseModel):
     """Model for synchronization conflicts."""
@@ -66,8 +65,9 @@ class DeltaSyncRequest(BaseModel):
     algorithm_version: str = Field(..., description="iOS algorithm version for compatibility check")
     app_version: str = Field(..., description="iOS app version")
 
-    @validator('device_id')
-    def validate_device_id(cls, v):
+    @field_validator('device_id')
+    @classmethod
+    def validate_device_id(cls, v: str) -> str:
         """Validate device ID format."""
         if not v or len(v.strip()) == 0:
             raise ValueError("Device ID cannot be empty")

@@ -3,7 +3,7 @@ Pydantic models for Property API operations
 Models match iOS Core Data schema and enable API request/response validation
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
@@ -43,24 +43,27 @@ class PropertyCreate(BaseModel):
     assessed_value: Optional[float] = Field(None, description="County assessed value", ge=0)
     device_id: Optional[str] = Field(None, description="Device that created this record")
 
-    @validator('parcel_id')
-    def validate_parcel_id_secure(cls, v):
+    @field_validator('parcel_id')
+    @classmethod
+    def validate_parcel_id_secure(cls, v: str) -> str:
         """Enhanced parcel ID validation with security checks."""
         result = PropertyValidator.validate_parcel_id(v)
         if not result.is_valid:
             raise ValueError("; ".join(result.errors))
         return result.sanitized_value
 
-    @validator('amount')
-    def validate_amount_secure(cls, v):
+    @field_validator('amount')
+    @classmethod
+    def validate_amount_secure(cls, v: float) -> float:
         """Enhanced amount validation with security checks."""
         result = PropertyValidator.validate_amount(v)
         if not result.is_valid:
             raise ValueError("; ".join(result.errors))
         return result.sanitized_value
 
-    @validator('acreage')
-    def validate_acreage_secure(cls, v):
+    @field_validator('acreage')
+    @classmethod
+    def validate_acreage_secure(cls, v: Optional[float]) -> Optional[float]:
         """Enhanced acreage validation with security checks."""
         if v is None:
             return v
@@ -69,8 +72,9 @@ class PropertyCreate(BaseModel):
             raise ValueError("; ".join(result.errors))
         return result.sanitized_value
 
-    @validator('county')
-    def validate_county_secure(cls, v):
+    @field_validator('county')
+    @classmethod
+    def validate_county_secure(cls, v: Optional[str]) -> Optional[str]:
         """Enhanced county validation with security checks."""
         if v is None:
             return v
@@ -79,8 +83,9 @@ class PropertyCreate(BaseModel):
             raise ValueError("; ".join(result.errors))
         return result.sanitized_value
 
-    @validator('description')
-    def validate_description_secure(cls, v):
+    @field_validator('description')
+    @classmethod
+    def validate_description_secure(cls, v: Optional[str]) -> Optional[str]:
         """Enhanced description validation with security checks."""
         if v is None:
             return v
@@ -89,8 +94,9 @@ class PropertyCreate(BaseModel):
             raise ValueError("; ".join(result.errors))
         return result.sanitized_value
 
-    @validator('owner_name')
-    def validate_owner_name_secure(cls, v):
+    @field_validator('owner_name')
+    @classmethod
+    def validate_owner_name_secure(cls, v: Optional[str]) -> Optional[str]:
         """Enhanced owner name validation with security checks."""
         if v is None:
             return v
@@ -99,8 +105,9 @@ class PropertyCreate(BaseModel):
             raise ValueError("; ".join(result.errors))
         return result.sanitized_value
 
-    @validator('year_sold')
-    def validate_year_sold_secure(cls, v):
+    @field_validator('year_sold')
+    @classmethod
+    def validate_year_sold_secure(cls, v: Optional[str]) -> Optional[str]:
         """Enhanced year sold validation with security checks."""
         if v is None:
             return v
@@ -120,9 +127,28 @@ class PropertyUpdate(BaseModel):
     assessed_value: Optional[float] = Field(None, description="County assessed value", ge=0)
     device_id: Optional[str] = Field(None, description="Device that modified this record")
 
-    # Validation uses same validators as PropertyCreate
-    _validate_county = validator('county', allow_reuse=True)(PropertyCreate.validate_county_secure)
-    _validate_year_sold = validator('year_sold', allow_reuse=True)(PropertyCreate.validate_year_sold_secure)
+    # Validation uses same logic as PropertyCreate
+    @field_validator('county')
+    @classmethod
+    def validate_county_secure(cls, v: Optional[str]) -> Optional[str]:
+        """Enhanced county validation with security checks."""
+        if v is None:
+            return v
+        result = PropertyValidator.validate_county(v)
+        if not result.is_valid:
+            raise ValueError("; ".join(result.errors))
+        return result.sanitized_value
+
+    @field_validator('year_sold')
+    @classmethod
+    def validate_year_sold_secure(cls, v: Optional[str]) -> Optional[str]:
+        """Enhanced year sold validation with security checks."""
+        if v is None:
+            return v
+        result = PropertyValidator.validate_year_sold(v)
+        if not result.is_valid:
+            raise ValueError("; ".join(result.errors))
+        return result.sanitized_value
 
 class PropertyResponse(BaseModel):
     """Model for property API responses - includes all fields."""
@@ -177,25 +203,7 @@ class PropertyResponse(BaseModel):
     triaged_at: Optional[datetime] = Field(None, description="When property was triaged")
     triaged_by: Optional[str] = Field(None, description="Device/user that triaged this property")
 
-    class Config:
-        from_attributes = True  # Enable ORM mode for SQLAlchemy compatibility
-        # Include fields with default values in serialization
-        fields = {
-            "lot_dimensions_score": {"exclude": False},
-            "shape_efficiency_score": {"exclude": False},
-            "corner_lot_bonus": {"exclude": False},
-            "irregular_shape_penalty": {"exclude": False},
-            "subdivision_quality_score": {"exclude": False},
-            "road_access_score": {"exclude": False},
-            "location_type_score": {"exclude": False},
-            "title_complexity_score": {"exclude": False},
-            "survey_requirement_score": {"exclude": False},
-            "premium_water_access_score": {"exclude": False},
-            "total_description_score": {"exclude": False},
-            "county_market_score": {"exclude": False},
-            "geographic_score": {"exclude": False},
-            "market_timing_score": {"exclude": False},
-        }
+    model_config = {"from_attributes": True}  # Enable ORM mode for SQLAlchemy compatibility
 
 class PropertyListResponse(BaseModel):
     """Model for property list API responses with pagination."""
@@ -214,8 +222,7 @@ class PropertyStatusUpdate(BaseModel):
     triage_notes: Optional[str] = Field(None, description="Research notes", max_length=2000)
     device_id: Optional[str] = Field(None, description="Device/user making the update")
 
-    class Config:
-        use_enum_values = True
+    model_config = {"use_enum_values": True}
 
 
 class PropertyStatusResponse(BaseModel):
@@ -255,8 +262,9 @@ class PropertyFilters(BaseModel):
     sort_by: Optional[str] = Field("investment_score", description="Sort field")
     sort_order: Optional[str] = Field("desc", description="Sort order: asc or desc")
 
-    @validator('sort_by')
-    def validate_sort_by(cls, v):
+    @field_validator('sort_by')
+    @classmethod
+    def validate_sort_by(cls, v: Optional[str]) -> Optional[str]:
         """Validate sort field."""
         valid_fields = {
             "investment_score", "amount", "acreage", "price_per_acre", "water_score",
@@ -268,8 +276,9 @@ class PropertyFilters(BaseModel):
             raise ValueError(f"Invalid sort field: {v}. Valid fields: {valid_fields}")
         return v
 
-    @validator('sort_order')
-    def validate_sort_order(cls, v):
+    @field_validator('sort_order')
+    @classmethod
+    def validate_sort_order(cls, v: Optional[str]) -> Optional[str]:
         """Validate sort order."""
         if v not in ["asc", "desc"]:
             raise ValueError("Sort order must be 'asc' or 'desc'")
@@ -299,8 +308,9 @@ class PropertyBulkOperation(BaseModel):
     operation: str = Field(..., description="Operation type: create, update, delete")
     properties: List[dict] = Field(..., description="List of property data")
 
-    @validator('operation')
-    def validate_operation(cls, v):
+    @field_validator('operation')
+    @classmethod
+    def validate_operation(cls, v: str) -> str:
         """Validate bulk operation type."""
         if v not in ["create", "update", "delete"]:
             raise ValueError("Operation must be 'create', 'update', or 'delete'")
