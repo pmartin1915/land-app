@@ -39,6 +39,7 @@ pytest-benchmark>=4.0.0
 # JSON Schema Validation
 jsonschema>=4.19.0
 pydantic>=2.3.0
+pydantic-settings>=2.0.0
 
 # Security & Input Validation
 bleach>=6.0.0

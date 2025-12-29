@@ -23,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://api.mapbox.com; img-src 'self' data: blob: https://api.mapbox.com https://*.tiles.mapbox.com; connect-src 'self' http://localhost:8001 https://api.mapbox.com https://*.tiles.mapbox.com wss://localhost:8001; worker-src 'self' blob:; font-src 'self' data:; frame-src 'none'"
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://api.mapbox.com; img-src 'self' data: blob: https://api.mapbox.com https://*.tiles.mapbox.com; connect-src 'self' https://*.localhost http://localhost:* https://api.mapbox.com https://*.tiles.mapbox.com wss://localhost:*; worker-src 'self' blob:; font-src 'self' data:; frame-src 'none'"
     }
   },
   "bundle": {

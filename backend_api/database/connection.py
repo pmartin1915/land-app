@@ -3,7 +3,6 @@ Database connection management for Alabama Auction Watcher API
 Async database connections with SQLAlchemy and proper connection pooling
 """
 
-import os
 import logging
 from databases import Database
 from sqlalchemy import create_engine, MetaData
@@ -11,13 +10,12 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from ..config import settings
+
 logger = logging.getLogger(__name__)
 
-# Database configuration
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "sqlite:///./data/alabama_auction_watcher.db"  # Relative path, cross-platform
-)
+# Database configuration from centralized settings
+DATABASE_URL = settings.resolved_database_url
 
 # Validate database URL scheme for security
 ALLOWED_DB_SCHEMES = (
@@ -45,7 +43,7 @@ if DATABASE_URL.startswith("sqlite"):
         DATABASE_URL,
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
-        echo=True  # Set to False in production
+        echo=settings.resolved_sql_echo
     )
 else:
     # PostgreSQL configuration
@@ -54,7 +52,7 @@ else:
         pool_pre_ping=True,
         pool_size=10,
         max_overflow=20,
-        echo=True  # Set to False in production
+        echo=settings.resolved_sql_echo
     )
 
 # Session factory

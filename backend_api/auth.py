@@ -3,7 +3,6 @@ JWT Authentication and security for Alabama Auction Watcher API
 Provides secure access for iOS application and admin users
 """
 
-import os
 import jwt
 import logging
 from datetime import datetime, timedelta
@@ -12,23 +11,24 @@ from fastapi import HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from passlib.context import CryptContext
 from pydantic import BaseModel
-import secrets
 import hashlib
 import hmac
 
+from .config import settings
+
 logger = logging.getLogger(__name__)
 
-# Security configuration
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", secrets.token_urlsafe(32))
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 15  # Short-lived for security
-REFRESH_TOKEN_EXPIRE_DAYS = 7
+# Environment indicator for conditional logic in routers
+ENVIRONMENT = settings.environment
 
-# Environment detection
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+# Security configuration from centralized settings
+SECRET_KEY = settings.resolved_jwt_secret_key
+ALGORITHM = settings.jwt_algorithm
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
+REFRESH_TOKEN_EXPIRE_DAYS = settings.refresh_token_expire_days
 
 # API Key configuration for iOS app
-API_KEY_SECRET = os.getenv("API_KEY_SECRET", secrets.token_urlsafe(32))
+API_KEY_SECRET = settings.resolved_api_key_secret
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

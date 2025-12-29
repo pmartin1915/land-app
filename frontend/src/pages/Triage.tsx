@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   ChevronLeft,
   ChevronRight,
@@ -294,6 +295,7 @@ function PropertyDetailPanel({
 }
 
 export function Triage() {
+  const navigate = useNavigate()
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
 
@@ -372,8 +374,8 @@ export function Triage() {
   // Handle view on map
   const handleViewOnMap = useCallback(() => {
     // Navigate to map page with selected property
-    window.location.href = `/map?property=${selectedSuggestion?.parcel_id}`
-  }, [selectedSuggestion])
+    navigate(`/map?property=${selectedSuggestion?.parcel_id}`)
+  }, [navigate, selectedSuggestion])
 
   // Keyboard shortcuts
   useEffect(() => {

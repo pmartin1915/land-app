@@ -80,6 +80,8 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+test-report.html
+test-results.json
 
 # Translations
 *.mo

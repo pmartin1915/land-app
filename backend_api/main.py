@@ -6,7 +6,6 @@ FastAPI application entry point with authentication, rate limiting, and CORS con
 Maintains exact algorithm compatibility with existing Python scripts and iOS Swift implementation.
 """
 
-import os
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -18,6 +17,9 @@ import logging
 from datetime import datetime
 from contextlib import asynccontextmanager
 
+# Import centralized configuration
+from .config import settings
+
 # Import routers
 from .routers import properties, counties, sync, auth, predictions, testing, applications, ai
 from .database.connection import database, connect_db, disconnect_db
@@ -28,23 +30,21 @@ from .middleware.caching import CachingMiddleware, CacheControlMiddleware
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, settings.log_level.upper()),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# Rate limiter configuration - disabled in development mode
-IS_DEVELOPMENT = os.getenv("ENVIRONMENT", "development").lower() == "development"
-
+# Rate limiter configuration - uses centralized settings
 def get_rate_limit_key(request: Request) -> str:
     """Return key for rate limiting, or empty string to bypass in development."""
-    if IS_DEVELOPMENT:
+    if settings.is_development:
         return ""  # Empty key bypasses rate limiting
     return get_remote_address(request)
 
 limiter = Limiter(
     key_func=get_rate_limit_key,
-    enabled=not IS_DEVELOPMENT  # Disable rate limiting entirely in development
+    enabled=settings.resolved_rate_limit_enabled
 )
 
 @asynccontextmanager
@@ -78,26 +78,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Add security headers middleware
 app.middleware("http")(add_security_headers)
 
-# CORS configuration - use environment variable for production
-DEFAULT_CORS_ORIGINS = [
-    "http://localhost:3000",  # Development React
-    "http://localhost:5173",  # Vite dev server
-    "http://localhost:8501",  # Streamlit
-    "tauri://localhost",      # Tauri desktop app
-    "https://tauri.localhost", # Tauri HTTPS
-    "capacitor://localhost",  # iOS Capacitor
-    "ionic://localhost",      # Ionic
-]
-CORS_ORIGINS_ENV = os.getenv("CORS_ORIGINS")
-if CORS_ORIGINS_ENV:
-    # Production: use comma-separated list from environment
-    CORS_ORIGINS = [origin.strip() for origin in CORS_ORIGINS_ENV.split(",")]
-else:
-    CORS_ORIGINS = DEFAULT_CORS_ORIGINS
-
+# CORS configuration - uses centralized settings
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS,
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -300,11 +284,11 @@ async def root():
 if __name__ == "__main__":
     import uvicorn
 
-    logger.info("=� Starting development server...")
+    logger.info(f"Starting development server on {settings.host}:{settings.port}...")
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
-        port=8001,
-        reload=True,
-        log_level="info"
+        host=settings.host,
+        port=settings.port,
+        reload=settings.is_development,
+        log_level=settings.log_level.lower()
     )
