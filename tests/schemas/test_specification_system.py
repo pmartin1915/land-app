@@ -12,10 +12,64 @@ from typing import Dict, Any
 
 from tests.schemas.specification_validator import (
     SpecificationValidator, SpecificationLoader, AITestSpecificationGenerator,
-    TestCase, ErrorSpecification, PerformanceThresholds,
-    TestCategory, Priority, Severity,
+    TestCase as SpecTestCase,  # Renamed to avoid pytest collection
+    ErrorSpecification, PerformanceThresholds,
+    TestCategory as SpecTestCategory,  # Renamed to avoid pytest collection
+    Priority, Severity,
     load_ai_test_specifications, get_ai_executable_test_plan, validate_test_specification
 )
+
+
+# Module-level fixtures for shared test data
+@pytest.fixture
+def sample_test_case():
+    """Sample test case data for validation."""
+    return {
+        "id": "sample_test_001",
+        "description": "Sample test case for validation",
+        "category": "unit",
+        "priority": "medium",
+        "input": {
+            "function_name": "test_function",
+            "parameters": {"param1": "value1"}
+        },
+        "expected_output": {
+            "return_value": "expected_result"
+        },
+        "ai_instructions": {
+            "can_auto_retry": True,
+            "max_retries": 3,
+            "escalate_on_failure": False,
+            "requires_human_validation": False
+        },
+        "tags": ["unit", "sample"]
+    }
+
+
+@pytest.fixture
+def sample_error_spec():
+    """Sample error specification for validation."""
+    return {
+        "code": "TEST_001",
+        "category": "network",
+        "severity": "medium",
+        "recoverable": True,
+        "context": {"test": "context"},
+        "suggested_actions": ["retry", "check_connection"],
+        "documentation_reference": "https://docs.example.com/errors/TEST_001"
+    }
+
+
+@pytest.fixture
+def sample_performance_thresholds():
+    """Sample performance thresholds for validation."""
+    return {
+        "max_duration_seconds": 30.0,
+        "min_records_per_second": 10.0,
+        "max_memory_usage_mb": 512.0,
+        "max_cpu_usage_percent": 80.0,
+        "success_rate_percent": 95.0
+    }
 
 
 class TestSpecificationValidator:
@@ -25,54 +79,6 @@ class TestSpecificationValidator:
     def validator(self):
         """Create a validator instance for testing."""
         return SpecificationValidator()
-
-    @pytest.fixture
-    def sample_test_case(self):
-        """Sample test case data for validation."""
-        return {
-            "id": "sample_test_001",
-            "description": "Sample test case for validation",
-            "category": "unit",
-            "priority": "medium",
-            "input": {
-                "function_name": "test_function",
-                "parameters": {"param1": "value1"}
-            },
-            "expected_output": {
-                "return_value": "expected_result"
-            },
-            "ai_instructions": {
-                "can_auto_retry": True,
-                "max_retries": 3,
-                "escalate_on_failure": False,
-                "requires_human_validation": False
-            },
-            "tags": ["unit", "sample"]
-        }
-
-    @pytest.fixture
-    def sample_error_spec(self):
-        """Sample error specification for validation."""
-        return {
-            "code": "TEST_001",
-            "category": "network",
-            "severity": "medium",
-            "recoverable": True,
-            "context": {"test": "context"},
-            "suggested_actions": ["retry", "check_connection"],
-            "documentation_reference": "https://docs.example.com/errors/TEST_001"
-        }
-
-    @pytest.fixture
-    def sample_performance_thresholds(self):
-        """Sample performance thresholds for validation."""
-        return {
-            "max_duration_seconds": 30.0,
-            "min_records_per_second": 10.0,
-            "max_memory_usage_mb": 512.0,
-            "max_cpu_usage_percent": 80.0,
-            "success_rate_percent": 95.0
-        }
 
     @pytest.mark.unit
     @pytest.mark.ai_test
@@ -224,9 +230,9 @@ class TestSpecificationLoader:
         """Test parsing test case data into structured object."""
         test_case = loader.parse_test_case(sample_test_case)
 
-        assert isinstance(test_case, TestCase)
+        assert isinstance(test_case, SpecTestCase)
         assert test_case.id == "sample_test_001"
-        assert test_case.category == TestCategory.UNIT
+        assert test_case.category == SpecTestCategory.UNIT
         assert test_case.priority == Priority.MEDIUM
         assert isinstance(test_case.input_data, dict)
         assert isinstance(test_case.expected_output, dict)
@@ -258,10 +264,10 @@ class TestSpecificationLoader:
     @pytest.mark.ai_test
     def test_get_test_cases_by_category(self, loader, temp_spec_file):
         """Test filtering test cases by category."""
-        unit_tests = loader.get_test_cases_by_category(temp_spec_file, TestCategory.UNIT)
+        unit_tests = loader.get_test_cases_by_category(temp_spec_file, SpecTestCategory.UNIT)
 
         assert len(unit_tests) == 1
-        assert all(test.category == TestCategory.UNIT for test in unit_tests)
+        assert all(test.category == SpecTestCategory.UNIT for test in unit_tests)
 
     @pytest.mark.unit
     @pytest.mark.ai_test
@@ -379,9 +385,9 @@ class TestUtilityFunctions:
         try:
             test_plan = get_ai_executable_test_plan()
             assert isinstance(test_plan, list)
-            # Each item should be a TestCase object
+            # Each item should be a SpecTestCase object
             for test_case in test_plan:
-                assert isinstance(test_case, TestCase)
+                assert isinstance(test_case, SpecTestCase)
         except FileNotFoundError:
             # If the file doesn't exist, that's acceptable for this test
             pytest.skip("Specification file not found - this is acceptable")
@@ -417,13 +423,13 @@ class TestEnumValidation:
     @pytest.mark.unit
     @pytest.mark.ai_test
     def test_test_category_enum(self):
-        """Test TestCategory enum values."""
-        assert TestCategory.UNIT.value == "unit"
-        assert TestCategory.INTEGRATION.value == "integration"
-        assert TestCategory.E2E.value == "e2e"
-        assert TestCategory.BENCHMARK.value == "benchmark"
-        assert TestCategory.ERROR_HANDLING.value == "error_handling"
-        assert TestCategory.AI_GENERATED.value == "ai_generated"
+        """Test SpecTestCategory enum values."""
+        assert SpecTestCategory.UNIT.value == "unit"
+        assert SpecTestCategory.INTEGRATION.value == "integration"
+        assert SpecTestCategory.E2E.value == "e2e"
+        assert SpecTestCategory.BENCHMARK.value == "benchmark"
+        assert SpecTestCategory.ERROR_HANDLING.value == "error_handling"
+        assert SpecTestCategory.AI_GENERATED.value == "ai_generated"
 
     @pytest.mark.unit
     @pytest.mark.ai_test
@@ -445,12 +451,12 @@ class TestEnumValidation:
 
 
 @pytest.mark.parametrize("category,expected_value", [
-    (TestCategory.UNIT, "unit"),
-    (TestCategory.INTEGRATION, "integration"),
-    (TestCategory.E2E, "e2e"),
-    (TestCategory.BENCHMARK, "benchmark"),
-    (TestCategory.ERROR_HANDLING, "error_handling"),
-    (TestCategory.AI_GENERATED, "ai_generated")
+    (SpecTestCategory.UNIT, "unit"),
+    (SpecTestCategory.INTEGRATION, "integration"),
+    (SpecTestCategory.E2E, "e2e"),
+    (SpecTestCategory.BENCHMARK, "benchmark"),
+    (SpecTestCategory.ERROR_HANDLING, "error_handling"),
+    (SpecTestCategory.AI_GENERATED, "ai_generated")
 ])
 @pytest.mark.unit
 @pytest.mark.ai_test
@@ -539,6 +545,6 @@ class TestAITestSpecificationIntegration:
 
         # Validate each test case can be parsed
         for ai_test in ai_tests:
-            assert isinstance(ai_test, TestCase)
+            assert isinstance(ai_test, SpecTestCase)
             assert ai_test.id is not None
-            assert ai_test.category in [TestCategory.UNIT, TestCategory.INTEGRATION, TestCategory.ERROR_HANDLING]
+            assert ai_test.category in [SpecTestCategory.UNIT, SpecTestCategory.INTEGRATION, SpecTestCategory.ERROR_HANDLING]

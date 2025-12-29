@@ -5,11 +5,9 @@ This module provides reusable test fixtures, mock data, and test utilities
 that enable comprehensive AI-testable validation of the auction system.
 """
 
-# Skip test files with outdated imports until they are updated
-collect_ignore = [
-    "unit/test_scraper.py",  # References removed functions (create_session, parse_property_table, etc.)
-    "schemas/test_specification_system.py",  # Uses __init__ in test classes (pytest incompatible)
-]
+# Note: Previously skipped tests have been fixed:
+# - test_scraper.py was deleted and replaced with test_scraper_playwright.py
+# - test_specification_system.py imports were aliased to avoid pytest collection issues
 
 import json
 import os

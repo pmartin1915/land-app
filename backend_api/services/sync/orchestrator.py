@@ -14,7 +14,7 @@ from ...models.sync import (
     DeltaSyncRequest, DeltaSyncResponse, FullSyncRequest, FullSyncResponse,
     SyncStatusResponse, BatchSyncRequest, BatchSyncResponse,
     SyncMetrics, SyncLogEntry, SyncLogListResponse,
-    SyncStatus, SyncOperation, PropertyChange
+    SyncStatus, SyncOperation, PropertyChange, RejectedChange
 )
 from ...models.property import PropertyCreate, PropertyUpdate
 from ..property_service import PropertyService
@@ -81,8 +81,8 @@ class SyncOrchestrator:
             self.db.commit()
             raise ValueError(f"Algorithm compatibility error: {compatibility_message}")
 
-        # Process client changes
-        changes_applied, changes_rejected, conflicts = self._process_client_changes(
+        # Process client changes with transaction safety
+        changes_applied, changes_rejected, conflicts, rejected_details = self._process_client_changes(
             request.device_id,
             request.changes
         )
@@ -103,6 +103,14 @@ class SyncOrchestrator:
         new_sync_timestamp = datetime.utcnow()
         self.db.commit()
 
+        # Determine overall status
+        if conflicts:
+            sync_status = SyncStatus.CONFLICT
+        elif changes_rejected > 0:
+            sync_status = SyncStatus.PARTIAL
+        else:
+            sync_status = SyncStatus.SUCCESS
+
         logger.info(
             f"Delta sync completed for device {request.device_id}: "
             f"{changes_applied} applied, {changes_rejected} rejected, {len(conflicts)} conflicts"
@@ -112,9 +120,10 @@ class SyncOrchestrator:
             server_changes=server_changes,
             conflicts=conflicts,
             new_sync_timestamp=new_sync_timestamp,
-            sync_status=SyncStatus.SUCCESS if not conflicts else SyncStatus.CONFLICT,
+            sync_status=sync_status,
             changes_applied=changes_applied,
             changes_rejected=changes_rejected,
+            rejected_details=rejected_details,
             server_changes_count=len(server_changes),
             conflicts_count=len(conflicts),
             algorithm_compatibility=algorithm_compatible,
@@ -122,40 +131,107 @@ class SyncOrchestrator:
         )
 
     def _process_client_changes(self, device_id: str, changes: list):
-        """Process incoming client changes."""
+        """
+        Process incoming client changes with transaction safety.
+
+        Uses savepoints to allow partial rollback on batch failures.
+        Returns detailed rejection information for failed changes.
+        """
         changes_applied = 0
-        changes_rejected = 0
+        rejected_changes = []
         conflicts = []
+
+        # First pass: detect conflicts without modifying data
+        non_conflicting, detected_conflicts = self.conflict_resolver.batch_detect_conflicts(
+            device_id, changes
+        )
+        conflicts.extend(detected_conflicts)
+
+        # Try batch processing with savepoint for atomicity
+        # Using context manager to ensure proper rollback even if begin_nested() fails
+        try:
+            with self.db.begin_nested():
+                for change in non_conflicting:
+                    self._apply_single_change(change, device_id)
+                    changes_applied += 1
+                # Context manager commits on successful exit
+
+        except Exception as batch_error:
+            # Batch failed - context manager already rolled back
+            logger.warning(f"Batch processing failed, falling back to individual: {str(batch_error)}")
+
+            # Reset counter and process one by one
+            changes_applied = 0
+            changes_applied, rejected_changes = self._process_changes_individually(
+                device_id, non_conflicting
+            )
+
+        return changes_applied, len(rejected_changes), conflicts, rejected_changes
+
+    def _apply_single_change(self, change: PropertyChange, device_id: str):
+        """Apply a single change operation. Raises on failure."""
+        if change.operation == SyncOperation.CREATE:
+            property_create = PropertyCreate(**change.data)
+            self.property_service.create_property(property_create, device_id)
+
+        elif change.operation == SyncOperation.UPDATE:
+            update_data = {k: v for k, v in change.data.items() if k != 'id'}
+            property_update = PropertyUpdate(**update_data)
+            self.property_service.update_property(
+                change.property_id, property_update, device_id
+            )
+
+        elif change.operation == SyncOperation.DELETE:
+            self.property_service.delete_property(change.property_id, device_id)
+
+    def _process_changes_individually(self, device_id: str, changes: list):
+        """
+        Process changes one at a time with individual error handling.
+        Used as fallback when batch processing fails.
+        """
+        changes_applied = 0
+        rejected_changes = []
 
         for change in changes:
             try:
-                if change.operation == SyncOperation.CREATE:
-                    property_create = PropertyCreate(**change.data)
-                    self.property_service.create_property(property_create, device_id)
-                    changes_applied += 1
-
-                elif change.operation == SyncOperation.UPDATE:
-                    existing = self.property_service.get_property(change.property_id)
-                    conflict = self.conflict_resolver.detect_update_conflict(change, existing)
-                    if conflict:
-                        conflicts.append(conflict)
-                    else:
-                        update_data = {k: v for k, v in change.data.items() if k != 'id'}
-                        property_update = PropertyUpdate(**update_data)
-                        self.property_service.update_property(
-                            change.property_id, property_update, device_id
-                        )
-                        changes_applied += 1
-
-                elif change.operation == SyncOperation.DELETE:
-                    self.property_service.delete_property(change.property_id, device_id)
-                    changes_applied += 1
+                with self.db.begin_nested():
+                    self._apply_single_change(change, device_id)
+                    # Context manager commits on successful exit
+                changes_applied += 1
 
             except Exception as e:
-                logger.error(f"Failed to process change {change.property_id}: {str(e)}")
-                changes_rejected += 1
+                # Context manager already rolled back on exception
+                error_msg = str(e)
+                logger.error(f"Failed to process change {change.property_id}: {error_msg}")
 
-        return changes_applied, changes_rejected, conflicts
+                # Categorize error
+                error_code = self._categorize_error(e)
+                recoverable = error_code not in ["VALIDATION_ERROR", "CONSTRAINT_VIOLATION"]
+
+                rejected_changes.append(RejectedChange(
+                    property_id=change.property_id,
+                    operation=change.operation,
+                    reason=error_msg,
+                    error_code=error_code,
+                    recoverable=recoverable
+                ))
+
+        return changes_applied, rejected_changes
+
+    def _categorize_error(self, error: Exception) -> str:
+        """Categorize an error for client handling."""
+        error_str = str(error).lower()
+
+        if "validation" in error_str or "invalid" in error_str:
+            return "VALIDATION_ERROR"
+        elif "constraint" in error_str or "duplicate" in error_str:
+            return "CONSTRAINT_VIOLATION"
+        elif "not found" in error_str:
+            return "NOT_FOUND"
+        elif "permission" in error_str or "unauthorized" in error_str:
+            return "PERMISSION_DENIED"
+        else:
+            return "INTERNAL_ERROR"
 
     # =========================================================================
     # FULL SYNC

@@ -207,13 +207,20 @@ class ConflictResolver:
         non_conflicting = []
         conflicts = []
 
+        # Bulk fetch all properties for UPDATE operations to avoid N+1 queries
+        update_ids = [c.property_id for c in changes if c.operation == SyncOperation.UPDATE]
+        existing_props = {}
+        if update_ids:
+            props = self.db.query(Property).filter(Property.id.in_(update_ids)).all()
+            existing_props = {str(p.id): p for p in props}
+
         for change in changes:
             if change.operation != SyncOperation.UPDATE:
                 non_conflicting.append(change)
                 continue
 
-            # Get existing property
-            existing = self.property_service.get_property(change.property_id)
+            # Look up from pre-fetched map instead of individual query
+            existing = existing_props.get(change.property_id)
             if not existing:
                 non_conflicting.append(change)
                 continue

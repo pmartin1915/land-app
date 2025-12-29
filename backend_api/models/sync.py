@@ -15,6 +15,15 @@ class SyncOperation(str, Enum):
     DELETE = "delete"
     NO_CHANGE = "no_change"
 
+
+class RejectedChange(BaseModel):
+    """Details about a rejected change during sync."""
+    property_id: str = Field(..., description="Property that was rejected")
+    operation: SyncOperation = Field(..., description="Operation that failed")
+    reason: str = Field(..., description="Why the change was rejected")
+    error_code: Optional[str] = Field(None, description="Error code for categorization")
+    recoverable: bool = Field(True, description="Whether the error is recoverable")
+
 class SyncStatus(str, Enum):
     """Synchronization status values."""
     SUCCESS = "success"
@@ -83,6 +92,7 @@ class DeltaSyncResponse(BaseModel):
     # Statistics
     changes_applied: int = Field(..., description="Number of client changes successfully applied")
     changes_rejected: int = Field(default=0, description="Number of client changes rejected")
+    rejected_details: List["RejectedChange"] = Field(default=[], description="Details of rejected changes")
     server_changes_count: int = Field(..., description="Number of server changes sent to client")
     conflicts_count: int = Field(..., description="Number of conflicts detected")
 
