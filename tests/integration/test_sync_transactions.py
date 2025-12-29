@@ -6,13 +6,14 @@ rollback partial changes, and provide detailed error information.
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import timedelta
 from unittest.mock import Mock, patch, MagicMock
 from uuid import uuid4
 
 from sqlalchemy.exc import IntegrityError, NoResultFound, DataError
 
 from backend_api.services.sync.orchestrator import SyncOrchestrator
+from backend_api.utils import utc_now
 from backend_api.services.sync.conflict_resolver import ConflictResolver
 from backend_api.services.sync.differ import SyncDiffer
 from backend_api.services.sync.sync_logger import SyncLogger
@@ -45,7 +46,7 @@ def mock_property_service():
     service.delete_property.return_value = True
     service.get_property.return_value = Mock(
         id=str(uuid4()),
-        updated_at=datetime.utcnow() - timedelta(hours=1),
+        updated_at=utc_now() - timedelta(hours=1),
         to_dict=lambda: {"id": str(uuid4()), "status": "new"}
     )
     return service
@@ -79,14 +80,14 @@ class TestBatchProcessing:
                 property_id=str(uuid4()),
                 operation=SyncOperation.CREATE,
                 data={"parcel_id": "TEST-001", "amount": 1000},
-                timestamp=datetime.utcnow(),
+                timestamp=utc_now(),
                 device_id="test-device"
             ),
             PropertyChange(
                 property_id=str(uuid4()),
                 operation=SyncOperation.CREATE,
                 data={"parcel_id": "TEST-002", "amount": 2000},
-                timestamp=datetime.utcnow(),
+                timestamp=utc_now(),
                 device_id="test-device"
             )
         ]
@@ -113,14 +114,14 @@ class TestBatchProcessing:
                 property_id=str(uuid4()),
                 operation=SyncOperation.CREATE,
                 data={"parcel_id": "TEST-001", "amount": 1000},
-                timestamp=datetime.utcnow(),
+                timestamp=utc_now(),
                 device_id="test-device"
             ),
             PropertyChange(
                 property_id=str(uuid4()),
                 operation=SyncOperation.CREATE,
                 data={"parcel_id": "TEST-002", "amount": 2000},
-                timestamp=datetime.utcnow(),
+                timestamp=utc_now(),
                 device_id="test-device"
             )
         ]
@@ -133,7 +134,8 @@ class TestBatchProcessing:
         def create_side_effect(*args, **kwargs):
             call_count[0] += 1
             if call_count[0] == 1:
-                raise Exception("Database constraint violation")
+                # Use IntegrityError which is caught for fallback to individual processing
+                raise IntegrityError("INSERT", {}, Exception("UNIQUE constraint failed"))
             return Mock(id=str(uuid4()))
 
         mock_property_service.create_property.side_effect = create_side_effect
@@ -155,14 +157,14 @@ class TestBatchProcessing:
                 property_id="prop-1",
                 operation=SyncOperation.CREATE,
                 data={"parcel_id": "TEST-001", "amount": 1000},
-                timestamp=datetime.utcnow(),
+                timestamp=utc_now(),
                 device_id="test-device"
             ),
             PropertyChange(
                 property_id="prop-2",
                 operation=SyncOperation.CREATE,
                 data={"parcel_id": "TEST-002", "amount": 2000},
-                timestamp=datetime.utcnow(),
+                timestamp=utc_now(),
                 device_id="test-device"
             )
         ]
@@ -171,7 +173,7 @@ class TestBatchProcessing:
 
         # Batch always fails to trigger individual processing
         def batch_fail(*args, **kwargs):
-            raise Exception("Batch failed")
+            raise IntegrityError("INSERT", {}, Exception("Batch failed"))
 
         # First create succeeds, second fails with validation error
         create_results = [
@@ -276,7 +278,7 @@ class TestDeltaSyncResponse:
         """Response should have PARTIAL status when some changes are rejected."""
         request = DeltaSyncRequest(
             device_id="test-device",
-            last_sync_timestamp=datetime.utcnow() - timedelta(hours=1),
+            last_sync_timestamp=utc_now() - timedelta(hours=1),
             changes=[],
             algorithm_version="1.0.0",
             app_version="1.0.0"
@@ -317,7 +319,7 @@ class TestDeltaSyncResponse:
         """Response should have SUCCESS status when all changes applied."""
         request = DeltaSyncRequest(
             device_id="test-device",
-            last_sync_timestamp=datetime.utcnow() - timedelta(hours=1),
+            last_sync_timestamp=utc_now() - timedelta(hours=1),
             changes=[],
             algorithm_version="1.0.0",
             app_version="1.0.0"
@@ -350,7 +352,7 @@ class TestConflictDetection:
                 property_id="prop-1",
                 operation=SyncOperation.UPDATE,
                 data={"status": "reviewing"},
-                timestamp=datetime.utcnow(),
+                timestamp=utc_now(),
                 device_id="test-device"
             )
         ]

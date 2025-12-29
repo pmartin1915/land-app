@@ -131,7 +131,14 @@ class EnhancedRateLimiter:
     def _start_cleanup_task(self):
         """Start background task for cleaning up old data."""
         if self._cleanup_task is None or self._cleanup_task.done():
-            self._cleanup_task = asyncio.create_task(self._cleanup_old_data())
+            try:
+                # Only create task if there's a running event loop
+                loop = asyncio.get_running_loop()
+                self._cleanup_task = loop.create_task(self._cleanup_old_data())
+            except RuntimeError:
+                # No running event loop (e.g., during testing or sync context)
+                # Cleanup will be handled manually or when a loop is available
+                pass
 
     async def _cleanup_old_data(self):
         """Periodically clean up old tracking data."""

@@ -5,11 +5,11 @@ Implements various resolution strategies.
 
 import logging
 from typing import List, Optional, Tuple
-from datetime import datetime
 
 from sqlalchemy.orm import Session
 
 from ...database.models import Property, SyncLog
+from ...utils import utc_now
 from ...models.sync import (
     SyncConflict, ConflictResolution, ConflictResolutionRequest,
     ConflictResolutionResponse, SyncStatus, PropertyChange, SyncOperation,
@@ -105,7 +105,7 @@ class ConflictResolver:
             status="success" if not errors else "partial",
             records_processed=len(request.resolutions),
             conflicts_resolved=resolved_conflicts,
-            completed_at=datetime.utcnow()
+            completed_at=utc_now()
         )
         self.db.add(sync_log)
         self.db.commit()

@@ -7,7 +7,8 @@ import logging
 from typing import List, Optional, Dict, Any, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func, desc, asc
-from datetime import datetime
+
+from ..utils import utc_now
 
 # Import exact Python algorithms (CRITICAL for compatibility)
 from scripts.utils import (
@@ -136,8 +137,22 @@ class PropertyService:
             logger.error(f"Algorithm calculation failed: {str(e)}")
             raise
 
-    def create_property(self, property_data: PropertyCreate, device_id: Optional[str] = None) -> Property:
-        """Create a new property with calculated metrics."""
+    def create_property(
+        self,
+        property_data: PropertyCreate,
+        device_id: Optional[str] = None,
+        auto_commit: bool = True
+    ) -> Property:
+        """
+        Create a new property with calculated metrics.
+
+        Args:
+            property_data: Property creation data
+            device_id: Optional device identifier for sync tracking
+            auto_commit: If True (default), commits the transaction.
+                        Set to False when caller manages transaction (e.g., sync orchestrator).
+        """
+        property_obj = None
         try:
             # Convert Pydantic model to dict
             data_dict = property_data.dict()
@@ -184,19 +199,24 @@ class PropertyService:
             )
 
             self.db.add(property_obj)
-            self.db.commit()
-            self.db.refresh(property_obj)
+            self.db.flush()  # Get ID without committing
+
+            if auto_commit:
+                self.db.commit()
+                self.db.refresh(property_obj)
 
             logger.info(f"Created property {property_obj.id} with investment score {property_obj.investment_score}")
             return property_obj
 
         except Exception as e:
-            self.db.rollback()
+            if auto_commit:
+                self.db.rollback()
             logger.error(f"Failed to create property: {str(e)}")
             raise
         finally:
             # Invalidate relevant caches after property creation
-            self._invalidate_property_caches(property_obj.county if property_obj else None)
+            if auto_commit:
+                self._invalidate_property_caches(property_obj.county if property_obj else None)
 
     @cache_result("property_detail", ttl=900)  # Cache for 15 minutes
     def get_property(self, property_id: str) -> Optional[Property]:
@@ -205,8 +225,24 @@ class PropertyService:
             and_(Property.id == property_id, Property.is_deleted == False)
         ).first()
 
-    def update_property(self, property_id: str, property_data: PropertyUpdate, device_id: Optional[str] = None) -> Optional[Property]:
-        """Update property with recalculated metrics."""
+    def update_property(
+        self,
+        property_id: str,
+        property_data: PropertyUpdate,
+        device_id: Optional[str] = None,
+        auto_commit: bool = True
+    ) -> Optional[Property]:
+        """
+        Update property with recalculated metrics.
+
+        Args:
+            property_id: ID of property to update
+            property_data: Property update data
+            device_id: Optional device identifier for sync tracking
+            auto_commit: If True (default), commits the transaction.
+                        Set to False when caller manages transaction (e.g., sync orchestrator).
+        """
+        property_obj = None
         try:
             property_obj = self.get_property(property_id)
             if not property_obj:
@@ -258,23 +294,41 @@ class PropertyService:
             property_obj.geographic_score = calculated_metrics['geographic_score']
             property_obj.market_timing_score = calculated_metrics['market_timing_score']
 
-            self.db.commit()
-            self.db.refresh(property_obj)
+            self.db.flush()  # Ensure changes are in transaction
+
+            if auto_commit:
+                self.db.commit()
+                self.db.refresh(property_obj)
 
             logger.info(f"Updated property {property_obj.id} with new investment score {property_obj.investment_score}")
             return property_obj
 
         except Exception as e:
-            self.db.rollback()
+            if auto_commit:
+                self.db.rollback()
             logger.error(f"Failed to update property {property_id}: {str(e)}")
             raise
         finally:
             # Invalidate relevant caches after property update
-            if property_obj:
+            if auto_commit and property_obj:
                 self._invalidate_property_caches(property_obj.county, property_obj.id)
 
-    def delete_property(self, property_id: str, device_id: Optional[str] = None) -> bool:
-        """Soft delete property (for sync compatibility)."""
+    def delete_property(
+        self,
+        property_id: str,
+        device_id: Optional[str] = None,
+        auto_commit: bool = True
+    ) -> bool:
+        """
+        Soft delete property (for sync compatibility).
+
+        Args:
+            property_id: ID of property to delete
+            device_id: Optional device identifier for sync tracking
+            auto_commit: If True (default), commits the transaction.
+                        Set to False when caller manages transaction (e.g., sync orchestrator).
+        """
+        property_obj = None
         try:
             property_obj = self.get_property(property_id)
             if not property_obj:
@@ -283,19 +337,24 @@ class PropertyService:
             # Soft delete for sync compatibility
             property_obj.is_deleted = True
             property_obj.device_id = device_id
-            property_obj.updated_at = datetime.utcnow()
+            property_obj.updated_at = utc_now()
 
-            self.db.commit()
+            self.db.flush()  # Ensure changes are in transaction
+
+            if auto_commit:
+                self.db.commit()
+
             logger.info(f"Soft deleted property {property_id}")
             return True
 
         except Exception as e:
-            self.db.rollback()
+            if auto_commit:
+                self.db.rollback()
             logger.error(f"Failed to delete property {property_id}: {str(e)}")
             raise
         finally:
             # Invalidate relevant caches after property deletion
-            if property_obj:
+            if auto_commit and property_obj:
                 self._invalidate_property_caches(property_obj.county, property_obj.id)
 
     @cache_result("property_list", ttl=300)  # Cache for 5 minutes
@@ -392,7 +451,7 @@ class PropertyService:
                 estimated_all_in_cost=calculated_metrics['estimated_all_in_cost'],
                 assessed_value_ratio=calculated_metrics['assessed_value_ratio'],
                 algorithm_version="1.0.0",  # Match iOS version
-                calculation_timestamp=datetime.utcnow()
+                calculation_timestamp=utc_now()
             )
 
         except Exception as e:

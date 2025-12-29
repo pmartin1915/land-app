@@ -10,9 +10,10 @@ Tests cover:
 
 import pytest
 from unittest.mock import MagicMock, Mock, patch
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from backend_api.services.sync.sync_logger import SyncLogger
+from backend_api.utils import utc_now
 
 
 @pytest.fixture
@@ -52,9 +53,9 @@ class TestCreateLog:
     @pytest.mark.unit
     def test_sets_started_at_timestamp(self, sync_logger, mock_db):
         """started_at should be set to current time."""
-        before = datetime.utcnow()
+        before = utc_now()
         log = sync_logger.create_log("device-123", "delta", True)
-        after = datetime.utcnow()
+        after = utc_now()
 
         assert log.started_at >= before
         assert log.started_at <= after
@@ -81,7 +82,7 @@ class TestUpdateLog:
     def test_updates_status(self, sync_logger):
         """Status should be updated."""
         log = Mock()
-        log.started_at = datetime.utcnow() - timedelta(seconds=5)
+        log.started_at = utc_now() - timedelta(seconds=5)
 
         sync_logger.update_log(log, "success", records_processed=10)
 
@@ -91,7 +92,7 @@ class TestUpdateLog:
     def test_updates_record_counts(self, sync_logger):
         """Record counts should be updated."""
         log = Mock()
-        log.started_at = datetime.utcnow()
+        log.started_at = utc_now()
 
         sync_logger.update_log(
             log,
@@ -109,11 +110,11 @@ class TestUpdateLog:
     def test_sets_completed_at(self, sync_logger):
         """completed_at should be set."""
         log = Mock()
-        log.started_at = datetime.utcnow() - timedelta(seconds=5)
+        log.started_at = utc_now() - timedelta(seconds=5)
 
-        before = datetime.utcnow()
+        before = utc_now()
         sync_logger.update_log(log, "success")
-        after = datetime.utcnow()
+        after = utc_now()
 
         assert log.completed_at >= before
         assert log.completed_at <= after
@@ -122,7 +123,7 @@ class TestUpdateLog:
     def test_calculates_duration(self, sync_logger):
         """duration_seconds should be calculated from timestamps."""
         log = Mock()
-        log.started_at = datetime.utcnow() - timedelta(seconds=10)
+        log.started_at = utc_now() - timedelta(seconds=10)
 
         sync_logger.update_log(log, "success")
 
@@ -134,7 +135,7 @@ class TestUpdateLog:
     def test_sets_error_message_on_failure(self, sync_logger):
         """Error message should be set on failure."""
         log = Mock()
-        log.started_at = datetime.utcnow()
+        log.started_at = utc_now()
 
         sync_logger.update_log(log, "failed", error_message="Connection timeout")
 
@@ -148,7 +149,7 @@ class TestMarkFailed:
     def test_sets_failed_status(self, sync_logger):
         """Status should be set to 'failed'."""
         log = Mock()
-        log.started_at = datetime.utcnow()
+        log.started_at = utc_now()
 
         sync_logger.mark_failed(log, "Database error")
 
@@ -163,7 +164,7 @@ class TestMarkSuccess:
     def test_sets_success_status_without_conflicts(self, sync_logger):
         """Status should be 'success' when no conflicts."""
         log = Mock()
-        log.started_at = datetime.utcnow()
+        log.started_at = utc_now()
 
         sync_logger.mark_success(log, records_processed=50)
 
@@ -173,7 +174,7 @@ class TestMarkSuccess:
     def test_sets_conflict_status_with_conflicts(self, sync_logger):
         """Status should be 'conflict' when conflicts detected."""
         log = Mock()
-        log.started_at = datetime.utcnow()
+        log.started_at = utc_now()
 
         sync_logger.mark_success(log, records_processed=50, conflicts_detected=3)
 
@@ -240,7 +241,7 @@ class TestGetLastSuccessfulSync:
     def test_returns_last_successful_sync(self, sync_logger, mock_db):
         """Should return the most recent successful sync log."""
         mock_log = Mock()
-        mock_log.completed_at = datetime.utcnow()
+        mock_log.completed_at = utc_now()
         mock_log.status = "success"
 
         mock_db.query.return_value.filter.return_value.order_by.return_value.first.return_value = mock_log

@@ -5,12 +5,12 @@ Provides atomic logging with proper transaction handling.
 
 import logging
 from typing import Optional
-from datetime import datetime
 from contextlib import contextmanager
 
 from sqlalchemy.orm import Session
 
 from ...database.models import SyncLog
+from ...utils import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ class SyncLogger:
             operation=operation,
             status="pending",
             algorithm_validation_passed=algorithm_compatible,
-            started_at=datetime.utcnow()
+            started_at=utc_now()
         )
         self.db.add(sync_log)
         self.db.flush()  # Get ID without committing
@@ -83,7 +83,7 @@ class SyncLogger:
         sync_log.conflicts_detected = conflicts_detected
         sync_log.conflicts_resolved = conflicts_resolved
         sync_log.error_message = error_message
-        sync_log.completed_at = datetime.utcnow()
+        sync_log.completed_at = utc_now()
 
         if sync_log.started_at:
             sync_log.duration_seconds = (

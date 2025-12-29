@@ -5,12 +5,13 @@ Thin layer that coordinates between differ, resolver, and logger.
 
 import logging
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, NoResultFound, DataError
 
 from ...database.models import Property, SyncLog
+from ...utils import utc_now
 from ...models.sync import (
     DeltaSyncRequest, DeltaSyncResponse, FullSyncRequest, FullSyncResponse,
     SyncStatusResponse, BatchSyncRequest, BatchSyncResponse,
@@ -101,7 +102,7 @@ class SyncOrchestrator:
             conflicts_detected=len(conflicts)
         )
 
-        new_sync_timestamp = datetime.utcnow()
+        new_sync_timestamp = utc_now()
         self.db.commit()
 
         # Determine overall status
@@ -157,9 +158,14 @@ class SyncOrchestrator:
                     changes_applied += 1
                 # Context manager commits on successful exit
 
-        except Exception as batch_error:
-            # Batch failed - context manager already rolled back
-            logger.warning(f"Batch processing failed, falling back to individual: {str(batch_error)}")
+        except (IntegrityError, DataError, ValueError) as batch_error:
+            # Only fall back to individual processing for data-specific errors:
+            # - IntegrityError: unique constraint, foreign key violations
+            # - DataError: invalid data types, string too long
+            # - ValueError: validation errors from Pydantic models
+            # Other errors (OperationalError, connection issues) should propagate
+            # and fail the entire sync request, triggering client retry.
+            logger.warning(f"Batch data error, falling back to individual processing: {str(batch_error)}")
 
             # Reset counter and process one by one
             changes_applied = 0
@@ -170,20 +176,29 @@ class SyncOrchestrator:
         return changes_applied, len(rejected_changes), conflicts, rejected_changes
 
     def _apply_single_change(self, change: PropertyChange, device_id: str):
-        """Apply a single change operation. Raises on failure."""
+        """
+        Apply a single change operation. Raises on failure.
+
+        Note: Uses auto_commit=False to let the orchestrator control transaction
+        boundaries. The caller (batch or individual processing) manages commits.
+        """
         if change.operation == SyncOperation.CREATE:
             property_create = PropertyCreate(**change.data)
-            self.property_service.create_property(property_create, device_id)
+            self.property_service.create_property(
+                property_create, device_id, auto_commit=False
+            )
 
         elif change.operation == SyncOperation.UPDATE:
             update_data = {k: v for k, v in change.data.items() if k != 'id'}
             property_update = PropertyUpdate(**update_data)
             self.property_service.update_property(
-                change.property_id, property_update, device_id
+                change.property_id, property_update, device_id, auto_commit=False
             )
 
         elif change.operation == SyncOperation.DELETE:
-            self.property_service.delete_property(change.property_id, device_id)
+            self.property_service.delete_property(
+                change.property_id, device_id, auto_commit=False
+            )
 
     def _process_changes_individually(self, device_id: str, changes: list):
         """
@@ -291,7 +306,7 @@ class SyncOrchestrator:
         # Update sync log
         self.sync_logger.mark_success(sync_log, records_processed=len(all_properties))
 
-        sync_timestamp = datetime.utcnow()
+        sync_timestamp = utc_now()
         self.db.commit()
 
         logger.info(
@@ -396,7 +411,7 @@ class SyncOrchestrator:
         # Get recent sync operations
         recent_syncs = self.db.query(SyncLog).filter(
             SyncLog.device_id == device_id,
-            SyncLog.started_at > datetime.utcnow() - timedelta(days=7)
+            SyncLog.started_at > utc_now() - timedelta(days=7)
         ).order_by(SyncLog.started_at.desc()).all()
 
         if not recent_syncs:

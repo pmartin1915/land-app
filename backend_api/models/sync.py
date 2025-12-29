@@ -8,6 +8,8 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
 
+from ..utils import utc_now
+
 class SyncOperation(str, Enum):
     """Synchronization operation types."""
     CREATE = "create"
@@ -223,7 +225,7 @@ def create_property_change(
         property_id=property_id,
         operation=operation,
         data=data,
-        timestamp=datetime.utcnow(),
+        timestamp=utc_now(),
         device_id=device_id
     )
 
