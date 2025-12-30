@@ -584,3 +584,180 @@ class PropertyService:
             logger.debug(f"Invalidated caches for property_id={property_id}, county={county}")
         except Exception as e:
             logger.warning(f"Failed to invalidate caches: {e}")
+
+    @cache_result("dashboard_stats", ttl=300)  # Cache for 5 minutes
+    def get_dashboard_stats(self) -> Dict[str, Any]:
+        """
+        Get aggregated statistics for the frontend dashboard.
+        Uses efficient SQL aggregations to minimize database roundtrips.
+        """
+        from datetime import datetime, timedelta
+        from sqlalchemy import case
+
+        try:
+            now = datetime.utcnow()
+            seven_days_ago = now - timedelta(days=7)
+            fourteen_days_ago = now - timedelta(days=14)
+
+            # 1. Main aggregates in a single query
+            main_stats = self.db.query(
+                func.count(Property.id).label("total"),
+                func.avg(Property.investment_score).label("avg_inv_score"),
+                func.avg(Property.price_per_acre).label("avg_price"),
+                func.avg(Property.water_score).label("avg_water_score"),
+                func.count(case((Property.water_score > 0, 1))).label("water_count"),
+                func.count(case((Property.created_at >= seven_days_ago, 1))).label("new_7d"),
+                func.count(case((and_(
+                    Property.created_at >= fourteen_days_ago,
+                    Property.created_at < seven_days_ago
+                ), 1))).label("new_prev_7d"),
+            ).filter(
+                Property.is_deleted == False
+            ).first()
+
+            total_props = main_stats.total or 0
+            new_7d = main_stats.new_7d or 0
+            prev_7d = main_stats.new_prev_7d or 0
+            water_count = main_stats.water_count or 0
+
+            # Calculate trend
+            if prev_7d > 0:
+                pct_change = ((new_7d - prev_7d) / prev_7d) * 100
+                trend_str = f"{pct_change:+.0f}% vs last week"
+            elif new_7d > 0:
+                trend_str = "New this week"
+            else:
+                trend_str = "No change"
+
+            # Calculate water access percentage
+            water_percentage = (water_count / total_props * 100) if total_props > 0 else 0
+
+            # 2. Top counties by property count
+            counties_query = self.db.query(
+                Property.county,
+                func.count(Property.id).label("count"),
+                func.avg(Property.investment_score).label("avg_score")
+            ).filter(
+                Property.is_deleted == False,
+                Property.county.isnot(None)
+            ).group_by(
+                Property.county
+            ).order_by(
+                desc("count")
+            ).limit(5).all()
+
+            top_counties = [
+                {
+                    "name": r.county,
+                    "count": r.count,
+                    "avg_investment_score": round(r.avg_score or 0, 1)
+                }
+                for r in counties_query
+            ]
+
+            # 3. Price distribution buckets
+            price_buckets = self.db.query(
+                func.count(case((Property.price_per_acre < 1000, 1))).label("r0"),
+                func.count(case((and_(Property.price_per_acre >= 1000, Property.price_per_acre < 5000), 1))).label("r1"),
+                func.count(case((and_(Property.price_per_acre >= 5000, Property.price_per_acre < 10000), 1))).label("r2"),
+                func.count(case((and_(Property.price_per_acre >= 10000, Property.price_per_acre < 50000), 1))).label("r3"),
+                func.count(case((Property.price_per_acre >= 50000, 1))).label("r4")
+            ).filter(Property.is_deleted == False).first()
+
+            price_distribution = {
+                "ranges": ["<$1k", "$1k-5k", "$5k-10k", "$10k-50k", "$50k+"],
+                "counts": [
+                    price_buckets.r0 or 0,
+                    price_buckets.r1 or 0,
+                    price_buckets.r2 or 0,
+                    price_buckets.r3 or 0,
+                    price_buckets.r4 or 0
+                ]
+            }
+
+            # 4. Activity timeline (last 14 days)
+            timeline_query = self.db.query(
+                func.date(Property.created_at).label("date"),
+                func.count(Property.id).label("count")
+            ).filter(
+                Property.is_deleted == False,
+                Property.created_at >= (now - timedelta(days=14))
+            ).group_by(
+                func.date(Property.created_at)
+            ).all()
+
+            timeline_map = {str(r.date): r.count for r in timeline_query}
+            timeline_dates = []
+            timeline_counts = []
+            for i in range(14):
+                d = (now - timedelta(days=13-i)).date()
+                timeline_dates.append(d.strftime("%b %d"))
+                timeline_counts.append(timeline_map.get(str(d), 0))
+
+            # 5. Recent activity (synthesized from recent properties)
+            recent_props = self.db.query(Property).filter(
+                Property.is_deleted == False
+            ).order_by(desc(Property.updated_at)).limit(10).all()
+
+            recent_activity = []
+            for p in recent_props:
+                # Determine activity type
+                if p.created_at and p.updated_at:
+                    # If created and updated are within 1 minute, it's new
+                    is_new = abs((p.created_at - p.updated_at).total_seconds()) < 60
+                else:
+                    is_new = True
+
+                if p.status == 'reviewing':
+                    act_type = "reviewed"
+                elif is_new:
+                    act_type = "new"
+                else:
+                    act_type = "updated"
+
+                county_name = p.county or "Unknown County"
+                recent_activity.append({
+                    "type": act_type,
+                    "description": f"{county_name} - {p.parcel_id[:20] if p.parcel_id else 'Property'}",
+                    "timestamp": p.updated_at.isoformat() if p.updated_at else now.isoformat()
+                })
+
+            # 6. Score distribution averages
+            scores = self.db.query(
+                func.avg(Property.water_score).label("water"),
+                func.avg(Property.investment_score).label("invest"),
+                func.avg(Property.county_market_score).label("county"),
+                func.avg(Property.geographic_score).label("geo"),
+                func.avg(Property.total_description_score).label("desc")
+            ).filter(Property.is_deleted == False).first()
+
+            score_distribution = {
+                "water_score": round(scores.water or 0, 1),
+                "investment_score": round(scores.invest or 0, 1),
+                "county_market_score": round(scores.county or 0, 1),
+                "geographic_score": round(scores.geo or 0, 1),
+                "description_score": round(scores.desc or 0, 1)
+            }
+
+            return {
+                "total_properties": total_props,
+                "upcoming_auctions": 0,  # No auction_date field in model
+                "new_items_7d": new_7d,
+                "new_items_trend": trend_str,
+                "watchlist_count": 0,  # No is_watchlisted field in model
+                "avg_investment_score": round(main_stats.avg_inv_score or 0, 1),
+                "water_access_percentage": round(water_percentage, 1),
+                "avg_price_per_acre": round(main_stats.avg_price or 0, 2),
+                "top_counties": top_counties,
+                "recent_activity": recent_activity,
+                "price_distribution": price_distribution,
+                "score_distribution": score_distribution,
+                "activity_timeline": {
+                    "dates": timeline_dates,
+                    "new_properties": timeline_counts
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to get dashboard stats: {str(e)}")
+            raise

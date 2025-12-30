@@ -159,6 +159,26 @@ async def get_workflow_stats(
         raise HTTPException(status_code=500, detail="Failed to get workflow statistics")
 
 
+@router.get("/stats")
+@limiter.limit("60/minute")
+async def get_dashboard_stats(
+    request: Request,
+    auth_data: dict = Depends(require_property_read),
+    property_service: PropertyService = Depends(get_property_service)
+):
+    """
+    Get aggregated statistics for the dashboard.
+    Returns metrics, distributions, and chart data for frontend visualization.
+    """
+    try:
+        stats = property_service.get_dashboard_stats()
+        return stats
+
+    except Exception as e:
+        logger.error(f"Failed to get dashboard stats: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get dashboard statistics")
+
+
 @router.get("/{property_id}", response_model=PropertyResponse)
 @limiter.limit("200/minute")
 async def get_property(

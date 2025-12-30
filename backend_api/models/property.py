@@ -335,3 +335,59 @@ class PropertyMetrics(BaseModel):
     county_distribution: dict = Field(..., description="Distribution of properties by county")
     year_distribution: dict = Field(..., description="Distribution of properties by year")
     score_ranges: dict = Field(..., description="Investment score distribution by ranges")
+
+
+# Dashboard Stats Models
+class TopCounty(BaseModel):
+    """Model for top county in dashboard stats."""
+    name: str = Field(..., description="County name")
+    count: int = Field(..., description="Number of properties in county")
+    avg_investment_score: float = Field(..., description="Average investment score for county")
+
+
+class RecentActivity(BaseModel):
+    """Model for recent activity in dashboard."""
+    type: str = Field(..., description="Activity type: new, updated, reviewed")
+    description: str = Field(..., description="Activity description")
+    timestamp: str = Field(..., description="ISO timestamp")
+
+
+class PriceDistribution(BaseModel):
+    """Model for price distribution chart data."""
+    ranges: List[str] = Field(..., description="Price range labels")
+    counts: List[int] = Field(..., description="Count of properties in each range")
+
+
+class ScoreDistribution(BaseModel):
+    """Model for score distribution radar chart."""
+    water_score: float = Field(..., description="Average water score")
+    investment_score: float = Field(..., description="Average investment score")
+    county_market_score: float = Field(..., description="Average county market score")
+    geographic_score: float = Field(..., description="Average geographic score")
+    description_score: float = Field(..., description="Average description score")
+
+
+class ActivityTimeline(BaseModel):
+    """Model for activity timeline chart."""
+    dates: List[str] = Field(..., description="Date labels for chart")
+    new_properties: List[int] = Field(..., description="New properties count per date")
+
+
+class DashboardStats(BaseModel):
+    """Model for dashboard statistics."""
+    # Scalar metrics
+    total_properties: int = Field(..., description="Total number of properties")
+    upcoming_auctions: int = Field(0, description="Properties with upcoming auctions")
+    new_items_7d: int = Field(..., description="Properties added in last 7 days")
+    new_items_trend: str = Field(..., description="Trend compared to previous week")
+    watchlist_count: int = Field(0, description="Properties on watchlist")
+    avg_investment_score: float = Field(..., description="Average investment score")
+    water_access_percentage: float = Field(..., description="Percentage with water access")
+    avg_price_per_acre: float = Field(..., description="Average price per acre")
+
+    # Chart data
+    top_counties: List[TopCounty] = Field(..., description="Top counties by property count")
+    recent_activity: List[RecentActivity] = Field(..., description="Recent property activity")
+    price_distribution: PriceDistribution = Field(..., description="Price distribution for chart")
+    score_distribution: ScoreDistribution = Field(..., description="Score averages for radar chart")
+    activity_timeline: ActivityTimeline = Field(..., description="Activity timeline for chart")
