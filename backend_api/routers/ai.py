@@ -11,16 +11,14 @@ import uuid as uuid_module
 from uuid import UUID
 from datetime import datetime
 from sqlalchemy.orm import Session
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from ..models.ai import AISuggestionResponse
 from ..database.connection import get_db
 from ..database.models import Property
 from ..auth import require_property_read
+from ..config import limiter
 
 logger = logging.getLogger(__name__)
-limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter()
 

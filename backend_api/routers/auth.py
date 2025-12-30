@@ -9,20 +9,18 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 from typing import Optional
 import logging
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from ..auth import (
     create_device_token, create_admin_token, create_api_key, verify_token,
     verify_password, get_password_hash, ENVIRONMENT
 )
+from ..config import limiter
 
 # Admin credentials from environment variables
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
 ADMIN_PASSWORD_HASH = os.getenv("ADMIN_PASSWORD_HASH")
 
 logger = logging.getLogger(__name__)
-limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter()
 security = HTTPBasic()

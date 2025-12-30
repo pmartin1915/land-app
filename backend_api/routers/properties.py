@@ -8,8 +8,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 import logging
 import math
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from datetime import datetime
 
 from ..database.connection import get_db
 from ..services.property_service import PropertyService
@@ -19,11 +18,10 @@ from ..models.property import (
     PropertyMetrics, PropertyBulkOperation, PropertyBulkResponse,
     PropertyStatusUpdate, PropertyStatusResponse
 )
-from datetime import datetime
 from ..auth import require_property_read, require_property_write
+from ..config import limiter
 
 logger = logging.getLogger(__name__)
-limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter()
 

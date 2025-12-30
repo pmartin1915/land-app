@@ -9,7 +9,7 @@ Maintains exact algorithm compatibility with existing Python scripts and iOS Swi
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import time
@@ -17,8 +17,8 @@ import logging
 from datetime import datetime
 from contextlib import asynccontextmanager
 
-# Import centralized configuration
-from .config import settings
+# Import centralized configuration and shared limiter
+from .config import settings, limiter
 
 # Import routers
 from .routers import properties, counties, sync, auth, predictions, testing, applications, ai
@@ -35,17 +35,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Rate limiter configuration - uses centralized settings
-def get_rate_limit_key(request: Request) -> str:
-    """Return key for rate limiting, or empty string to bypass in development."""
-    if settings.is_development:
-        return ""  # Empty key bypasses rate limiting
-    return get_remote_address(request)
-
-limiter = Limiter(
-    key_func=get_rate_limit_key,
-    enabled=settings.resolved_rate_limit_enabled
-)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

@@ -6,8 +6,6 @@ CRITICAL: County codes and names must exactly match iOS CountyValidator.swift
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 import logging
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from ..database.connection import get_db
 from ..database.models import County
@@ -17,9 +15,9 @@ from ..models.county import (
     CountyStatistics, CountyStatisticsResponse, ADOR_COUNTY_MAPPING,
     get_county_by_code, get_county_by_name, search_counties
 )
+from ..config import limiter
 
 logger = logging.getLogger(__name__)
-limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter()
 

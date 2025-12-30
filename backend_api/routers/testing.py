@@ -8,11 +8,10 @@ from typing import List, Optional, Dict, Any
 import logging
 import time
 from datetime import datetime, timedelta
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from pydantic import BaseModel, Field
 
 from ..auth import require_property_read, require_admin
+from ..config import limiter
 from ..models.prediction import (
     PredictionConfidence, MarketTrend, OpportunityType, MarketPhase
 )
@@ -35,7 +34,6 @@ from scripts.prediction_accuracy_validator import (
 )
 
 logger = logging.getLogger(__name__)
-limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter()
 

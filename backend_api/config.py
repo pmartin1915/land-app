@@ -10,8 +10,11 @@ from pathlib import Path
 from typing import List, Optional
 from functools import lru_cache
 
+from fastapi import Request
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 
 def get_project_root() -> Path:
@@ -149,3 +152,18 @@ def get_settings() -> Settings:
 
 # Convenience exports
 settings = get_settings()
+
+
+def _get_rate_limit_key(request: Request) -> str:
+    """Return key for rate limiting, or empty string to bypass in development."""
+    if settings.is_development:
+        return ""  # Empty key bypasses rate limiting
+    return get_remote_address(request)
+
+
+# Shared rate limiter for all routers
+# Uses development-aware key function that bypasses limits in dev mode
+limiter = Limiter(
+    key_func=_get_rate_limit_key,
+    enabled=settings.resolved_rate_limit_enabled
+)

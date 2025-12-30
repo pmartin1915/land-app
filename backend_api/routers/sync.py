@@ -9,8 +9,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import Optional
 import logging
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from ..database.connection import get_db
 from ..services.sync_service import SyncService, get_sync_service
@@ -20,9 +18,9 @@ from ..models.sync import (
     SyncMetrics, BatchSyncRequest, BatchSyncResponse,
     SyncLogListResponse
 )
+from ..config import limiter
 
 logger = logging.getLogger(__name__)
-limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter()
 

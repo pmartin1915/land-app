@@ -8,8 +8,6 @@ from typing import List, Optional
 import logging
 import time
 from datetime import datetime
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from ..models.prediction import (
     PropertyAppreciationRequest, PropertyAppreciationResponse,
@@ -35,8 +33,9 @@ from scripts.predictive_market_engine import (
     EmergingOpportunity
 )
 
+from ..config import limiter
+
 logger = logging.getLogger(__name__)
-limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter()
 
