@@ -64,13 +64,13 @@ async def scrape_and_import(
     logger.info("ARKANSAS COSL COMPREHENSIVE SCRAPER")
     logger.info("=" * 60)
 
-    scraper = ArkansasCOSLScraper()
     engine = ScoringEngine(capital_limit=capital_limit)
 
-    # Scrape all properties
+    # Scrape all properties using async context manager
     logger.info("Fetching all properties from COSL...")
     try:
-        properties = await scraper.scrape_all_properties()
+        async with ArkansasCOSLScraper() as scraper:
+            properties = await scraper.scrape_all_properties()
         logger.info(f"Found {len(properties)} total properties")
     except Exception as e:
         logger.error(f"Scraping failed: {e}")
