@@ -31,17 +31,56 @@ class PropertyStatus(str, Enum):
     PENDING = "pending"
     WITHDRAWN = "withdrawn"
 
+
+class SaleType(str, Enum):
+    """Property sale type enumeration for multi-state support."""
+    TAX_LIEN = "tax_lien"
+    TAX_DEED = "tax_deed"
+    REDEEMABLE_DEED = "redeemable_deed"
+    HYBRID = "hybrid"
+
+
+class OwnerType(str, Enum):
+    """Property owner type enumeration for wholesaling."""
+    INDIVIDUAL = "individual"
+    CORPORATE = "corporate"
+    ESTATE = "estate"
+    ABSENTEE = "absentee"
+    UNKNOWN = "unknown"
+
+
+class WholesalePipelineStatus(str, Enum):
+    """Wholesale deal status enumeration."""
+    IDENTIFIED = "identified"
+    CONTACTED = "contacted"
+    UNDER_CONTRACT = "under_contract"
+    ASSIGNED = "assigned"
+    CLOSED = "closed"
+    DEAD = "dead"
+
 class PropertyCreate(BaseModel):
     """Model for creating a new property."""
     parcel_id: str = Field(..., description="Unique parcel identifier", min_length=1)
     amount: float = Field(..., description="Bid/sale amount in USD", gt=0)
     acreage: Optional[float] = Field(None, description="Property acreage", ge=0)
     description: Optional[str] = Field(None, description="Legal property description")
-    county: Optional[str] = Field(None, description="Alabama county name")
+    county: Optional[str] = Field(None, description="County name")
     owner_name: Optional[str] = Field(None, description="Property owner name")
     year_sold: Optional[str] = Field(None, description="Sale year")
     assessed_value: Optional[float] = Field(None, description="County assessed value", ge=0)
     device_id: Optional[str] = Field(None, description="Device that created this record")
+
+    # Multi-state and wholesale fields (Pivot 2025)
+    state: Optional[str] = Field('AL', description="State code (AL, AR, TX, FL)", max_length=2)
+    sale_type: Optional[str] = Field(None, description="Tax lien, tax deed, redeemable deed, or hybrid")
+    redemption_period_days: Optional[int] = Field(None, description="Days until ownership clear", ge=0)
+    time_to_ownership_days: Optional[int] = Field(None, description="Total days to marketable title", ge=0)
+    estimated_market_value: Optional[float] = Field(None, description="Estimated market value", ge=0)
+    wholesale_spread: Optional[float] = Field(None, description="Market value - asking price")
+    owner_type: Optional[str] = Field(None, description="Owner type for wholesaling")
+    data_source: Optional[str] = Field(None, description="Scraper/platform source", max_length=100)
+    auction_date: Optional[datetime] = Field(None, description="Scheduled auction date")
+    auction_platform: Optional[str] = Field(None, description="Auction platform name", max_length=100)
 
     @field_validator('parcel_id')
     @classmethod
@@ -194,7 +233,7 @@ class PropertyResponse(BaseModel):
     created_at: datetime = Field(..., description="Record creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     device_id: Optional[str] = Field(None, description="Device that last modified this record")
-    sync_timestamp: datetime = Field(..., description="Last sync timestamp")
+    sync_timestamp: Optional[datetime] = Field(None, description="Last sync timestamp")
     is_deleted: bool = Field(default=False, description="Soft delete flag for sync")
 
     # Research workflow status
@@ -202,6 +241,24 @@ class PropertyResponse(BaseModel):
     triage_notes: Optional[str] = Field(None, description="Research notes from triage review")
     triaged_at: Optional[datetime] = Field(None, description="When property was triaged")
     triaged_by: Optional[str] = Field(None, description="Device/user that triaged this property")
+
+    # Multi-state and wholesale fields (Pivot 2025)
+    state: str = Field(default='AL', description="State code")
+    sale_type: Optional[str] = Field(None, description="Tax lien, tax deed, redeemable deed, or hybrid")
+    redemption_period_days: Optional[int] = Field(None, description="Days until ownership clear")
+    time_to_ownership_days: Optional[int] = Field(None, description="Total days to marketable title")
+    estimated_market_value: Optional[float] = Field(None, description="Estimated market value")
+    wholesale_spread: Optional[float] = Field(None, description="Market value - asking price")
+    owner_type: Optional[str] = Field(None, description="Owner type for wholesaling")
+    data_source: Optional[str] = Field(None, description="Scraper/platform source")
+    auction_date: Optional[datetime] = Field(None, description="Scheduled auction date")
+    auction_platform: Optional[str] = Field(None, description="Auction platform name")
+
+    # Multi-State Scoring Fields (Milestone 3)
+    buy_hold_score: Optional[float] = Field(None, description="Time-adjusted buy-and-hold investment score (0-100)")
+    wholesale_score: Optional[float] = Field(None, description="Wholesale flip viability score (0-100)")
+    effective_cost: Optional[float] = Field(None, description="Total cost including quiet title fees")
+    time_penalty_factor: Optional[float] = Field(None, description="Time decay multiplier (0-1)")
 
     model_config = {"from_attributes": True}  # Enable ORM mode for SQLAlchemy compatibility
 
@@ -254,6 +311,19 @@ class PropertyFilters(BaseModel):
     min_total_description_score: Optional[float] = Field(None, description="Minimum total description score", ge=0)
     min_road_access_score: Optional[float] = Field(None, description="Minimum road access score", ge=0)
 
+    # Multi-state filters (Pivot 2025)
+    state: Optional[str] = Field(None, description="Filter by state code", max_length=2)
+    sale_type: Optional[str] = Field(None, description="Filter by sale type")
+    max_time_to_ownership_days: Optional[int] = Field(None, description="Maximum days to ownership", ge=0)
+    min_wholesale_spread: Optional[float] = Field(None, description="Minimum wholesale spread", ge=0)
+    owner_type: Optional[str] = Field(None, description="Filter by owner type")
+    upcoming_auctions_only: Optional[bool] = Field(False, description="Only show properties with future auction dates")
+
+    # Multi-state scoring filters (Milestone 3)
+    min_buy_hold_score: Optional[float] = Field(None, description="Minimum buy & hold score", ge=0, le=100)
+    min_wholesale_score: Optional[float] = Field(None, description="Minimum wholesale score", ge=0, le=100)
+    max_effective_cost: Optional[float] = Field(None, description="Maximum effective cost", ge=0)
+
     # Pagination
     page: int = Field(1, description="Page number (1-based)", ge=1)
     page_size: int = Field(100, description="Number of items per page", ge=1, le=1000)
@@ -270,7 +340,11 @@ class PropertyFilters(BaseModel):
             "investment_score", "amount", "acreage", "price_per_acre", "water_score",
             "assessed_value_ratio", "county", "year_sold", "created_at", "updated_at",
             "county_market_score", "geographic_score", "market_timing_score",
-            "total_description_score", "road_access_score"
+            "total_description_score", "road_access_score",
+            # Multi-state fields
+            "state", "sale_type", "time_to_ownership_days", "wholesale_spread", "auction_date",
+            # Multi-state scoring fields (Milestone 3)
+            "buy_hold_score", "wholesale_score", "effective_cost", "time_penalty_factor"
         }
         if v not in valid_fields:
             raise ValueError(f"Invalid sort field: {v}. Valid fields: {valid_fields}")
@@ -391,3 +465,93 @@ class DashboardStats(BaseModel):
     price_distribution: PriceDistribution = Field(..., description="Price distribution for chart")
     score_distribution: ScoreDistribution = Field(..., description="Score averages for radar chart")
     activity_timeline: ActivityTimeline = Field(..., description="Activity timeline for chart")
+
+
+# Multi-State Configuration Models (Pivot 2025)
+
+class StateConfigResponse(BaseModel):
+    """Model for state configuration API responses."""
+    id: int
+    state_code: str
+    state_name: str
+    sale_type: str
+    redemption_period_days: Optional[int]
+    interest_rate: Optional[float]
+    quiet_title_cost_estimate: Optional[float]
+    time_to_ownership_days: int
+    auction_platform: Optional[str]
+    scraper_module: Optional[str]
+    is_active: bool
+    recommended_for_beginners: bool
+    notes: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class StateConfigListResponse(BaseModel):
+    """Model for state configuration list API responses."""
+    states: List[StateConfigResponse] = Field(..., description="List of state configurations")
+    total_count: int = Field(..., description="Total number of states")
+    active_count: int = Field(..., description="Number of active states")
+
+
+# Wholesale Pipeline Models (Pivot 2025)
+
+class WholesalePipelineCreate(BaseModel):
+    """Model for creating a wholesale pipeline entry."""
+    property_id: str = Field(..., description="Property ID")
+    status: WholesalePipelineStatus = Field(WholesalePipelineStatus.IDENTIFIED, description="Deal status")
+    contract_price: Optional[float] = Field(None, description="Contract price", gt=0)
+    assignment_fee: Optional[float] = Field(None, description="Wholesale fee", gt=0)
+    earnest_money: Optional[float] = Field(None, description="Earnest money", ge=0)
+    buyer_name: Optional[str] = Field(None, description="End buyer name", max_length=200)
+    buyer_email: Optional[str] = Field(None, description="End buyer email", max_length=200)
+    contract_date: Optional[datetime] = Field(None, description="Contract signing date")
+    closing_date: Optional[datetime] = Field(None, description="Expected closing date")
+    marketing_notes: Optional[str] = Field(None, description="Marketing notes", max_length=2000)
+    notes: Optional[str] = Field(None, description="General notes", max_length=2000)
+
+
+class WholesalePipelineUpdate(BaseModel):
+    """Model for updating a wholesale pipeline entry."""
+    status: Optional[WholesalePipelineStatus] = None
+    contract_price: Optional[float] = Field(None, gt=0)
+    assignment_fee: Optional[float] = Field(None, gt=0)
+    earnest_money: Optional[float] = Field(None, ge=0)
+    buyer_name: Optional[str] = Field(None, max_length=200)
+    buyer_email: Optional[str] = Field(None, max_length=200)
+    contract_date: Optional[datetime] = None
+    closing_date: Optional[datetime] = None
+    marketing_notes: Optional[str] = Field(None, max_length=2000)
+    notes: Optional[str] = Field(None, max_length=2000)
+
+
+class WholesalePipelineResponse(BaseModel):
+    """Model for wholesale pipeline API responses."""
+    id: str
+    property_id: str
+    status: str
+    contract_price: Optional[float]
+    assignment_fee: Optional[float]
+    earnest_money: Optional[float]
+    buyer_id: Optional[str]
+    buyer_name: Optional[str]
+    buyer_email: Optional[str]
+    contract_date: Optional[datetime]
+    closing_date: Optional[datetime]
+    closed_at: Optional[datetime]
+    marketing_notes: Optional[str]
+    notes: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class WholesalePipelineListResponse(BaseModel):
+    """Model for wholesale pipeline list API responses."""
+    deals: List[WholesalePipelineResponse] = Field(..., description="List of wholesale deals")
+    total_count: int = Field(..., description="Total number of deals")
+    by_status: dict = Field(..., description="Count of deals by status")

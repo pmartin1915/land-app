@@ -1,15 +1,22 @@
 """
-Alabama Auction Watcher - Optimized Streamlit Dashboard
+Tax Deed Auction Watcher - Multi-State Streamlit Dashboard
 
 High-performance interactive dashboard with AI testability for browsing and analyzing
-tax delinquent properties from the Alabama Department of Revenue.
+tax deed and tax lien properties across multiple states (AR, AL).
 
 Features:
+- Multi-state scoring engine (buy_hold_score, wholesale_score)
+- State-specific cost calculations (effective_cost including quiet title)
+- Time decay penalties for redemption periods
 - Advanced caching with multi-tier strategy
 - Asynchronous data loading
 - Memory optimization
 - Performance monitoring
 - AI-driven testing and error detection
+
+Supported States:
+- Arkansas (AR): Tax Deed - Immediate ownership, no quiet title needed
+- Alabama (AL): Tax Lien - 4-year redemption, ~$4k quiet title required
 
 Usage:
     streamlit run streamlit_app/app.py
@@ -67,8 +74,8 @@ from streamlit_app.testing.ai_testability import (
 
 # Page configuration
 st.set_page_config(
-    page_title="Alabama Auction Watcher",
-    page_icon="🏠",
+    page_title="Tax Deed Auction Watcher",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -355,13 +362,13 @@ def load_watchlist_data(filters: Dict[str, Any]) -> pd.DataFrame:
 
 
 def display_legal_disclaimer():
-    """Display the legal disclaimer banner."""
+    """Display the legal disclaimer banner with multi-state awareness."""
     st.markdown("""
     <div class="disclaimer-banner">
-        <h4>⚠️ IMPORTANT LEGAL NOTICE</h4>
-        <p><strong>Alabama Redemption Period:</strong> Properties purchased at tax auctions in Alabama are subject to a
-        <strong>3-year redemption period</strong> during which the original owner can reclaim the property by paying
-        the purchase price plus interest and costs. During this period, you cannot take possession of the property.
+        <h4>IMPORTANT LEGAL NOTICE</h4>
+        <p><strong>State-Specific Rules Apply:</strong> Tax sale properties vary significantly by state.
+        <strong>Alabama</strong> has a 4-year redemption period and requires quiet title action (~$4,000).
+        <strong>Arkansas</strong> tax deeds provide immediate ownership with state-issued warranty deed.
         Always consult with a real estate attorney before participating in tax auctions.</p>
     </div>
     """, unsafe_allow_html=True)
@@ -435,6 +442,24 @@ def create_sidebar_filters() -> Dict:
         # Check for previous filters to detect changes
         previous_filters = st.session_state.get('previous_filters', {})
         filters = {}
+
+        # State filter (Multi-State Pivot 2025)
+        st.sidebar.subheader("STATE")
+        state_options = ['All', 'AR - Arkansas (Tax Deed)', 'AL - Alabama (Tax Lien)']
+        state_selection = st.sidebar.selectbox(
+            "Select State",
+            options=state_options,
+            index=0,
+            key="state_selectbox",
+            help="Arkansas: Immediate ownership. Alabama: 4-year redemption + quiet title."
+        )
+        # Extract state code from selection
+        if state_selection == 'All':
+            filters['state'] = None
+        else:
+            filters['state'] = state_selection.split(' - ')[0]
+
+        st.sidebar.markdown("---")
 
         # Price range filter
         filters['price_range'] = st.sidebar.slider(
@@ -644,6 +669,45 @@ def display_summary_metrics(df: pd.DataFrame):
                             value=format_currency(metrics_data['avg_all_in'])
                         )
 
+            # Multi-State Scoring Metrics Row (Milestone 3)
+            col9, col10, col11, col12 = st.columns(4)
+
+            with performance_context("summary_metrics", "display_row3"):
+                with col9:
+                    if metrics_data['avg_buy_hold_score'] is not None:
+                        st.metric(
+                            label="Avg Buy & Hold Score",
+                            value=f"{metrics_data['avg_buy_hold_score']:.1f}",
+                            help="Time-adjusted investment score (0-100). Higher = better."
+                        )
+
+                with col10:
+                    if metrics_data['avg_wholesale_score'] is not None:
+                        st.metric(
+                            label="Avg Wholesale Score",
+                            value=f"{metrics_data['avg_wholesale_score']:.1f}",
+                            help="Wholesale flip viability (0-100). Tax liens score 0."
+                        )
+
+                with col11:
+                    if metrics_data['avg_effective_cost'] is not None:
+                        st.metric(
+                            label="Avg Effective Cost",
+                            value=format_currency(metrics_data['avg_effective_cost']),
+                            help="Total cost including quiet title fees"
+                        )
+
+                with col12:
+                    # State breakdown
+                    state_breakdown = metrics_data.get('state_breakdown', {})
+                    if state_breakdown:
+                        breakdown_str = ", ".join([f"{k}: {v}" for k, v in state_breakdown.items()])
+                        st.metric(
+                            label="State Distribution",
+                            value=breakdown_str if len(breakdown_str) < 20 else f"{len(state_breakdown)} states",
+                            help=f"Properties by state: {breakdown_str}"
+                        )
+
     except Exception as e:
         # Enhanced error handling with AI logging
         performance_monitor = get_performance_monitor()
@@ -677,7 +741,14 @@ def _calculate_batch_metrics(df: pd.DataFrame) -> Dict[str, Any]:
             'total_investment': None,
             'total_acreage': None,
             'avg_score': None,
-            'avg_all_in': None
+            'avg_all_in': None,
+            # Multi-state metrics
+            'avg_buy_hold_score': None,
+            'avg_wholesale_score': None,
+            'avg_effective_cost': None,
+            'state_breakdown': None,
+            'tax_deed_count': 0,
+            'tax_lien_count': 0
         }
 
         # Calculate metrics only if columns exist
@@ -701,6 +772,23 @@ def _calculate_batch_metrics(df: pd.DataFrame) -> Dict[str, Any]:
 
         if 'estimated_all_in_cost' in df.columns:
             metrics['avg_all_in'] = df['estimated_all_in_cost'].mean()
+
+        # Multi-state scoring metrics
+        if 'buy_hold_score' in df.columns:
+            metrics['avg_buy_hold_score'] = df['buy_hold_score'].mean()
+
+        if 'wholesale_score' in df.columns:
+            metrics['avg_wholesale_score'] = df['wholesale_score'].mean()
+
+        if 'effective_cost' in df.columns:
+            metrics['avg_effective_cost'] = df['effective_cost'].mean()
+
+        if 'state' in df.columns:
+            metrics['state_breakdown'] = df['state'].value_counts().to_dict()
+
+        if 'sale_type' in df.columns:
+            metrics['tax_deed_count'] = (df['sale_type'] == 'tax_deed').sum()
+            metrics['tax_lien_count'] = (df['sale_type'] == 'tax_lien').sum()
 
         return metrics
 
@@ -878,13 +966,18 @@ def _build_table_column_config(df: pd.DataFrame) -> Tuple[List[str], Dict[str, A
         # Column configuration mapping for performance
         column_mappings = {
             'rank': st.column_config.NumberColumn("Rank", format="%d", width="small"),
+            'state': st.column_config.TextColumn("State", width="small"),
             'parcel_id': st.column_config.TextColumn("Parcel ID", width="medium"),
             'county': st.column_config.TextColumn("County", width="small"),
             'amount': st.column_config.NumberColumn("Price", format="$%.2f", width="small"),
+            'effective_cost': st.column_config.NumberColumn("Eff.Cost", format="$%.0f", width="small", help="Total cost including quiet title"),
             'acreage': st.column_config.NumberColumn("Acres", format="%.2f", width="small"),
             'price_per_acre': st.column_config.NumberColumn("$/Acre", format="$%.2f", width="small"),
             'Water': st.column_config.TextColumn("Water", width="small", help="Y indicates water features present"),
-            'investment_score': st.column_config.NumberColumn("Score", format="%.1f", width="small"),
+            'buy_hold_score': st.column_config.NumberColumn("BH Score", format="%.1f", width="small", help="Buy & Hold Score (time-adjusted)"),
+            'wholesale_score': st.column_config.NumberColumn("WS Score", format="%.1f", width="small", help="Wholesale viability score"),
+            'investment_score': st.column_config.NumberColumn("Inv Score", format="%.1f", width="small"),
+            'sale_type': st.column_config.TextColumn("Type", width="small", help="tax_lien, tax_deed, etc."),
             'description': st.column_config.TextColumn("Description", width="large")
         }
 
@@ -994,6 +1087,25 @@ def create_visualizations(df: pd.DataFrame):
 
                 correlation_fig = create_correlation_heatmap(df_viz)
                 st.plotly_chart(correlation_fig, use_container_width=True)
+
+        # Multi-State Score Comparison (Milestone 3)
+        if 'state' in df_viz.columns and df_viz['state'].nunique() > 1:
+            st.markdown("---")
+            st.subheader("Multi-State Score Comparison")
+
+            col7, col8 = st.columns(2)
+
+            with col7:
+                with performance_context("visualizations", "state_score_comparison"):
+                    fig_state_scores = _create_state_score_comparison(df_viz)
+                    if fig_state_scores:
+                        st.plotly_chart(fig_state_scores, use_container_width=True)
+
+            with col8:
+                with performance_context("visualizations", "effective_cost_comparison"):
+                    fig_cost = _create_effective_cost_comparison(df_viz)
+                    if fig_cost:
+                        st.plotly_chart(fig_cost, use_container_width=True)
 
         # Complete progress
         chart_progress.progress(1.0)
@@ -1160,6 +1272,96 @@ def _create_investment_score_box_plot(df: pd.DataFrame):
         return None
 
 
+@smart_cache("state_score_comparison_chart", ttl_seconds=300, cache_type="chart_generation")
+def _create_state_score_comparison(df: pd.DataFrame):
+    """
+    Create grouped bar chart comparing Buy & Hold and Wholesale scores by state.
+    Shows the impact of time penalties on different sale types.
+    """
+    if 'state' not in df.columns:
+        return None
+
+    if 'buy_hold_score' not in df.columns and 'wholesale_score' not in df.columns:
+        return None
+
+    try:
+        # Aggregate scores by state
+        state_scores = df.groupby('state').agg({
+            'buy_hold_score': 'mean',
+            'wholesale_score': 'mean'
+        }).reset_index()
+
+        # Melt for grouped bar chart
+        state_scores_melted = state_scores.melt(
+            id_vars=['state'],
+            value_vars=['buy_hold_score', 'wholesale_score'],
+            var_name='Score Type',
+            value_name='Average Score'
+        )
+
+        # Clean up labels
+        state_scores_melted['Score Type'] = state_scores_melted['Score Type'].replace({
+            'buy_hold_score': 'Buy & Hold',
+            'wholesale_score': 'Wholesale'
+        })
+
+        fig = px.bar(
+            state_scores_melted,
+            x='state',
+            y='Average Score',
+            color='Score Type',
+            barmode='group',
+            title="Average Scores by State",
+            labels={'state': 'State', 'Average Score': 'Score (0-100)'},
+            color_discrete_map={'Buy & Hold': '#3b82f6', 'Wholesale': '#10b981'}
+        )
+        fig.update_layout(height=400, legend_title_text='Score Type')
+        return fig
+    except Exception:
+        return None
+
+
+@smart_cache("effective_cost_comparison_chart", ttl_seconds=300, cache_type="chart_generation")
+def _create_effective_cost_comparison(df: pd.DataFrame):
+    """
+    Create box plot comparing effective costs by state.
+    Shows the impact of quiet title requirements on total investment cost.
+    """
+    if 'state' not in df.columns or 'effective_cost' not in df.columns:
+        return None
+
+    try:
+        # Filter to valid effective costs
+        df_valid = df[df['effective_cost'].notna() & (df['effective_cost'] > 0)]
+
+        if len(df_valid) == 0:
+            return None
+
+        fig = px.box(
+            df_valid,
+            x='state',
+            y='effective_cost',
+            title="Effective Cost Distribution by State",
+            labels={'state': 'State', 'effective_cost': 'Effective Cost ($)'},
+            color='state',
+            color_discrete_map={'AR': '#10b981', 'AL': '#f59e0b'}
+        )
+        fig.update_layout(height=400, showlegend=False)
+
+        # Add annotation explaining the difference
+        fig.add_annotation(
+            text="AL includes ~$4k quiet title cost",
+            xref="paper", yref="paper",
+            x=0.5, y=-0.15,
+            showarrow=False,
+            font=dict(size=10, color="gray")
+        )
+
+        return fig
+    except Exception:
+        return None
+
+
 def main():
     """Main Streamlit application."""
 
@@ -1167,8 +1369,8 @@ def main():
     initialize_session_state()
 
     # Page title and description
-    st.title("Alabama Auction Watcher")
-    st.markdown("**Interactive dashboard for analyzing Alabama tax delinquent property auctions**")
+    st.title("Tax Deed Auction Watcher")
+    st.markdown("**Multi-state dashboard for analyzing tax deed and tax lien property auctions (AR, AL)**")
 
     # Display legal disclaimer
     display_legal_disclaimer()
@@ -1305,8 +1507,8 @@ def main():
     # Footer information
     st.markdown("""
     <div class='footer-style'>
-        <p><strong>Alabama Auction Watcher</strong> | Professional Property Investment Platform</p>
-        <p>Always consult with legal and real estate professionals before investing</p>
+        <p><strong>Tax Deed Auction Watcher</strong> | Multi-State Property Investment Platform</p>
+        <p>AR (Tax Deed) | AL (Tax Lien) | Always consult with legal and real estate professionals before investing</p>
     </div>
     """, unsafe_allow_html=True)
 

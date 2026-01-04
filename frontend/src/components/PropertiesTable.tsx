@@ -58,7 +58,7 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
   }), [searchQuery, globalFilters, sorting, pagination])
 
   // Fetch data
-  const { data, loading, error, refetch } = useProperties(searchParams)
+  const { data, isLoading: loading, error, refetch } = useProperties(searchParams)
 
   // Column definitions
   const columns = useMemo<ColumnDef<Property>[]>(() => [

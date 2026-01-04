@@ -57,7 +57,7 @@ export interface Property {
 
   // Sync metadata for cross-platform compatibility
   device_id?: string
-  sync_timestamp: string
+  sync_timestamp?: string | null
   is_deleted: boolean
 }
 
@@ -278,6 +278,10 @@ export interface APIError {
   timestamp: string
   path?: string
   ai_recovery_hint?: string
+  details?: {
+    message?: string
+    [key: string]: unknown
+  }
 }
 
 // Filter and Search Types

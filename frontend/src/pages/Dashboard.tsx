@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { useComponentTheme } from '../lib/theme-provider'
 import { usePropertyStats, useTriageQueue, useCounties, useWorkflowStats } from '../lib/hooks'
 import { PropertyFilters } from '../types'
 import { DashboardCharts } from '../components/DashboardCharts'
@@ -49,20 +48,17 @@ function KPICard({ title, value, subtitle, icon, trend, trendText, className = '
 }
 
 export function Dashboard() {
-  const theme = useComponentTheme()
   const [filters] = useState<PropertyFilters>({})
 
   // Fetch data using hooks
-  const { data: stats, loading: statsLoading, error: statsError } = usePropertyStats(filters)
-  const { data: triageQueue, loading: triageLoading } = useTriageQueue()
-  const { data: counties, loading: countiesLoading } = useCounties()
-  const { data: workflowStats, loading: workflowLoading } = useWorkflowStats()
+  const { data: stats, isLoading: statsLoading, error: statsError } = usePropertyStats(filters)
+  const { data: triageQueue, isLoading: triageLoading } = useTriageQueue()
+  const { data: counties, isLoading: countiesLoading } = useCounties()
+  const { data: workflowStats, isLoading: workflowLoading } = useWorkflowStats()
 
   // Calculate derived metrics
-  const upcomingAuctions = stats?.upcoming_auctions || 0
   const newItems = stats?.new_items_7d || 0
   const needsReview = triageQueue?.length || 0
-  const watchlistCount = stats?.watchlist_count || 0
   const totalProperties = stats?.total_properties || 0
   const avgInvestmentScore = stats?.avg_investment_score || 0
 
@@ -313,11 +309,11 @@ export function Dashboard() {
                 <div key={county.name} className="flex items-center justify-between p-3 bg-surface rounded border border-neutral-1 hover:bg-card transition-colors">
                   <div>
                     <p className="font-medium text-text-primary">{county.name}</p>
-                    <p className="text-sm text-text-muted">{county.properties} properties</p>
+                    <p className="text-sm text-text-muted">{county.count} properties</p>
                   </div>
                   <div className="text-right">
                     <p className="font-medium text-accent-primary">#{index + 1}</p>
-                    <p className="text-xs text-text-muted">${county.avg_price?.toLocaleString() || 0}</p>
+                    <p className="text-xs text-text-muted">Score: {county.avg_investment_score?.toFixed(1) || 'N/A'}</p>
                   </div>
                 </div>
               )) || (
@@ -331,17 +327,40 @@ export function Dashboard() {
         <div className="bg-card rounded-lg p-6 border border-neutral-1 shadow-card">
           <h2 className="text-lg font-semibold text-text-primary mb-4">Recent Activity</h2>
           <div className="space-y-3">
-            {stats?.recent_activity?.map((activity, index) => (
-              <div key={index} className="flex items-center space-x-3 p-2 rounded hover:bg-surface transition-colors duration-150">
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                  activity.type === 'success' ? 'bg-success' :
-                  activity.type === 'warning' ? 'bg-warning' :
-                  activity.type === 'info' ? 'bg-accent-primary' : 'bg-accent-alt'
-                }`}></div>
-                <span className="text-text-muted flex-1">{activity.message}</span>
-                <span className="text-xs text-text-muted">{activity.time}</span>
-              </div>
-            )) || (
+            {stats?.recent_activity?.map((activity, index) => {
+              // Map backend activity types to UI colors
+              const typeColor = activity.type === 'new' ? 'bg-accent-primary' :
+                               activity.type === 'reviewed' ? 'bg-warning' :
+                               activity.type === 'purchased' ? 'bg-success' :
+                               activity.type === 'rejected' ? 'bg-danger' : 'bg-accent-alt'
+
+              // Format timestamp to relative time
+              const formatTime = (timestamp: string) => {
+                try {
+                  const date = new Date(timestamp)
+                  const now = new Date()
+                  const diffMs = now.getTime() - date.getTime()
+                  const diffMins = Math.floor(diffMs / 60000)
+                  const diffHours = Math.floor(diffMins / 60)
+                  const diffDays = Math.floor(diffHours / 24)
+
+                  if (diffDays > 0) return `${diffDays}d ago`
+                  if (diffHours > 0) return `${diffHours}h ago`
+                  if (diffMins > 0) return `${diffMins}m ago`
+                  return 'Just now'
+                } catch {
+                  return ''
+                }
+              }
+
+              return (
+                <div key={index} className="flex items-center space-x-3 p-2 rounded hover:bg-surface transition-colors duration-150">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${typeColor}`}></div>
+                  <span className="text-text-muted flex-1 text-sm">{activity.description}</span>
+                  <span className="text-xs text-text-muted">{formatTime(activity.timestamp)}</span>
+                </div>
+              )
+            }) || (
               statsLoading ? (
                 Array(4).fill(0).map((_, i) => (
                   <div key={i} className="animate-pulse flex items-center space-x-3 p-2">

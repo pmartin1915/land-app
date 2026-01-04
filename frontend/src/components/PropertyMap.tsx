@@ -1,8 +1,8 @@
-// PropertyMap.tsx - Interactive map with properties and FEMA flood zone overlay
+// PropertyMap.tsx - Interactive map with properties using WebGL layers for performance
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
-import Map, { Source, Layer, Marker, Popup, NavigationControl, ScaleControl, FullscreenControl } from 'react-map-gl'
-import Supercluster from 'supercluster'
-import type { MapRef, ViewStateChangeEvent, MapLayerMouseEvent } from 'react-map-gl'
+import Map, { Source, Layer, Popup, NavigationControl, ScaleControl, FullscreenControl } from 'react-map-gl'
+import type { MapRef, ViewStateChangeEvent, MapLayerMouseEvent, LayerProps } from 'react-map-gl'
+import type { FeatureCollection, Feature, Point } from 'geojson'
 import { Property } from '../types'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
@@ -84,6 +84,17 @@ const COUNTY_CENTROIDS: Record<string, { lat: number; lng: number }> = {
   'Winston': { lat: 34.1493, lng: -87.3758 },
 }
 
+// Seeded random for consistent jitter
+function seededRandom(seed: string): number {
+  let hash = 0
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash
+  }
+  return (Math.abs(hash) % 10000) / 10000
+}
+
 // Get approximate coordinates for a property based on county
 function getPropertyCoordinates(property: Property): { lat: number; lng: number } | null {
   if (!property.county) return null
@@ -93,9 +104,10 @@ function getPropertyCoordinates(property: Property): { lat: number; lng: number 
 
   if (!centroid) return null
 
-  // Add some random jitter within the county for visual separation
-  const jitterLat = (Math.random() - 0.5) * 0.15
-  const jitterLng = (Math.random() - 0.5) * 0.15
+  // Use property ID as seed for consistent jitter
+  const seed = property.id || property.parcel_id
+  const jitterLat = (seededRandom(seed + 'lat') - 0.5) * 0.15
+  const jitterLng = (seededRandom(seed + 'lng') - 0.5) * 0.15
 
   return {
     lat: centroid.lat + jitterLat,
@@ -103,19 +115,75 @@ function getPropertyCoordinates(property: Property): { lat: number; lng: number 
   }
 }
 
-// Cluster point type
-interface ClusterPoint {
-  type: 'Feature'
-  properties: {
-    cluster?: boolean
-    cluster_id?: number
-    point_count?: number
-    point_count_abbreviated?: string
-    property?: Property
+// Property info for popup
+interface PropertyPopupInfo {
+  id: string
+  county: string
+  amount: number
+  acreage?: number
+  price_per_acre?: number
+  investment_score?: number
+  water_score: number
+  coordinates: [number, number]
+}
+
+// Layer styles - defined outside component to prevent recreation
+const clusterLayer: LayerProps = {
+  id: 'clusters',
+  type: 'circle',
+  filter: ['has', 'point_count'],
+  paint: {
+    'circle-color': [
+      'step',
+      ['get', 'point_count'],
+      '#3B82F6', // blue for small clusters
+      10, '#10B981', // green for medium
+      50, '#F59E0B', // amber for large
+      100, '#EF4444' // red for very large
+    ],
+    'circle-radius': [
+      'step',
+      ['get', 'point_count'],
+      20, // default
+      10, 25,
+      50, 30,
+      100, 40
+    ],
+    'circle-stroke-width': 2,
+    'circle-stroke-color': '#fff'
   }
-  geometry: {
-    type: 'Point'
-    coordinates: [number, number]
+}
+
+const clusterCountLayer: LayerProps = {
+  id: 'cluster-count',
+  type: 'symbol',
+  filter: ['has', 'point_count'],
+  layout: {
+    'text-field': '{point_count_abbreviated}',
+    'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+    'text-size': 12
+  },
+  paint: {
+    'text-color': '#fff'
+  }
+}
+
+// Unclustered point layer with data-driven styling based on investment score
+const unclusteredPointLayer: LayerProps = {
+  id: 'unclustered-point',
+  type: 'circle',
+  filter: ['!', ['has', 'point_count']],
+  paint: {
+    'circle-color': [
+      'case',
+      ['>=', ['get', 'investment_score'], 85], '#10B981', // green - elite
+      ['>=', ['get', 'investment_score'], 70], '#3B82F6', // blue - good
+      ['>=', ['get', 'investment_score'], 50], '#F59E0B', // amber - moderate
+      '#EF4444' // red - low
+    ],
+    'circle-radius': 8,
+    'circle-stroke-width': 2,
+    'circle-stroke-color': '#fff'
   }
 }
 
@@ -132,92 +200,119 @@ export function PropertyMap({
   properties,
   selectedProperty,
   onPropertySelect,
-  showFloodZones = true,
+  showFloodZones = false,
   showClusters = true,
   className = ''
 }: PropertyMapProps) {
   const mapRef = useRef<MapRef>(null)
   const [viewState, setViewState] = useState(ALABAMA_CENTER)
-  const [popupInfo, setPopupInfo] = useState<Property | null>(null)
-  const [clusters, setClusters] = useState<ClusterPoint[]>([])
+  const [popupInfo, setPopupInfo] = useState<PropertyPopupInfo | null>(null)
+  const [cursor, setCursor] = useState<string>('grab')
 
   // Mapbox token from environment
   const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN || ''
 
-  // Initialize supercluster
-  const supercluster = useMemo(() => {
-    const sc = new Supercluster({
-      radius: 60,
-      maxZoom: 14,
-      minZoom: 0,
-    })
-    return sc
-  }, [])
-
-  // Convert properties to GeoJSON points
-  const points = useMemo<ClusterPoint[]>(() => {
-    return properties
-      .map((property): ClusterPoint | null => {
+  // Convert properties to GeoJSON - only recalculate when properties change
+  const geojson: FeatureCollection = useMemo(() => {
+    const features: Feature<Point>[] = properties
+      .map((property): Feature<Point> | null => {
         const coords = getPropertyCoordinates(property)
         if (!coords) return null
 
         return {
           type: 'Feature',
           properties: {
-            property,
+            id: property.id,
+            parcel_id: property.parcel_id,
+            county: property.county || 'Unknown',
+            amount: property.amount,
+            acreage: property.acreage,
+            price_per_acre: property.price_per_acre,
+            investment_score: property.investment_score || 0,
+            water_score: property.water_score || 0,
           },
           geometry: {
             type: 'Point',
-            coordinates: [coords.lng, coords.lat],
-          },
+            coordinates: [coords.lng, coords.lat]
+          }
         }
       })
-      .filter((p): p is ClusterPoint => p !== null)
+      .filter((f): f is Feature<Point> => f !== null)
+
+    return {
+      type: 'FeatureCollection',
+      features
+    }
   }, [properties])
-
-  // Load points into supercluster and get clusters for current view
-  useEffect(() => {
-    if (!showClusters || points.length === 0) {
-      setClusters(points)
-      return
-    }
-
-    supercluster.load(points)
-
-    const bounds = mapRef.current?.getMap().getBounds()
-    if (bounds) {
-      const clusterData = supercluster.getClusters(
-        [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()],
-        Math.floor(viewState.zoom)
-      ) as ClusterPoint[]
-      setClusters(clusterData)
-    }
-  }, [points, viewState.zoom, showClusters, supercluster])
 
   // Handle map movement
   const onMove = useCallback((evt: ViewStateChangeEvent) => {
     setViewState(evt.viewState)
   }, [])
 
-  // Handle cluster click - zoom into cluster
-  const handleClusterClick = useCallback((clusterId: number, coordinates: [number, number]) => {
-    const expansionZoom = Math.min(supercluster.getClusterExpansionZoom(clusterId), 14)
+  // Handle click on map layer
+  const onClick = useCallback((event: MapLayerMouseEvent) => {
+    const feature = event.features?.[0]
+    if (!feature) {
+      setPopupInfo(null)
+      onPropertySelect?.(null)
+      return
+    }
 
-    mapRef.current?.flyTo({
-      center: coordinates,
-      zoom: expansionZoom,
-      duration: 500
+    const props = feature.properties
+    if (!props) return
+
+    // Check if it's a cluster
+    if (props.cluster) {
+      // Zoom into cluster
+      const clusterId = props.cluster_id
+      const mapboxSource = mapRef.current?.getSource('properties-source')
+
+      if (mapboxSource && 'getClusterExpansionZoom' in mapboxSource) {
+        (mapboxSource as any).getClusterExpansionZoom(clusterId, (err: any, zoom: number) => {
+          if (err) return
+
+          const geometry = feature.geometry as Point
+          mapRef.current?.easeTo({
+            center: geometry.coordinates as [number, number],
+            zoom: Math.min(zoom, 14),
+            duration: 500
+          })
+        })
+      }
+      return
+    }
+
+    // Single property click
+    const geometry = feature.geometry as Point
+    const coordinates = geometry.coordinates as [number, number]
+
+    setPopupInfo({
+      id: props.id,
+      county: props.county,
+      amount: props.amount,
+      acreage: props.acreage,
+      price_per_acre: props.price_per_acre,
+      investment_score: props.investment_score,
+      water_score: props.water_score,
+      coordinates
     })
-  }, [supercluster])
 
-  // Get investment score color
-  const getScoreColor = (score: number | undefined): string => {
-    if (!score) return '#6B7280' // gray
-    if (score >= 85) return '#10B981' // green - elite
-    if (score >= 70) return '#3B82F6' // blue - good
-    if (score >= 50) return '#F59E0B' // yellow - moderate
-    return '#EF4444' // red - low
-  }
+    // Find and select the full property object
+    const fullProperty = properties.find(p => p.id === props.id)
+    if (fullProperty) {
+      onPropertySelect?.(fullProperty)
+    }
+  }, [properties, onPropertySelect])
+
+  // Handle mouse enter/leave for cursor
+  const onMouseEnter = useCallback(() => {
+    setCursor('pointer')
+  }, [])
+
+  const onMouseLeave = useCallback(() => {
+    setCursor('grab')
+  }, [])
 
   // Format price
   const formatPrice = (amount: number): string => {
@@ -225,6 +320,15 @@ export function PropertyMap({
       return `$${(amount / 1000).toFixed(1)}k`
     }
     return `$${amount.toLocaleString()}`
+  }
+
+  // Get investment score color
+  const getScoreColor = (score: number | undefined): string => {
+    if (!score) return '#6B7280'
+    if (score >= 85) return '#10B981'
+    if (score >= 70) return '#3B82F6'
+    if (score >= 50) return '#F59E0B'
+    return '#EF4444'
   }
 
   if (!mapboxToken) {
@@ -260,114 +364,43 @@ export function PropertyMap({
         ref={mapRef}
         {...viewState}
         onMove={onMove}
+        onClick={onClick}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
         style={{ width: '100%', height: '100%' }}
         mapStyle="mapbox://styles/mapbox/outdoors-v12"
         mapboxAccessToken={mapboxToken}
         attributionControl={false}
+        cursor={cursor}
+        interactiveLayerIds={['clusters', 'unclustered-point']}
       >
         {/* Navigation Controls */}
         <NavigationControl position="top-right" />
         <ScaleControl position="bottom-left" />
         <FullscreenControl position="top-right" />
 
-        {/* FEMA Flood Hazard Layer */}
-        {showFloodZones && (
-          <Source
-            id="fema-flood-zones"
-            type="raster"
-            tiles={[
-              'https://hazards.fema.gov/gis/nfhl/rest/services/public/NFHL/MapServer/export?dpi=96&transparent=true&format=png24&bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256,256&f=image'
-            ]}
-            tileSize={256}
-          >
-            <Layer
-              id="fema-flood-layer"
-              type="raster"
-              paint={{
-                'raster-opacity': 0.5
-              }}
-            />
-          </Source>
-        )}
-
-        {/* Property Clusters and Markers */}
-        {clusters.map((cluster) => {
-          const [longitude, latitude] = cluster.geometry.coordinates
-          const { cluster: isCluster, point_count: pointCount, property } = cluster.properties
-
-          // Render cluster
-          if (isCluster && cluster.properties.cluster_id !== undefined) {
-            return (
-              <Marker
-                key={`cluster-${cluster.properties.cluster_id}`}
-                longitude={longitude}
-                latitude={latitude}
-                anchor="center"
-                onClick={(e) => {
-                  e.originalEvent.stopPropagation()
-                  handleClusterClick(cluster.properties.cluster_id!, [longitude, latitude])
-                }}
-              >
-                <div
-                  className="flex items-center justify-center rounded-full bg-accent-primary text-white font-bold cursor-pointer shadow-lg border-2 border-white transition-transform hover:scale-110"
-                  style={{
-                    width: `${Math.min(50 + (pointCount || 0) / 5, 80)}px`,
-                    height: `${Math.min(50 + (pointCount || 0) / 5, 80)}px`,
-                  }}
-                >
-                  {pointCount}
-                </div>
-              </Marker>
-            )
-          }
-
-          // Render individual property marker
-          if (property) {
-            const isSelected = selectedProperty?.id === property.id
-            return (
-              <Marker
-                key={`property-${property.id}`}
-                longitude={longitude}
-                latitude={latitude}
-                anchor="bottom"
-                onClick={(e) => {
-                  e.originalEvent.stopPropagation()
-                  setPopupInfo(property)
-                  onPropertySelect?.(property)
-                }}
-              >
-                <div
-                  className={`cursor-pointer transition-transform ${isSelected ? 'scale-125' : 'hover:scale-110'}`}
-                  title={`${property.county}: ${formatPrice(property.amount)}`}
-                >
-                  <svg
-                    width="24"
-                    height="36"
-                    viewBox="0 0 24 36"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M12 0C5.383 0 0 5.383 0 12c0 9 12 24 12 24s12-15 12-24c0-6.617-5.383-12-12-12z"
-                      fill={getScoreColor(property.investment_score)}
-                      stroke={isSelected ? '#FFFFFF' : 'none'}
-                      strokeWidth={isSelected ? 2 : 0}
-                    />
-                    <circle cx="12" cy="12" r="5" fill="white" />
-                  </svg>
-                </div>
-              </Marker>
-            )
-          }
-
-          return null
-        })}
+        {/* Properties GeoJSON Source with built-in clustering */}
+        <Source
+          id="properties-source"
+          type="geojson"
+          data={geojson}
+          cluster={showClusters}
+          clusterMaxZoom={14}
+          clusterRadius={50}
+        >
+          {/* Cluster circles */}
+          <Layer {...clusterLayer} />
+          {/* Cluster count labels */}
+          <Layer {...clusterCountLayer} />
+          {/* Individual property points */}
+          <Layer {...unclusteredPointLayer} />
+        </Source>
 
         {/* Property Popup */}
         {popupInfo && (
           <Popup
-            longitude={getPropertyCoordinates(popupInfo)?.lng || 0}
-            latitude={getPropertyCoordinates(popupInfo)?.lat || 0}
+            longitude={popupInfo.coordinates[0]}
+            latitude={popupInfo.coordinates[1]}
             anchor="bottom"
             onClose={() => {
               setPopupInfo(null)
@@ -420,7 +453,12 @@ export function PropertyMap({
               <div className="mt-2 pt-2 border-t border-gray-200">
                 <button
                   className="w-full px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
-                  onClick={() => onPropertySelect?.(popupInfo)}
+                  onClick={() => {
+                    const fullProperty = properties.find(p => p.id === popupInfo.id)
+                    if (fullProperty) {
+                      onPropertySelect?.(fullProperty)
+                    }
+                  }}
                 >
                   View Details
                 </button>
@@ -450,29 +488,6 @@ export function PropertyMap({
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#EF4444' }} />
             <span className="text-text-muted">Low (&lt;50)</span>
           </div>
-        </div>
-        {showFloodZones && (
-          <>
-            <div className="border-t border-neutral-1 my-2" />
-            <div className="text-xs font-semibold text-text-primary mb-1">FEMA Flood Zones</div>
-            <div className="text-xs text-text-muted">Blue shaded areas indicate flood risk</div>
-          </>
-        )}
-      </div>
-
-      {/* Map Controls */}
-      <div className="absolute top-4 left-4 bg-card rounded-lg shadow-lg border border-neutral-1 p-2">
-        <div className="flex flex-col gap-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showFloodZones}
-              onChange={() => {}}
-              className="rounded border-neutral-2 text-accent-primary focus:ring-accent-primary"
-              disabled
-            />
-            <span className="text-xs text-text-primary">FEMA Flood Zones</span>
-          </label>
         </div>
       </div>
 

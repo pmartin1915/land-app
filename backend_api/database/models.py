@@ -3,7 +3,7 @@ SQLAlchemy database models for Alabama Auction Watcher API
 Models exactly match iOS Core Data schema for perfect compatibility
 """
 
-from sqlalchemy import Column, String, Float, Integer, DateTime, Text, Boolean
+from sqlalchemy import Column, String, Float, Integer, DateTime, Text, Boolean, Date
 from sqlalchemy.sql import func
 from .connection import Base
 import uuid
@@ -73,6 +73,24 @@ class Property(Base):
     triaged_at = Column(DateTime, nullable=True, comment="When property was triaged")
     triaged_by = Column(String, nullable=True, comment="Device/user that triaged this property")
 
+    # Multi-State and Wholesale Fields (Pivot 2025)
+    state = Column(String(2), default='AL', nullable=True, index=True, comment="State code (AL, AR, TX, FL)")
+    sale_type = Column(String(20), nullable=True, comment="Tax lien, tax deed, redeemable deed, or hybrid")
+    redemption_period_days = Column(Integer, nullable=True, comment="Days until ownership is clear")
+    time_to_ownership_days = Column(Integer, nullable=True, comment="Total days to marketable title")
+    estimated_market_value = Column(Float, nullable=True, comment="Estimated market value for wholesale spread")
+    wholesale_spread = Column(Float, nullable=True, comment="Market value - asking price")
+    owner_type = Column(String(20), nullable=True, comment="Individual, corporate, estate, absentee")
+    data_source = Column(String(100), nullable=True, comment="Which scraper/platform sourced this")
+    auction_date = Column(Date, nullable=True, comment="Scheduled auction date")
+    auction_platform = Column(String(100), nullable=True, comment="GovEase, COSL, county-specific")
+
+    # Multi-State Scoring Fields (Milestone 3)
+    buy_hold_score = Column(Float, nullable=True, comment="Time-adjusted investment score (0-100)")
+    wholesale_score = Column(Float, nullable=True, comment="Wholesale viability score (0-100)")
+    effective_cost = Column(Float, nullable=True, comment="Total cost including quiet title fees")
+    time_penalty_factor = Column(Float, nullable=True, comment="Time decay multiplier (0-1)")
+
     def __repr__(self):
         return f"<Property(id={self.id}, parcel_id={self.parcel_id}, amount={self.amount})>"
 
@@ -122,7 +140,23 @@ class Property(Base):
             "status": self.status or "new",
             "triage_notes": self.triage_notes,
             "triaged_at": self.triaged_at.isoformat() if self.triaged_at else None,
-            "triaged_by": self.triaged_by
+            "triaged_by": self.triaged_by,
+            # Multi-state and wholesale fields
+            "state": self.state or "AL",
+            "sale_type": self.sale_type,
+            "redemption_period_days": self.redemption_period_days,
+            "time_to_ownership_days": self.time_to_ownership_days,
+            "estimated_market_value": self.estimated_market_value,
+            "wholesale_spread": self.wholesale_spread,
+            # Multi-state scoring fields
+            "buy_hold_score": self.buy_hold_score,
+            "wholesale_score": self.wholesale_score,
+            "effective_cost": self.effective_cost,
+            "time_penalty_factor": self.time_penalty_factor,
+            "owner_type": self.owner_type,
+            "data_source": self.data_source,
+            "auction_date": self.auction_date.isoformat() if self.auction_date else None,
+            "auction_platform": self.auction_platform
         }
 
 class County(Base):
@@ -370,3 +404,112 @@ def initialize_counties():
         raise
     finally:
         db.close()
+
+
+# Multi-State Support Models (Pivot 2025)
+
+class StateConfig(Base):
+    """
+    Multi-state configuration for tax deed/lien support.
+    Stores state-specific rules, costs, and platform information.
+    """
+    __tablename__ = "state_configs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    state_code = Column(String(2), unique=True, nullable=False, comment="2-letter state code")
+    state_name = Column(String(50), nullable=False, comment="Full state name")
+    sale_type = Column(String(20), nullable=False, comment="tax_lien, tax_deed, redeemable_deed, or hybrid")
+    redemption_period_days = Column(Integer, nullable=True, comment="Days until clear ownership")
+    interest_rate = Column(Float, nullable=True, comment="Interest rate as decimal (0.12 = 12%)")
+    quiet_title_cost_estimate = Column(Float, nullable=True, comment="Estimated legal costs")
+    time_to_ownership_days = Column(Integer, nullable=False, comment="Total days to marketable title")
+    auction_platform = Column(String(100), nullable=True, comment="Primary auction website")
+    scraper_module = Column(String(100), nullable=True, comment="Python module path for scraper")
+    is_active = Column(Boolean, default=True, comment="Whether to actively scrape this state")
+    recommended_for_beginners = Column(Boolean, default=False, comment="Suitable for <$25k investors")
+    notes = Column(Text, nullable=True, comment="Additional context and warnings")
+
+    # Metadata
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    def __repr__(self):
+        return f"<StateConfig(state={self.state_code}, type={self.sale_type})>"
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "state_code": self.state_code,
+            "state_name": self.state_name,
+            "sale_type": self.sale_type,
+            "redemption_period_days": self.redemption_period_days,
+            "interest_rate": self.interest_rate,
+            "quiet_title_cost_estimate": self.quiet_title_cost_estimate,
+            "time_to_ownership_days": self.time_to_ownership_days,
+            "auction_platform": self.auction_platform,
+            "scraper_module": self.scraper_module,
+            "is_active": self.is_active,
+            "recommended_for_beginners": self.recommended_for_beginners,
+            "notes": self.notes,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class WholesalePipeline(Base):
+    """
+    Wholesale deal pipeline tracking.
+    Tracks properties from identification through contract assignment.
+    """
+    __tablename__ = "wholesale_pipeline"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    property_id = Column(String, nullable=False, index=True, comment="FK to properties.id")
+    status = Column(String(20), nullable=False, default='identified',
+                   comment="identified, contacted, under_contract, assigned, closed, dead")
+
+    # Financial details
+    contract_price = Column(Float, nullable=True, comment="Purchase contract price")
+    assignment_fee = Column(Float, nullable=True, comment="Wholesale fee to collect")
+    earnest_money = Column(Float, nullable=True, comment="Earnest money deposit")
+
+    # Buyer information
+    buyer_id = Column(String, nullable=True, comment="End buyer identifier")
+    buyer_name = Column(String(200), nullable=True, comment="End buyer name")
+    buyer_email = Column(String(200), nullable=True, comment="End buyer email")
+
+    # Timeline
+    contract_date = Column(Date, nullable=True, comment="PSA signing date")
+    closing_date = Column(Date, nullable=True, comment="Expected/actual closing")
+    closed_at = Column(DateTime, nullable=True, comment="When deal was won/lost")
+
+    # Notes
+    marketing_notes = Column(Text, nullable=True, comment="Notes for marketing to buyers")
+    notes = Column(Text, nullable=True, comment="General deal notes")
+
+    # Metadata
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    def __repr__(self):
+        return f"<WholesalePipeline(id={self.id}, property_id={self.property_id}, status={self.status})>"
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "property_id": self.property_id,
+            "status": self.status,
+            "contract_price": self.contract_price,
+            "assignment_fee": self.assignment_fee,
+            "earnest_money": self.earnest_money,
+            "buyer_id": self.buyer_id,
+            "buyer_name": self.buyer_name,
+            "buyer_email": self.buyer_email,
+            "contract_date": self.contract_date.isoformat() if self.contract_date else None,
+            "closing_date": self.closing_date.isoformat() if self.closing_date else None,
+            "closed_at": self.closed_at.isoformat() if self.closed_at else None,
+            "marketing_notes": self.marketing_notes,
+            "notes": self.notes,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }

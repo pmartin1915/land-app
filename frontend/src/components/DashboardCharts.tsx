@@ -8,7 +8,7 @@ interface DashboardChartsProps {
 }
 
 export function DashboardCharts({ stats, isLoading }: DashboardChartsProps) {
-  const theme = useComponentTheme()
+  const { isDark } = useComponentTheme()
 
   // Chart theme colors
   const chartColors = {
@@ -16,10 +16,10 @@ export function DashboardCharts({ stats, isLoading }: DashboardChartsProps) {
     secondary: '#10B981',
     accent: '#F59E0B',
     danger: '#EF4444',
-    background: theme.theme === 'dark' ? '#1F2937' : '#FFFFFF',
-    paper: theme.theme === 'dark' ? '#374151' : '#F9FAFB',
-    text: theme.theme === 'dark' ? '#F3F4F6' : '#1F2937',
-    grid: theme.theme === 'dark' ? '#4B5563' : '#E5E7EB'
+    background: isDark ? '#1F2937' : '#FFFFFF',
+    paper: isDark ? '#374151' : '#F9FAFB',
+    text: isDark ? '#F3F4F6' : '#1F2937',
+    grid: isDark ? '#4B5563' : '#E5E7EB'
   }
 
   // Default chart layout
@@ -143,7 +143,7 @@ export function DashboardCharts({ stats, isLoading }: DashboardChartsProps) {
         'Description',
         'Water Score'
       ],
-      fill: 'toself',
+      fill: 'toself' as const,
       fillcolor: `${chartColors.primary}20`,
       line: {
         color: chartColors.primary
@@ -180,7 +180,7 @@ export function DashboardCharts({ stats, isLoading }: DashboardChartsProps) {
       x: stats.activity_timeline.dates,
       y: stats.activity_timeline.new_properties,
       type: 'scatter' as const,
-      mode: 'lines+markers',
+      mode: 'lines+markers' as const,
       line: {
         color: chartColors.primary,
         width: 2

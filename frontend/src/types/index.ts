@@ -77,6 +77,8 @@ export type {
 // Re-export commonly used types with aliases for convenience
 export type {
   Property as PropertyData,
+} from './api'
+export type {
   PropertyFilters as Filters,
   AppState as ApplicationState,
   TableColumn as Column,

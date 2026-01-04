@@ -17,7 +17,7 @@ import {
   ArrowUp,
   ArrowDown,
 } from 'lucide-react'
-import { useTriageQueue, useProperty, useAISuggestionMutations } from '../lib/hooks'
+import { useTriageQueue, useProperty } from '../lib/hooks'
 import { api } from '../lib/api'
 import { AISuggestion, Property } from '../types'
 
@@ -300,8 +300,8 @@ export function Triage() {
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
 
   // Fetch triage queue
-  const { data: triageQueue, loading, error, refetch } = useTriageQueue()
-  const { applySuggestion, rejectSuggestion, loading: actionLoading } = useAISuggestionMutations()
+  const { data: triageQueue, isLoading: loading, error, refetch } = useTriageQueue()
+  const [actionLoading, setActionLoading] = useState(false)
 
   // Get currently selected suggestion
   const selectedSuggestion = useMemo(() => {
@@ -310,53 +310,73 @@ export function Triage() {
   }, [triageQueue, selectedIndex])
 
   // Fetch full property details for selected suggestion
-  const { data: selectedProperty, loading: propertyLoading } = useProperty(
+  const { data: selectedProperty, isLoading: propertyLoading } = useProperty(
     selectedSuggestion?.parcel_id || ''
   )
 
   // Handle keep action - mark as "reviewing" (ready for deeper research)
   const handleKeep = useCallback(async () => {
-    if (!selectedSuggestion || !selectedProperty) return
+    if (!selectedSuggestion) {
+      console.warn('handleKeep: No suggestion selected')
+      return
+    }
+    if (!selectedProperty) {
+      console.warn('handleKeep: Property not loaded yet for suggestion:', selectedSuggestion.parcel_id)
+      return
+    }
+    setActionLoading(true)
     try {
+      console.log('handleKeep: Keeping property', selectedProperty.id)
       // Update property status to "reviewing"
       await api.properties.updatePropertyStatus(
         selectedProperty.id,
         'reviewing',
         `Kept from triage: ${selectedSuggestion.reason || 'High priority investment'}`
       )
-      // Also apply the AI suggestion
-      await applySuggestion(selectedSuggestion.id)
-      // Move to next item or stay at current position
-      if (triageQueue && selectedIndex >= triageQueue.length - 1) {
-        setSelectedIndex(Math.max(0, selectedIndex - 1))
+      // Move to next item
+      if (triageQueue && triageQueue.length > 1) {
+        const nextIndex = selectedIndex < triageQueue.length - 1 ? selectedIndex : selectedIndex - 1
+        setSelectedIndex(Math.max(0, nextIndex))
       }
       refetch()
     } catch (err) {
       console.error('Failed to keep suggestion:', err)
+    } finally {
+      setActionLoading(false)
     }
-  }, [selectedSuggestion, selectedProperty, applySuggestion, selectedIndex, triageQueue, refetch])
+  }, [selectedSuggestion, selectedProperty, selectedIndex, triageQueue, refetch])
 
   // Handle reject action - mark as "rejected"
   const handleReject = useCallback(async () => {
-    if (!selectedSuggestion || !selectedProperty) return
+    if (!selectedSuggestion) {
+      console.warn('handleReject: No suggestion selected')
+      return
+    }
+    if (!selectedProperty) {
+      console.warn('handleReject: Property not loaded yet for suggestion:', selectedSuggestion.parcel_id)
+      return
+    }
+    setActionLoading(true)
     try {
+      console.log('handleReject: Rejecting property', selectedProperty.id)
       // Update property status to "rejected"
       await api.properties.updatePropertyStatus(
         selectedProperty.id,
         'rejected',
         'Rejected via triage review'
       )
-      // Also reject the AI suggestion
-      await rejectSuggestion(selectedSuggestion.id, 'Rejected via triage')
-      // Move to next item or stay at current position
-      if (triageQueue && selectedIndex >= triageQueue.length - 1) {
-        setSelectedIndex(Math.max(0, selectedIndex - 1))
+      // Move to next item
+      if (triageQueue && triageQueue.length > 1) {
+        const nextIndex = selectedIndex < triageQueue.length - 1 ? selectedIndex : selectedIndex - 1
+        setSelectedIndex(Math.max(0, nextIndex))
       }
       refetch()
     } catch (err) {
       console.error('Failed to reject suggestion:', err)
+    } finally {
+      setActionLoading(false)
     }
-  }, [selectedSuggestion, selectedProperty, rejectSuggestion, selectedIndex, triageQueue, refetch])
+  }, [selectedSuggestion, selectedProperty, selectedIndex, triageQueue, refetch])
 
   // Handle navigation
   const handleNext = useCallback(() => {

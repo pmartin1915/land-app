@@ -6,12 +6,12 @@ import { Property, PropertyFilters } from '../types'
 
 export function Map() {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null)
-  const [showFloodZones, setShowFloodZones] = useState(true)
+  const [showFloodZones, setShowFloodZones] = useState(false) // Disabled by default - FEMA server has issues
   const [minScore, setMinScore] = useState<number | undefined>(50)
   const [filters, setFilters] = useState<PropertyFilters>({})
 
   // Fetch properties for the map
-  const { data: properties, loading, error, refetch } = useMapProperties(filters, minScore)
+  const { data: properties, isLoading: loading, error, refetch } = useMapProperties(filters, minScore)
 
   // Handle property selection
   const handlePropertySelect = useCallback((property: Property | null) => {
@@ -52,15 +52,16 @@ export function Map() {
               </select>
             </div>
 
-            {/* Flood Zone Toggle */}
-            <label className="flex items-center gap-2 cursor-pointer">
+            {/* Flood Zone Toggle - currently disabled due to FEMA server issues */}
+            <label className="flex items-center gap-2 cursor-pointer opacity-50" title="FEMA flood zone overlay temporarily disabled due to server performance issues">
               <input
                 type="checkbox"
                 checked={showFloodZones}
                 onChange={(e) => setShowFloodZones(e.target.checked)}
                 className="rounded border-neutral-2 text-accent-primary focus:ring-accent-primary"
+                disabled
               />
-              <span className="text-sm text-text-primary">FEMA Flood Zones</span>
+              <span className="text-sm text-text-primary">FEMA Flood Zones (unavailable)</span>
             </label>
 
             {/* Refresh Button */}
@@ -129,7 +130,6 @@ export function Map() {
         </div>
         <div className="flex items-center gap-4">
           <span>Data source: Alabama Department of Revenue</span>
-          {showFloodZones && <span>Flood zones: FEMA NFHL</span>}
         </div>
       </div>
     </div>

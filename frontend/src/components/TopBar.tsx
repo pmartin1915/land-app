@@ -81,20 +81,20 @@ function FilterPopover({ isOpen, onClose, filters, onFiltersChange }: FilterPopo
             <input
               type="number"
               placeholder="Min"
-              value={localFilters.price_range?.[0] || ''}
+              value={localFilters.priceRange?.[0] || ''}
               onChange={(e) => setLocalFilters({
                 ...localFilters,
-                price_range: [parseInt(e.target.value) || 0, localFilters.price_range?.[1] || 100000]
+                priceRange: [parseInt(e.target.value) || 0, localFilters.priceRange?.[1] || 100000]
               })}
               className="flex-1 px-3 py-2 bg-surface border border-neutral-1 rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-primary"
             />
             <input
               type="number"
               placeholder="Max"
-              value={localFilters.price_range?.[1] || ''}
+              value={localFilters.priceRange?.[1] || ''}
               onChange={(e) => setLocalFilters({
                 ...localFilters,
-                price_range: [localFilters.price_range?.[0] || 0, parseInt(e.target.value) || 100000]
+                priceRange: [localFilters.priceRange?.[0] || 0, parseInt(e.target.value) || 100000]
               })}
               className="flex-1 px-3 py-2 bg-surface border border-neutral-1 rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-primary"
             />
@@ -111,10 +111,10 @@ function FilterPopover({ isOpen, onClose, filters, onFiltersChange }: FilterPopo
               type="number"
               step="0.1"
               placeholder="Min"
-              value={localFilters.acreage_range?.[0] || ''}
+              value={localFilters.acreageRange?.[0] || ''}
               onChange={(e) => setLocalFilters({
                 ...localFilters,
-                acreage_range: [parseFloat(e.target.value) || 0, localFilters.acreage_range?.[1] || 100]
+                acreageRange: [parseFloat(e.target.value) || 0, localFilters.acreageRange?.[1] || 100]
               })}
               className="flex-1 px-3 py-2 bg-surface border border-neutral-1 rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-primary"
             />
@@ -122,10 +122,10 @@ function FilterPopover({ isOpen, onClose, filters, onFiltersChange }: FilterPopo
               type="number"
               step="0.1"
               placeholder="Max"
-              value={localFilters.acreage_range?.[1] || ''}
+              value={localFilters.acreageRange?.[1] || ''}
               onChange={(e) => setLocalFilters({
                 ...localFilters,
-                acreage_range: [localFilters.acreage_range?.[0] || 0, parseFloat(e.target.value) || 100]
+                acreageRange: [localFilters.acreageRange?.[0] || 0, parseFloat(e.target.value) || 100]
               })}
               className="flex-1 px-3 py-2 bg-surface border border-neutral-1 rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-primary"
             />
@@ -159,10 +159,10 @@ function FilterPopover({ isOpen, onClose, filters, onFiltersChange }: FilterPopo
           <input
             type="checkbox"
             id="water-only"
-            checked={localFilters.water_only || false}
+            checked={localFilters.waterOnly || false}
             onChange={(e) => setLocalFilters({
               ...localFilters,
-              water_only: e.target.checked || undefined
+              waterOnly: e.target.checked || undefined
             })}
             className="w-4 h-4 text-accent-primary border-neutral-1 rounded focus:ring-accent-primary"
           />
@@ -181,10 +181,10 @@ function FilterPopover({ isOpen, onClose, filters, onFiltersChange }: FilterPopo
               type="number"
               min="0"
               max="100"
-              value={localFilters.min_investment_score || ''}
+              value={localFilters.minInvestmentScore || ''}
               onChange={(e) => setLocalFilters({
                 ...localFilters,
-                min_investment_score: parseInt(e.target.value) || undefined
+                minInvestmentScore: parseInt(e.target.value) || undefined
               })}
               className="w-full px-3 py-2 bg-surface border border-neutral-1 rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary"
             />
@@ -196,10 +196,10 @@ function FilterPopover({ isOpen, onClose, filters, onFiltersChange }: FilterPopo
               type="number"
               min="0"
               max="100"
-              value={localFilters.min_county_market_score || ''}
+              value={localFilters.minCountyMarketScore || ''}
               onChange={(e) => setLocalFilters({
                 ...localFilters,
-                min_county_market_score: parseInt(e.target.value) || undefined
+                minCountyMarketScore: parseInt(e.target.value) || undefined
               })}
               className="w-full px-3 py-2 bg-surface border border-neutral-1 rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary"
             />
@@ -211,10 +211,10 @@ function FilterPopover({ isOpen, onClose, filters, onFiltersChange }: FilterPopo
               type="number"
               min="0"
               max="100"
-              value={localFilters.min_geographic_score || ''}
+              value={localFilters.minGeographicScore || ''}
               onChange={(e) => setLocalFilters({
                 ...localFilters,
-                min_geographic_score: parseInt(e.target.value) || undefined
+                minGeographicScore: parseInt(e.target.value) || undefined
               })}
               className="w-full px-3 py-2 bg-surface border border-neutral-1 rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary"
             />
