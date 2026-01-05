@@ -72,11 +72,7 @@ class ScraperFactory:
             if state == 'AR':
                 return await ScraperFactory._scrape_arkansas(county)
             elif state == 'AL':
-                return ScrapeResult(
-                    properties=[],
-                    items_found=0,
-                    error_message="Alabama scraper not yet integrated. Use scripts/scraper.py directly for now."
-                )
+                return await ScraperFactory._scrape_alabama(county)
             else:
                 return ScrapeResult(
                     properties=[],
@@ -110,3 +106,41 @@ class ScraperFactory:
             properties=prop_dicts,
             items_found=len(prop_dicts)
         )
+
+    @staticmethod
+    async def _scrape_alabama(county: Optional[str]) -> ScrapeResult:
+        """
+        Run Alabama ADOR scraper.
+
+        Note: Alabama requires a county parameter (county-based system).
+        """
+        from .alabama_dor import AlabamaDORScraper, CountyValidationError
+
+        if not county:
+            return ScrapeResult(
+                properties=[],
+                items_found=0,
+                error_message="County is required for Alabama scraping. Alabama uses a county-based system."
+            )
+
+        logger.info(f"Starting Alabama ADOR scrape for county: {county}")
+
+        try:
+            async with AlabamaDORScraper() as scraper:
+                properties = await scraper.scrape_county(county)
+
+            prop_dicts = [prop.to_dict() for prop in properties]
+
+            logger.info(f"Alabama scrape complete: {len(prop_dicts)} properties")
+
+            return ScrapeResult(
+                properties=prop_dicts,
+                items_found=len(prop_dicts)
+            )
+
+        except CountyValidationError as e:
+            return ScrapeResult(
+                properties=[],
+                items_found=0,
+                error_message=f"Invalid county: {e}"
+            )
