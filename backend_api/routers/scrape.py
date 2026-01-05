@@ -249,8 +249,11 @@ async def run_scrape_job(job_id: str, state: str, county: Optional[str]):
     Updates job status as it progresses.
     """
     from ..database.connection import SessionLocal
+    from datetime import timezone
 
     db = SessionLocal()
+    job = None
+
     try:
         # Update job to running
         job = db.query(ScrapeJob).filter(ScrapeJob.id == job_id).first()
@@ -262,23 +265,82 @@ async def run_scrape_job(job_id: str, state: str, county: Optional[str]):
         job.started_at = datetime.utcnow()
         db.commit()
 
-        # TODO: Actually run the scraper based on state
-        # This is a placeholder - actual scraper integration would go here
         logger.info(f"Running scrape for {state}" + (f" - {county}" if county else ""))
 
-        # For now, just mark as completed with placeholder counts
-        # In production, this would call the actual scraper modules
-        import asyncio
-        await asyncio.sleep(2)  # Simulate some work
+        # Run the appropriate scraper via factory
+        from core.scrapers.factory import ScraperFactory
+        result = await ScraperFactory.scrape(state=state, county=county)
 
-        job.status = 'completed'
-        job.completed_at = datetime.utcnow()
-        job.items_found = 0  # Would be actual count from scraper
-        job.items_added = 0
-        job.items_updated = 0
+        # Check for scraper errors
+        if result.error_message:
+            job.status = 'failed'
+            job.error_message = result.error_message
+            job.completed_at = datetime.utcnow()
+            db.commit()
+            logger.error(f"Scrape job {job_id} failed: {result.error_message}")
+            return
+
+        job.items_found = result.items_found
         db.commit()
 
-        logger.info(f"Completed scrape job {job_id}")
+        # Process properties with upsert logic
+        items_added = 0
+        items_updated = 0
+        scrape_timestamp = datetime.now(timezone.utc)
+
+        # Initialize scoring engine
+        from core.scoring import ScoringEngine
+        scoring_engine = ScoringEngine(capital_limit=10000.0)
+
+        for prop_dict in result.properties:
+            try:
+                parcel_id = prop_dict.get('parcel_id')
+                prop_state = prop_dict.get('state', state)
+
+                if not parcel_id:
+                    continue
+
+                # Check if exists
+                existing = db.query(Property).filter(
+                    Property.parcel_id == parcel_id,
+                    Property.state == prop_state
+                ).first()
+
+                if existing:
+                    # Update existing property
+                    _update_existing_property(existing, prop_dict, scrape_timestamp)
+
+                    # Re-score if acreage now available but no score yet
+                    if existing.acreage and existing.acreage > 0 and existing.buy_hold_score is None:
+                        _calculate_scores(existing, scoring_engine)
+
+                    items_updated += 1
+                else:
+                    # Create new property
+                    new_prop = _create_new_property(prop_dict, scrape_timestamp)
+                    _calculate_scores(new_prop, scoring_engine)
+                    db.add(new_prop)
+                    items_added += 1
+
+                # Batch commit every 50 properties for progress visibility
+                if (items_added + items_updated) % 50 == 0:
+                    db.flush()
+                    job.items_added = items_added
+                    job.items_updated = items_updated
+                    db.commit()
+
+            except Exception as e:
+                logger.warning(f"Failed to process property {prop_dict.get('parcel_id')}: {e}")
+                continue
+
+        # Final commit
+        job.status = 'completed'
+        job.completed_at = datetime.utcnow()
+        job.items_added = items_added
+        job.items_updated = items_updated
+        db.commit()
+
+        logger.info(f"Completed scrape job {job_id}: {items_added} added, {items_updated} updated")
 
     except Exception as e:
         logger.error(f"Scrape job {job_id} failed: {str(e)}")
@@ -289,6 +351,82 @@ async def run_scrape_job(job_id: str, state: str, county: Optional[str]):
             db.commit()
     finally:
         db.close()
+
+
+def _update_existing_property(existing: Property, prop_dict: dict, timestamp) -> None:
+    """Update an existing property with new scraped data."""
+    # Update mutable fields
+    existing.amount = prop_dict.get('amount', existing.amount)
+    existing.owner_name = prop_dict.get('owner_name', existing.owner_name)
+    existing.description = prop_dict.get('description', existing.description)
+    existing.updated_at = timestamp
+
+    # Update acreage if we have new data and didn't have it before
+    new_acreage = prop_dict.get('acreage')
+    if new_acreage and new_acreage > 0:
+        if not existing.acreage or existing.acreage <= 0:
+            existing.acreage = new_acreage
+            existing.acreage_source = prop_dict.get('acreage_source')
+            existing.acreage_confidence = prop_dict.get('acreage_confidence')
+            existing.acreage_raw_text = prop_dict.get('acreage_raw_text')
+
+
+def _create_new_property(prop_dict: dict, timestamp) -> Property:
+    """Create a new Property from scraped data."""
+    from core.scoring import DELTA_REGION_COUNTIES, DELTA_REGION_PENALTY
+
+    county = prop_dict.get('county', '').upper()
+    is_delta = county in DELTA_REGION_COUNTIES
+
+    return Property(
+        parcel_id=prop_dict['parcel_id'],
+        county=prop_dict.get('county'),
+        owner_name=prop_dict.get('owner_name'),
+        acreage=prop_dict.get('acreage'),
+        amount=prop_dict.get('amount'),
+        description=prop_dict.get('description'),
+        state=prop_dict.get('state', 'AR'),
+        sale_type=prop_dict.get('sale_type'),
+        redemption_period_days=prop_dict.get('redemption_period_days'),
+        time_to_ownership_days=prop_dict.get('time_to_ownership_days'),
+        data_source=prop_dict.get('data_source'),
+        auction_platform=prop_dict.get('auction_platform'),
+        year_sold=prop_dict.get('year_sold'),
+        status='new',
+        updated_at=timestamp,
+        acreage_source=prop_dict.get('acreage_source'),
+        acreage_confidence=prop_dict.get('acreage_confidence'),
+        acreage_raw_text=prop_dict.get('acreage_raw_text'),
+        is_delta_region=is_delta,
+        delta_penalty_factor=DELTA_REGION_PENALTY if is_delta else 1.0,
+    )
+
+
+def _calculate_scores(prop: Property, engine) -> None:
+    """Calculate buy-hold and wholesale scores for a property."""
+    if not (prop.amount and prop.amount > 0 and prop.acreage and prop.acreage > 0):
+        return
+
+    from core.scoring import PropertyScoreInput
+
+    score_input = PropertyScoreInput(
+        state=prop.state or 'AR',
+        sale_type=prop.sale_type or 'tax_deed',
+        amount=prop.amount,
+        acreage=prop.acreage,
+        water_score=prop.water_score or 0.0,
+        year_sold=prop.year_sold,
+        county=prop.county
+    )
+
+    result = engine.calculate_scores(score_input)
+    prop.buy_hold_score = result.buy_hold_score
+    prop.wholesale_score = result.wholesale_score
+    prop.effective_cost = result.effective_cost
+    prop.time_penalty_factor = result.time_penalty_factor
+    prop.is_market_reject = result.is_market_reject
+    prop.is_delta_region = result.is_delta_region
+    prop.delta_penalty_factor = result.delta_penalty_factor
 
 
 @router.get("/freshness", response_model=StateFreshnessResponse)
