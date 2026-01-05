@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -34,6 +34,11 @@ interface PropertiesTableProps {
   searchQuery?: string
 }
 
+// Watchlist status cache
+interface WatchlistStatus {
+  [propertyId: string]: boolean
+}
+
 export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: PropertiesTableProps) {
   const theme = useComponentTheme()
 
@@ -47,6 +52,10 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
     pageSize: 25,
   })
 
+  // Watchlist state
+  const [watchlistStatus, setWatchlistStatus] = useState<WatchlistStatus>({})
+  const [togglingWatch, setTogglingWatch] = useState<string | null>(null)
+
   // Build search params for API
   const searchParams: SearchParams = useMemo(() => ({
     q: searchQuery,
@@ -59,6 +68,64 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
 
   // Fetch data
   const { data, isLoading: loading, error, refetch } = useProperties(searchParams)
+
+  // Fetch watchlist status for visible properties
+  const fetchWatchlistStatus = useCallback(async (propertyIds: string[]) => {
+    if (propertyIds.length === 0) return
+
+    try {
+      const response = await fetch(`/api/v1/watchlist/bulk-status?property_ids=${propertyIds.join(',')}`, {
+        headers: {
+          'X-API-Key': localStorage.getItem('aw_api_key') || 'AW_dev_automated_development_key_001'
+        }
+      })
+
+      if (response.ok) {
+        const statusData = await response.json()
+        setWatchlistStatus(prev => ({ ...prev, ...statusData }))
+      }
+    } catch (err) {
+      console.error('Failed to fetch watchlist status:', err)
+    }
+  }, [])
+
+  // Fetch watchlist status when data changes
+  useEffect(() => {
+    if (data?.items) {
+      const propertyIds = data.items.map(p => p.id)
+      fetchWatchlistStatus(propertyIds)
+    }
+  }, [data?.items, fetchWatchlistStatus])
+
+  // Toggle watch status for a property
+  const toggleWatch = useCallback(async (propertyId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+
+    if (togglingWatch) return // Prevent double-click
+
+    try {
+      setTogglingWatch(propertyId)
+
+      const response = await fetch(`/api/v1/watchlist/property/${propertyId}/watch`, {
+        method: 'POST',
+        headers: {
+          'X-API-Key': localStorage.getItem('aw_api_key') || 'AW_dev_automated_development_key_001'
+        }
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        setWatchlistStatus(prev => ({
+          ...prev,
+          [propertyId]: result.is_watched
+        }))
+      }
+    } catch (err) {
+      console.error('Failed to toggle watch:', err)
+    } finally {
+      setTogglingWatch(null)
+    }
+  }, [togglingWatch])
 
   // Column definitions
   const columns = useMemo<ColumnDef<Property>[]>(() => [
@@ -215,33 +282,45 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
     {
       id: 'actions',
       header: 'Actions',
-      cell: ({ row }) => (
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => onRowSelect?.(row.original)}
-            className="p-1 hover:bg-surface rounded transition-colors"
-            title="View Details"
-          >
-            <Eye className="w-4 h-4" />
-          </button>
-          <button
-            className="p-1 hover:bg-surface rounded transition-colors"
-            title="Add to Watchlist"
-          >
-            <Star className="w-4 h-4" />
-          </button>
-          <button
-            className="p-1 hover:bg-surface rounded transition-colors"
-            title="View on Map"
-          >
-            <MapPin className="w-4 h-4" />
-          </button>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const propertyId = row.original.id
+        const isWatched = watchlistStatus[propertyId] || false
+        const isToggling = togglingWatch === propertyId
+
+        return (
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => onRowSelect?.(row.original)}
+              className="p-1 hover:bg-surface rounded transition-colors"
+              title="View Details"
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+            <button
+              onClick={(e) => toggleWatch(propertyId, e)}
+              disabled={isToggling}
+              className={`p-1 rounded transition-colors ${
+                isWatched
+                  ? 'text-warning hover:text-warning/80'
+                  : 'text-text-muted hover:text-warning'
+              } ${isToggling ? 'opacity-50' : ''}`}
+              title={isWatched ? 'Remove from Watchlist' : 'Add to Watchlist'}
+            >
+              <Star className={`w-4 h-4 ${isWatched ? 'fill-warning' : ''}`} />
+            </button>
+            <button
+              className="p-1 hover:bg-surface rounded transition-colors"
+              title="View on Map"
+            >
+              <MapPin className="w-4 h-4" />
+            </button>
+          </div>
+        )
+      },
       enableSorting: false,
       enableHiding: false,
     },
-  ], [onRowSelect])
+  ], [onRowSelect, watchlistStatus, togglingWatch, toggleWatch])
 
   // Create table instance
   const table = useReactTable({
@@ -304,6 +383,38 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
     </div>
   )
 
+  // Bulk add to watchlist
+  const bulkAddToWatchlist = async () => {
+    const selectedRows = table.getFilteredSelectedRowModel().rows
+    const propertyIds = selectedRows.map(row => row.original.id)
+
+    for (const propertyId of propertyIds) {
+      if (!watchlistStatus[propertyId]) {
+        try {
+          const response = await fetch(`/api/v1/watchlist/property/${propertyId}/watch`, {
+            method: 'POST',
+            headers: {
+              'X-API-Key': localStorage.getItem('aw_api_key') || 'AW_dev_automated_development_key_001'
+            }
+          })
+
+          if (response.ok) {
+            const result = await response.json()
+            setWatchlistStatus(prev => ({
+              ...prev,
+              [propertyId]: result.is_watched
+            }))
+          }
+        } catch (err) {
+          console.error('Failed to add to watchlist:', err)
+        }
+      }
+    }
+
+    // Clear selection after bulk action
+    table.resetRowSelection()
+  }
+
   // Bulk actions component
   const BulkActions = () => {
     const selectedRows = table.getFilteredSelectedRowModel().rows
@@ -316,7 +427,10 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
           {selectedRows.length} row(s) selected
         </span>
         <div className="flex space-x-2 ml-auto">
-          <button className="px-3 py-1 bg-accent-primary text-white text-sm rounded hover:bg-opacity-90 transition-colors">
+          <button
+            onClick={bulkAddToWatchlist}
+            className="px-3 py-1 bg-accent-primary text-white text-sm rounded hover:bg-opacity-90 transition-colors"
+          >
             Add to Watchlist
           </button>
           <button className="px-3 py-1 bg-surface text-text-primary border border-neutral-1 text-sm rounded hover:bg-card transition-colors flex items-center space-x-1">

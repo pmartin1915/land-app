@@ -22,6 +22,7 @@ from .config import settings, limiter
 
 # Import routers
 from .routers import properties, counties, sync, auth, predictions, testing, applications, ai
+from .routers import settings as settings_router, watchlist, exports, scrape
 from .database.connection import database, connect_db, disconnect_db
 from .auth import add_security_headers, require_sync_access
 
@@ -252,6 +253,35 @@ app.include_router(
     ai.router,
     prefix=f"{API_V1_PREFIX}/ai",
     tags=["AI Investment Triage"],
+    dependencies=[]  # Auth applied per endpoint for granular control
+)
+
+# New frontend polish routers (Phase 2025-01-05)
+app.include_router(
+    settings_router.router,
+    prefix=f"{API_V1_PREFIX}/settings",
+    tags=["User Settings"],
+    dependencies=[]  # Auth applied per endpoint for granular control
+)
+
+app.include_router(
+    watchlist.router,
+    prefix=f"{API_V1_PREFIX}/watchlist",
+    tags=["Watchlist"],
+    dependencies=[]  # Auth applied per endpoint for granular control
+)
+
+app.include_router(
+    exports.router,
+    prefix=f"{API_V1_PREFIX}/export",
+    tags=["Data Export"],
+    dependencies=[]  # Auth applied per endpoint for granular control
+)
+
+app.include_router(
+    scrape.router,
+    prefix=f"{API_V1_PREFIX}/scrape",
+    tags=["Scrape Jobs"],
     dependencies=[]  # Auth applied per endpoint for granular control
 )
 

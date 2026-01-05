@@ -58,13 +58,13 @@ class Property(Base):
 
     # Property details
     description = Column(Text, nullable=True, comment="Legal property description")
-    county = Column(String, nullable=True, comment="Alabama county name")
+    county = Column(String, nullable=True, index=True, comment="Alabama county name")
     owner_name = Column(String, nullable=True, comment="Property owner name")
-    year_sold = Column(String, nullable=True, comment="Sale year")
+    year_sold = Column(String, nullable=True, index=True, comment="Sale year")
 
     # Ranking and metadata
     rank = Column(Integer, nullable=True, comment="Investment score ranking")
-    created_at = Column(DateTime, default=func.now(), comment="Record creation timestamp")
+    created_at = Column(DateTime, default=func.now(), index=True, comment="Record creation timestamp")
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), comment="Last update timestamp")
 
     # Sync metadata for cross-platform compatibility
@@ -470,6 +470,139 @@ class StateConfig(Base):
             "notes": self.notes,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class UserPreference(Base):
+    """
+    User preferences for investment settings, budget, and filter defaults.
+    One row per device_id - survives scraper re-runs.
+    """
+    __tablename__ = "user_preferences"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    device_id = Column(String, unique=True, index=True, nullable=False,
+                       comment="Links to device auth - one preference set per device")
+    investment_budget = Column(Float, default=10000.0, nullable=True,
+                               comment="User investment capital budget in USD")
+    excluded_states = Column(String, nullable=True,
+                             comment="JSON array of state codes to exclude from results")
+    default_filters = Column(Text, nullable=True,
+                             comment="JSON of saved filter presets")
+    max_property_price = Column(Float, nullable=True,
+                                comment="Maximum price per property (derived from budget)")
+    preferred_states = Column(String, nullable=True,
+                              comment="JSON array of preferred state codes")
+    notifications_enabled = Column(Boolean, default=True,
+                                   comment="Whether to show notifications")
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    def __repr__(self):
+        return f"<UserPreference(device_id={self.device_id}, budget={self.investment_budget})>"
+
+    def to_dict(self):
+        import json
+        return {
+            "id": self.id,
+            "device_id": self.device_id,
+            "investment_budget": self.investment_budget,
+            "excluded_states": json.loads(self.excluded_states) if self.excluded_states else [],
+            "default_filters": json.loads(self.default_filters) if self.default_filters else {},
+            "max_property_price": self.max_property_price,
+            "preferred_states": json.loads(self.preferred_states) if self.preferred_states else [],
+            "notifications_enabled": self.notifications_enabled,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class PropertyInteraction(Base):
+    """
+    User overlay for property watchlist and notes.
+    IMPORTANT: Separate from Property table to survive scraper re-runs.
+    """
+    __tablename__ = "property_interactions"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    device_id = Column(String, index=True, nullable=False,
+                       comment="Device that created this interaction")
+    property_id = Column(String, index=True, nullable=False,
+                         comment="FK to properties table")
+    is_watched = Column(Boolean, default=False,
+                        comment="Whether property is on watchlist")
+    star_rating = Column(Integer, nullable=True,
+                         comment="User rating 1-5 stars")
+    user_notes = Column(Text, nullable=True,
+                        comment="User notes about this property")
+    dismissed = Column(Boolean, default=False,
+                       comment="User dismissed/hidden this property")
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    def __repr__(self):
+        return f"<PropertyInteraction(property_id={self.property_id}, watched={self.is_watched})>"
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "device_id": self.device_id,
+            "property_id": self.property_id,
+            "is_watched": self.is_watched,
+            "star_rating": self.star_rating,
+            "user_notes": self.user_notes,
+            "dismissed": self.dismissed,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+class ScrapeJob(Base):
+    """
+    Scrape job tracking for visibility into data freshness.
+    """
+    __tablename__ = "scrape_jobs"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    state = Column(String(2), nullable=False, index=True,
+                   comment="State code being scraped")
+    county = Column(String(100), nullable=True,
+                    comment="County name if county-specific, NULL for all counties")
+    status = Column(String(20), nullable=False, default='pending',
+                    comment="pending, running, completed, failed, cancelled")
+    items_found = Column(Integer, default=0,
+                         comment="Total properties found during scrape")
+    items_added = Column(Integer, default=0,
+                         comment="New properties added to database")
+    items_updated = Column(Integer, default=0,
+                           comment="Existing properties updated")
+    started_at = Column(DateTime, nullable=True,
+                        comment="When scrape job started")
+    completed_at = Column(DateTime, nullable=True,
+                          comment="When scrape job completed")
+    error_message = Column(Text, nullable=True,
+                           comment="Error details if job failed")
+    triggered_by = Column(String, nullable=True,
+                          comment="Device ID or system that triggered the job")
+    created_at = Column(DateTime, default=func.now())
+
+    def __repr__(self):
+        return f"<ScrapeJob(id={self.id}, state={self.state}, status={self.status})>"
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "state": self.state,
+            "county": self.county,
+            "status": self.status,
+            "items_found": self.items_found,
+            "items_added": self.items_added,
+            "items_updated": self.items_updated,
+            "started_at": self.started_at.isoformat() if self.started_at else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "error_message": self.error_message,
+            "triggered_by": self.triggered_by,
+            "created_at": self.created_at.isoformat() if self.created_at else None
         }
 
 
