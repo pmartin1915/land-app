@@ -37,6 +37,18 @@ MIN_WHOLESALE_SPREAD_PCT = 0.40  # 40% margin required
 # Properties sitting unsold for 10+ years indicate fundamental problems
 STALE_DELINQUENCY_THRESHOLD = 2015
 
+# Delta region counties (economic distress, poor liquidity)
+# These counties have persistent economic challenges, population decline,
+# and limited market liquidity - making resale difficult
+DELTA_REGION_COUNTIES = {
+    # Arkansas Delta counties (Mississippi River Delta)
+    'PHILLIPS', 'LEE', 'CHICOT', 'MISSISSIPPI', 'CRITTENDEN',
+    'ST. FRANCIS', 'MONROE', 'DESHA', 'ARKANSAS'
+}
+
+# Penalty factor for Delta region properties (50% score reduction)
+DELTA_REGION_PENALTY = 0.50
+
 
 @dataclass
 class PropertyScoreInput:
@@ -50,6 +62,7 @@ class PropertyScoreInput:
     estimated_market_value: Optional[float] = None
     description_score: float = 0.0  # Pre-computed from utils.py
     year_sold: Optional[str] = None  # Delinquency year for market reject check
+    county: Optional[str] = None  # County name for regional risk scoring
 
     def get_effective_cost(self) -> float:
         """
@@ -101,6 +114,19 @@ class PropertyScoreInput:
         except (ValueError, TypeError):
             return False  # Handle malformed data gracefully
 
+    def is_delta_region(self) -> bool:
+        """
+        Check if property is in a Delta region county.
+        Delta counties have economic distress and poor market liquidity.
+
+        Returns True if in Delta region, False otherwise.
+        "Fail open" for NULL county: don't penalize if data is missing.
+        """
+        if not self.county:
+            return False  # Fail open - don't penalize missing data
+
+        return self.county.upper() in DELTA_REGION_COUNTIES
+
 
 @dataclass
 class ScoreResult:
@@ -113,6 +139,8 @@ class ScoreResult:
     time_penalty_factor: float
     capital_viable: bool
     is_market_reject: bool = False  # Pre-2015 delinquency (stale inventory)
+    is_delta_region: bool = False  # Delta region county (economic distress)
+    delta_penalty_factor: float = 1.0  # Multiplier applied for Delta region
     notes: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -125,6 +153,8 @@ class ScoreResult:
             'time_penalty_factor': self.time_penalty_factor,
             'capital_viable': self.capital_viable,
             'is_market_reject': self.is_market_reject,
+            'is_delta_region': self.is_delta_region,
+            'delta_penalty_factor': self.delta_penalty_factor,
             'notes': self.notes
         }
 
@@ -161,6 +191,12 @@ class ScoringEngine:
         if is_reject:
             notes.append(f"MARKET REJECT: Delinquent since {data.year_sold} (pre-{STALE_DELINQUENCY_THRESHOLD})")
 
+        # Delta region check (economic distress)
+        is_delta = data.is_delta_region()
+        delta_penalty = DELTA_REGION_PENALTY if is_delta else 1.0
+        if is_delta:
+            notes.append(f"DELTA REGION: {data.county} county (50% score penalty)")
+
         # Capital viability check
         capital_viable = effective_cost <= self.capital_limit
         if not capital_viable:
@@ -174,13 +210,16 @@ class ScoringEngine:
         if market_value:
             spread = market_value - effective_cost
 
-        # Calculate both scores (zeroed if market reject)
+        # Calculate both scores (zeroed if market reject, reduced if Delta region)
         if is_reject:
             buy_hold = 0.0
             wholesale = 0.0
         else:
             buy_hold = self._calculate_buy_hold_score(data, effective_cost, time_penalty, capital_viable)
             wholesale = self._calculate_wholesale_score(data, effective_cost, market_value, spread)
+            # Apply Delta region penalty
+            buy_hold *= delta_penalty
+            wholesale *= delta_penalty
 
         # Add context notes
         state_config = get_state_config(data.state)
@@ -199,6 +238,8 @@ class ScoringEngine:
             time_penalty_factor=round(time_penalty, 3),
             capital_viable=capital_viable,
             is_market_reject=is_reject,
+            is_delta_region=is_delta,
+            delta_penalty_factor=delta_penalty,
             notes=notes
         )
 
