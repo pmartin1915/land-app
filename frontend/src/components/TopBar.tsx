@@ -132,6 +132,26 @@ function FilterPopover({ isOpen, onClose, filters, onFiltersChange }: FilterPopo
           </div>
         </div>
 
+        {/* State Selection */}
+        <div>
+          <label className="block text-sm font-medium text-text-primary mb-2">
+            State
+          </label>
+          <select
+            value={localFilters.state || ''}
+            onChange={(e) => setLocalFilters({
+              ...localFilters,
+              state: e.target.value || undefined,
+              county: undefined // Reset county when state changes
+            })}
+            className="w-full px-3 py-2 bg-surface border border-neutral-1 rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary"
+          >
+            <option value="">All States</option>
+            <option value="AL">Alabama (Tax Lien)</option>
+            <option value="AR">Arkansas (Tax Deed)</option>
+          </select>
+        </div>
+
         {/* County Selection */}
         <div>
           <label className="block text-sm font-medium text-text-primary mb-2">
