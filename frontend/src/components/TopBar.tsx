@@ -208,6 +208,23 @@ function FilterPopover({ isOpen, onClose, filters, onFiltersChange }: FilterPopo
           </label>
         </div>
 
+        {/* Exclude Delta Region Toggle */}
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            id="exclude-delta"
+            checked={localFilters.excludeDeltaRegion || false}
+            onChange={(e) => setLocalFilters({
+              ...localFilters,
+              excludeDeltaRegion: e.target.checked || undefined
+            })}
+            className="w-4 h-4 text-accent-primary border-neutral-1 rounded focus:ring-accent-primary"
+          />
+          <label htmlFor="exclude-delta" className="ml-2 text-sm text-text-primary">
+            Exclude Delta region (AR high-risk counties)
+          </label>
+        </div>
+
         {/* Score Filters */}
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-text-primary">Minimum Scores</h4>
@@ -286,6 +303,7 @@ export function TopBar({ title, onFiltersChange, onSearchChange }: TopBarProps) 
   const [showFilters, setShowFilters] = useState(false)
   const [showQuickActions, setShowQuickActions] = useState(false)
   const [filters, setFilters] = useState<PropertyFilters>({})
+  const [selectedPeriod, setSelectedPeriod] = useState('all-time')
 
   const searchRef = useRef<HTMLDivElement>(null)
   const filtersRef = useRef<HTMLDivElement>(null)
@@ -310,6 +328,39 @@ export function TopBar({ title, onFiltersChange, onSearchChange }: TopBarProps) 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query)
     onSearchChange?.(query, searchResults)
+  }
+
+  // Handle period selector changes
+  const handlePeriodChange = (period: string) => {
+    setSelectedPeriod(period)
+    let createdAfter: string | undefined
+
+    const now = new Date()
+    switch (period) {
+      case 'last-24-hours':
+        createdAfter = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
+        break
+      case 'last-7-days':
+        createdAfter = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+        break
+      case 'last-30-days':
+        createdAfter = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
+        break
+      case 'last-quarter':
+        createdAfter = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString()
+        break
+      case 'last-year':
+        createdAfter = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000).toISOString()
+        break
+      case 'all-time':
+      default:
+        createdAfter = undefined
+        break
+    }
+
+    const newFilters = { ...filters, createdAfter }
+    setFilters(newFilters)
+    onFiltersChange?.(newFilters)
   }
 
   // Close dropdowns when clicking outside
@@ -488,7 +539,8 @@ export function TopBar({ title, onFiltersChange, onSearchChange }: TopBarProps) 
         {/* Period Selector */}
         <select
           className="px-3 py-2 bg-surface text-text-primary border border-neutral-1 rounded-lg hover:bg-card transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary"
-          defaultValue="last-7-days"
+          value={selectedPeriod}
+          onChange={(e) => handlePeriodChange(e.target.value)}
         >
           <option value="last-24-hours">Last 24 Hours</option>
           <option value="last-7-days">Last 7 Days</option>

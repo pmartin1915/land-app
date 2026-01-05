@@ -304,6 +304,7 @@ class PropertyFilters(BaseModel):
     year_sold: Optional[str] = Field(None, description="Filter by exact sale year")
     search_query: Optional[str] = Field(None, description="Search in description and owner name")
     min_year_sold: Optional[int] = Field(None, description="Minimum delinquency year (exclude pre-X properties)", ge=1900, le=2100)
+    created_after: Optional[datetime] = Field(None, description="Filter by created_at date (period filter)")
 
     # Advanced Intelligence Filters
     min_county_market_score: Optional[float] = Field(None, description="Minimum county market score", ge=0)
@@ -319,6 +320,7 @@ class PropertyFilters(BaseModel):
     min_wholesale_spread: Optional[float] = Field(None, description="Minimum wholesale spread", ge=0)
     owner_type: Optional[str] = Field(None, description="Filter by owner type")
     upcoming_auctions_only: Optional[bool] = Field(False, description="Only show properties with future auction dates")
+    exclude_delta_region: Optional[bool] = Field(None, description="Exclude Delta region counties (AR high-risk)")
 
     # Multi-state scoring filters (Milestone 3)
     min_buy_hold_score: Optional[float] = Field(None, description="Minimum buy & hold score", ge=0, le=100)

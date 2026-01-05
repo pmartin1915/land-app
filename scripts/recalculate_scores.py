@@ -73,7 +73,9 @@ def recalculate_all_scores(
                 acreage=prop.acreage,
                 water_score=prop.water_score or 0.0,
                 assessed_value=prop.assessed_value,
-                estimated_market_value=prop.estimated_market_value
+                estimated_market_value=prop.estimated_market_value,
+                year_sold=prop.year_sold,  # For market reject penalty
+                county=prop.county  # For Delta region penalty
             )
 
             # Calculate scores
@@ -84,6 +86,11 @@ def recalculate_all_scores(
             prop.wholesale_score = result.wholesale_score
             prop.effective_cost = result.effective_cost
             prop.time_penalty_factor = result.time_penalty_factor
+
+            # Update market reject and Delta region flags
+            prop.is_market_reject = result.is_market_reject
+            prop.is_delta_region = result.is_delta_region
+            prop.delta_penalty_factor = result.delta_penalty_factor
 
             # Also update wholesale_spread if market value available
             if result.wholesale_spread is not None:
@@ -154,12 +161,12 @@ def print_score_summary(db, state_filter: str = None):
 
     top_query = db.query(Property).filter(
         Property.buy_hold_score.isnot(None)
-    ).order_by(Property.buy_hold_score.desc()).limit(10)
+    )
 
     if state_filter:
         top_query = top_query.filter(Property.state == state_filter.upper())
 
-    top_props = top_query.all()
+    top_props = top_query.order_by(Property.buy_hold_score.desc()).limit(10).all()
 
     print(f"{'State':<5} {'County':<15} {'Amount':>10} {'Acres':>8} {'BH Score':>10} {'Eff Cost':>12}")
     print("-" * 60)

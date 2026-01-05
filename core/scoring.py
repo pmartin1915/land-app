@@ -43,7 +43,7 @@ STALE_DELINQUENCY_THRESHOLD = 2015
 DELTA_REGION_COUNTIES = {
     # Arkansas Delta counties (Mississippi River Delta)
     'PHILLIPS', 'LEE', 'CHICOT', 'MISSISSIPPI', 'CRITTENDEN',
-    'ST. FRANCIS', 'MONROE', 'DESHA', 'ARKANSAS'
+    'ST. FRANCIS', 'ST FRANCIS', 'MONROE', 'DESHA', 'ARKANSAS'
 }
 
 # Penalty factor for Delta region properties (50% score reduction)

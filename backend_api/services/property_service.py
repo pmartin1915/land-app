@@ -409,6 +409,21 @@ class PropertyService:
                     )
                 )
 
+            # Exclude Delta region counties (AR high-risk)
+            # "Fail open" for NULL: properties with unknown county are included
+            if filters.exclude_delta_region:
+                from core.scoring import DELTA_REGION_COUNTIES
+                query = query.filter(
+                    or_(
+                        Property.county.is_(None),
+                        ~func.upper(Property.county).in_(DELTA_REGION_COUNTIES)
+                    )
+                )
+
+            # Created after filter (period selector)
+            if filters.created_after is not None:
+                query = query.filter(Property.created_at >= filters.created_after)
+
             if filters.search_query:
                 search_term = f"%{filters.search_query}%"
                 query = query.filter(

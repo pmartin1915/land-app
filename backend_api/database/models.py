@@ -96,6 +96,11 @@ class Property(Base):
     effective_cost = Column(Float, nullable=True, comment="Total cost including quiet title fees")
     time_penalty_factor = Column(Float, nullable=True, comment="Time decay multiplier (0-1)")
 
+    # Market reject and regional risk flags (Milestone 3+)
+    is_market_reject = Column(Boolean, default=False, comment="Pre-2015 delinquency (stale inventory)")
+    is_delta_region = Column(Boolean, default=False, comment="Arkansas Delta region county")
+    delta_penalty_factor = Column(Float, default=1.0, comment="Delta region penalty multiplier")
+
     def __repr__(self):
         return f"<Property(id={self.id}, parcel_id={self.parcel_id}, amount={self.amount})>"
 
@@ -161,6 +166,10 @@ class Property(Base):
             "wholesale_score": self.wholesale_score,
             "effective_cost": self.effective_cost,
             "time_penalty_factor": self.time_penalty_factor,
+            # Market reject and regional risk flags
+            "is_market_reject": self.is_market_reject,
+            "is_delta_region": self.is_delta_region,
+            "delta_penalty_factor": self.delta_penalty_factor,
             "owner_type": self.owner_type,
             "data_source": self.data_source,
             "auction_date": self.auction_date.isoformat() if self.auction_date else None,
