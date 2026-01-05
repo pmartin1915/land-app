@@ -192,3 +192,11 @@ gemini_api_key_instructions.txt
 
 # Claude Code local settings
 .claude/settings.local.json
+# Playwright test artifacts
+frontend/playwright-report/
+frontend/test-results/
+playwright-report/
+test-results/
+
+# Database backups
+*.backup

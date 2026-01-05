@@ -16,8 +16,8 @@ The core data processing pipeline has been successfully implemented and validate
 
 ## Final Assets
 
-*   `alabama_auction_watcher.db`: The SQLite database containing all raw and processed data.
-*   `final_property_dataset.csv`: A clean, sorted CSV file containing the 1,890 valid properties, ordered by `investment_score`. This is the primary output of this project phase.
+- `alabama_auction_watcher.db`: The SQLite database containing all raw and processed data.
+- `final_property_dataset.csv`: A clean, sorted CSV file containing the 1,890 valid properties, ordered by `investment_score`. This is the primary output of this project phase.
 
 ## How to Use
 
@@ -43,8 +43,8 @@ python quick_validate.py
 
 The data is now clean and ready for use. Potential next steps include:
 
--   **Analysis & Visualization**: Use the `final_property_dataset.csv` in tools like Jupyter Notebook, Tableau, or Excel to explore trends and identify top candidates.
--   **Web Application**: Build a simple web interface (e.g., using Flask or Django) to display the top-ranked properties in a user-friendly format.
--   **Alerting System**: Create a service that sends an email or notification when new properties are scraped that meet specific investment criteria.
+- **Analysis & Visualization**: Use the `final_property_dataset.csv` in tools like Jupyter Notebook, Tableau, or Excel to explore trends and identify top candidates.
+- **Web Application**: Build a simple web interface (e.g., using Flask or Django) to display the top-ranked properties in a user-friendly format.
+- **Alerting System**: Create a service that sends an email or notification when new properties are scraped that meet specific investment criteria.
 
 ---
