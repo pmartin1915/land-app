@@ -47,6 +47,7 @@ export interface Property {
   // Property details
   description?: string
   county?: string
+  state: string  // State code: AL, AR, TX, FL
   owner_name?: string
   year_sold?: string
 
@@ -290,6 +291,7 @@ export interface PropertyFilters {
   acreage_range?: [number, number]
   water_only?: boolean
   county?: string
+  state?: string  // State code filter: AL, AR, TX, FL
   min_investment_score?: number
   min_county_market_score?: number
   min_geographic_score?: number

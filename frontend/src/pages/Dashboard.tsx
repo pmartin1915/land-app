@@ -181,6 +181,22 @@ export function Dashboard() {
         </div>
       </div>
 
+      {/* State Distribution (Multi-State Support) */}
+      {stats?.state_distribution && stats.state_distribution.length > 1 && (
+        <div className="bg-card rounded-lg p-6 border border-neutral-1 shadow-card mb-8">
+          <h2 className="text-lg font-semibold text-text-primary mb-4">Properties by State</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {stats.state_distribution.map((stateData: { state: string; count: number; avg_investment_score: number }) => (
+              <div key={stateData.state} className="text-center p-4 bg-surface rounded-lg border border-neutral-1">
+                <p className="text-2xl font-bold text-text-primary">{stateData.count.toLocaleString()}</p>
+                <p className="text-sm font-medium text-text-muted">{stateData.state}</p>
+                <p className="text-xs text-accent-primary">Avg Score: {stateData.avg_investment_score?.toFixed(1) || 'N/A'}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Research Pipeline */}
       <div className="bg-card rounded-lg p-6 border border-neutral-1 shadow-card mb-8">
         <div className="flex items-center justify-between mb-4">

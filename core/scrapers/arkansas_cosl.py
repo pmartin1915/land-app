@@ -36,6 +36,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from config.logging_config import get_logger
+from scripts.acreage_processor import extract_acreage_with_lineage
 
 logger = get_logger(__name__)
 
@@ -82,6 +83,11 @@ class COSLProperty:
     # Additional fields for database compatibility
     legal_description: Optional[str] = None
 
+    # Acreage lineage tracking (for parsed acreage)
+    acreage_source: Optional[str] = None  # 'api', 'parsed_explicit', 'parsed_plss', 'parsed_dimensions'
+    acreage_confidence: Optional[str] = None  # 'high', 'medium', 'low'
+    acreage_raw_text: Optional[str] = None  # The text that was parsed
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for database insertion."""
         return {
@@ -98,6 +104,10 @@ class COSLProperty:
             'data_source': 'arkansas_cosl',
             'auction_platform': 'COSL Website',
             'year_sold': str(datetime.now().year),
+            # Acreage data lineage (set in _parse_property)
+            'acreage_source': self.acreage_source,
+            'acreage_confidence': self.acreage_confidence,
+            'acreage_raw_text': self.acreage_raw_text,
         }
 
     def _build_legal_description(self) -> str:
@@ -245,19 +255,60 @@ class ArkansasCOSLScraper:
             except (ValueError, TypeError) as e:
                 logger.debug(f"Date parse error: {e}")
 
+        # Get API acreage first
+        api_acreage = float(raw_data.get('Acreage') or raw_data.get('Acres', 0) or 0)
+
+        # Extract section/township/range for legal description
+        section = raw_data.get('Section')
+        township = raw_data.get('Township')
+        range_val = raw_data.get('Range')
+        parcel_number = raw_data.get('CoSLParcelNumber') or raw_data.get('ParcelNumber', '')
+
+        # Initialize lineage tracking
+        acreage_source = None
+        acreage_confidence = None
+        acreage_raw_text = None
+        final_acres = api_acreage
+
+        if api_acreage > 0:
+            # API provided acreage
+            acreage_source = 'api'
+            acreage_confidence = 'high'
+        else:
+            # Try to parse acreage from legal description components
+            desc_parts = []
+            if section:
+                desc_parts.append(f"SEC {section}")
+            if township:
+                desc_parts.append(f"TWP {township}")
+            if range_val:
+                desc_parts.append(f"RNG {range_val}")
+            temp_desc = " ".join(desc_parts) if desc_parts else f"Parcel {parcel_number}"
+
+            parsed_result = extract_acreage_with_lineage(temp_desc)
+            if parsed_result:
+                final_acres = parsed_result.acreage
+                acreage_source = parsed_result.source
+                acreage_confidence = parsed_result.confidence
+                acreage_raw_text = parsed_result.raw_text
+                logger.debug(f"Parsed acreage for {parcel_number}: {final_acres} ({acreage_source})")
+
         return COSLProperty(
             listing_token=raw_data.get('ListingToken', ''),
-            parcel_number=raw_data.get('CoSLParcelNumber') or raw_data.get('ParcelNumber', ''),
+            parcel_number=parcel_number,
             county=raw_data.get('CoSLCountyName') or raw_data.get('County', ''),
             owner=raw_data.get('Owner', ''),
-            acres=float(raw_data.get('Acreage') or raw_data.get('Acres', 0) or 0),
-            section=raw_data.get('Section'),
-            township=raw_data.get('Township'),
-            range=raw_data.get('Range'),
+            acres=final_acres,
+            section=section,
+            township=township,
+            range=range_val,
             starting_bid=float(raw_data.get('StartingBid', 0) or 0),
             current_bid=float(raw_data.get('CurrentBid', 0) or 0),
             added_on=added_on,
             gis_id=str(raw_data.get('GisId', '')) if raw_data.get('GisId') else None,
+            acreage_source=acreage_source,
+            acreage_confidence=acreage_confidence,
+            acreage_raw_text=acreage_raw_text,
         )
 
     async def scrape_all_properties(self, county_filter: Optional[str] = None,

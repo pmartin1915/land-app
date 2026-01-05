@@ -5,20 +5,26 @@ This script scrapes ALL available properties from the Arkansas
 Commissioner of State Lands auction platform and imports them
 into the database with proper scoring.
 
+Features:
+- Full upsert logic (update existing, insert new)
+- Staleness detection (mark properties no longer on COSL)
+- Re-scoring for properties that gain acreage data
+- County filtering (skip high-risk Delta region)
+
 Usage:
     python scripts/scrape_all_arkansas.py
     python scripts/scrape_all_arkansas.py --dry-run
     python scripts/scrape_all_arkansas.py --min-delinquency-year 2015
 
 Created: 2025-01-04
-Purpose: Expand Arkansas property inventory for investment analysis
+Updated: 2026-01-04 (enhanced upsert and staleness detection)
 """
 
 import argparse
 import asyncio
 import sys
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -45,6 +51,61 @@ AVOID_COUNTIES = [
 ]
 
 
+def mark_stale_properties(db, scrape_start_time: datetime, dry_run: bool = False) -> int:
+    """
+    Mark Arkansas properties not seen in this scrape as potentially sold/removed.
+
+    Properties that existed in the database but were NOT updated during this scrape
+    are likely no longer available on COSL (sold, redeemed, or removed).
+
+    Args:
+        db: Database session
+        scrape_start_time: Timestamp when scrape began (UTC)
+        dry_run: If True, don't actually update status
+
+    Returns:
+        Number of properties marked as stale
+    """
+    # Find properties not updated during this scrape
+    stale_props = db.query(Property).filter(
+        Property.state == 'AR',
+        Property.data_source == 'arkansas_cosl',
+        Property.updated_at < scrape_start_time,
+        Property.status.notin_(['purchased', 'rejected', 'sold_or_removed'])
+    ).all()
+
+    if not stale_props:
+        return 0
+
+    logger.info(f"Found {len(stale_props)} properties no longer on COSL")
+
+    if not dry_run:
+        for prop in stale_props:
+            prop.status = 'sold_or_removed'
+            logger.debug(f"Marked stale: {prop.parcel_id} ({prop.county})")
+
+    return len(stale_props)
+
+
+def calculate_property_scores(prop: Property, engine: ScoringEngine) -> None:
+    """Calculate and set scores for a property with valid acreage."""
+    if not (prop.amount and prop.amount > 0 and prop.acreage and prop.acreage > 0):
+        return
+
+    score_input = PropertyScoreInput(
+        state='AR',
+        sale_type='tax_deed',
+        amount=prop.amount,
+        acreage=prop.acreage,
+        water_score=0.0  # Would need description analysis
+    )
+    result = engine.calculate_scores(score_input)
+    prop.buy_hold_score = result.buy_hold_score
+    prop.wholesale_score = result.wholesale_score
+    prop.effective_cost = result.effective_cost
+    prop.time_penalty_factor = result.time_penalty_factor
+
+
 async def scrape_and_import(
     dry_run: bool = False,
     min_delinquency_year: int = 2015,
@@ -66,12 +127,16 @@ async def scrape_and_import(
 
     engine = ScoringEngine(capital_limit=capital_limit)
 
+    # Record scrape start time for staleness detection
+    scrape_start_time = datetime.now(timezone.utc)
+    logger.info(f"Scrape started at: {scrape_start_time.isoformat()}")
+
     # Scrape all properties using async context manager
     logger.info("Fetching all properties from COSL...")
     try:
         async with ArkansasCOSLScraper() as scraper:
             properties = await scraper.scrape_all_properties()
-        logger.info(f"Found {len(properties)} total properties")
+        logger.info(f"Found {len(properties)} total properties from COSL API")
     except Exception as e:
         logger.error(f"Scraping failed: {e}")
         return
@@ -80,9 +145,8 @@ async def scrape_and_import(
     db = SessionLocal()
     imported = 0
     skipped_county = 0
-    skipped_exists = 0
-    skipped_delinquency = 0
     updated = 0
+    rescored = 0
 
     try:
         for prop in properties:
@@ -96,12 +160,6 @@ async def scrape_and_import(
                 skipped_county += 1
                 continue
 
-            # TODO: Add delinquency year check when available from scraper
-            # For now, use added_on date as proxy
-            # if delinquency_year < min_delinquency_year:
-            #     skipped_delinquency += 1
-            #     continue
-
             # Check if exists
             existing = db.query(Property).filter(
                 Property.parcel_id == parcel_id,
@@ -109,12 +167,29 @@ async def scrape_and_import(
             ).first()
 
             if existing:
-                # Update if bid changed
-                if existing.amount != prop_dict.get('amount'):
-                    existing.amount = prop_dict.get('amount')
-                    updated += 1
-                else:
-                    skipped_exists += 1
+                # Full upsert: update all mutable fields
+                existing.amount = prop_dict.get('amount')
+                existing.owner_name = prop_dict.get('owner_name')
+                existing.description = prop_dict.get('description')
+                existing.updated_at = datetime.now(timezone.utc)
+
+                # Update acreage if scraper now provides it (API or parsed) and we didn't have it
+                new_acreage = prop_dict.get('acreage')
+                new_source = prop_dict.get('acreage_source')
+                if new_acreage and new_acreage > 0:
+                    if not existing.acreage or existing.acreage <= 0:
+                        existing.acreage = new_acreage
+                        existing.acreage_source = new_source
+                        existing.acreage_confidence = prop_dict.get('acreage_confidence')
+                        existing.acreage_raw_text = prop_dict.get('acreage_raw_text')
+                        logger.debug(f"Updated acreage for {parcel_id}: {new_acreage} (source: {new_source})")
+
+                # Re-score if we now have acreage but didn't have scores
+                if existing.acreage and existing.acreage > 0 and existing.buy_hold_score is None:
+                    calculate_property_scores(existing, engine)
+                    rescored += 1
+
+                updated += 1
                 continue
 
             # Create new property
@@ -128,42 +203,43 @@ async def scrape_and_import(
                 state='AR',
                 sale_type='tax_deed',
                 redemption_period_days=0,
+                time_to_ownership_days=1,
                 data_source='arkansas_cosl',
-                auction_platform='COSL Website'
+                auction_platform='COSL Website',
+                status='new',
+                updated_at=datetime.now(timezone.utc),
+                # Acreage lineage from scraper (API or parsed)
+                acreage_source=prop_dict.get('acreage_source'),
+                acreage_confidence=prop_dict.get('acreage_confidence'),
+                acreage_raw_text=prop_dict.get('acreage_raw_text'),
             )
 
-            # Calculate scores
-            if new_prop.amount and new_prop.amount > 0 and new_prop.acreage and new_prop.acreage > 0:
-                score_input = PropertyScoreInput(
-                    state='AR',
-                    sale_type='tax_deed',
-                    amount=new_prop.amount,
-                    acreage=new_prop.acreage,
-                    water_score=0.0  # Would need description analysis
-                )
-                result = engine.calculate_scores(score_input)
-                new_prop.buy_hold_score = result.buy_hold_score
-                new_prop.wholesale_score = result.wholesale_score
-                new_prop.effective_cost = result.effective_cost
-                new_prop.time_penalty_factor = result.time_penalty_factor
+            # Calculate scores for new property
+            calculate_property_scores(new_prop, engine)
 
             db.add(new_prop)
             imported += 1
 
             if imported % 100 == 0:
-                logger.info(f"Imported {imported} properties...")
+                logger.info(f"Imported {imported} new properties...")
+
+        # Flush changes to DB before staleness check (so updated_at values are visible)
+        db.flush()
+
+        # Staleness detection: mark properties no longer on COSL
+        stale_count = mark_stale_properties(db, scrape_start_time, dry_run)
 
         # Summary
         logger.info("")
         logger.info("=" * 60)
         logger.info("IMPORT SUMMARY")
         logger.info("=" * 60)
-        logger.info(f"Total scraped:     {len(properties)}")
+        logger.info(f"Total from COSL:   {len(properties)}")
         logger.info(f"New imported:      {imported}")
-        logger.info(f"Updated bids:      {updated}")
-        logger.info(f"Skipped (exists):  {skipped_exists}")
+        logger.info(f"Updated existing:  {updated}")
+        logger.info(f"Re-scored:         {rescored}")
+        logger.info(f"Marked stale:      {stale_count}")
         logger.info(f"Skipped (county):  {skipped_county}")
-        logger.info(f"Skipped (old):     {skipped_delinquency}")
 
         if dry_run:
             logger.info("")

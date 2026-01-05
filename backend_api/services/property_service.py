@@ -365,6 +365,9 @@ class PropertyService:
             query = self.db.query(Property).filter(Property.is_deleted == False)
 
             # Apply filters
+            if filters.state:
+                query = query.filter(Property.state == filters.state)
+
             if filters.county:
                 query = query.filter(Property.county == filters.county)
 
@@ -739,6 +742,28 @@ class PropertyService:
                 "description_score": round(scores.desc or 0, 1)
             }
 
+            # 7. State distribution (multi-state support)
+            state_counts = self.db.query(
+                Property.state,
+                func.count(Property.id).label("count"),
+                func.avg(Property.investment_score).label("avg_score")
+            ).filter(
+                Property.is_deleted == False
+            ).group_by(
+                Property.state
+            ).order_by(
+                desc("count")
+            ).all()
+
+            state_distribution = [
+                {
+                    "state": r.state or "AL",
+                    "count": r.count,
+                    "avg_investment_score": round(r.avg_score or 0, 1)
+                }
+                for r in state_counts
+            ]
+
             return {
                 "total_properties": total_props,
                 "upcoming_auctions": 0,  # No auction_date field in model
@@ -755,7 +780,8 @@ class PropertyService:
                 "activity_timeline": {
                     "dates": timeline_dates,
                     "new_properties": timeline_counts
-                }
+                },
+                "state_distribution": state_distribution
             }
 
         except Exception as e:

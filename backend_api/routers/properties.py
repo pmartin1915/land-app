@@ -34,7 +34,8 @@ def get_property_service(db: Session = Depends(get_db)) -> PropertyService:
 async def list_properties(
     request: Request,
     auth_data: dict = Depends(require_property_read),
-    county: Optional[str] = Query(None, description="Filter by Alabama county"),
+    state: Optional[str] = Query(None, description="Filter by state code (AL, AR, TX, FL)"),
+    county: Optional[str] = Query(None, description="Filter by county"),
     min_price: Optional[float] = Query(None, description="Minimum bid amount", ge=0),
     max_price: Optional[float] = Query(None, description="Maximum bid amount", ge=0),
     min_acreage: Optional[float] = Query(None, description="Minimum acreage", ge=0),
@@ -63,6 +64,7 @@ async def list_properties(
     try:
         # Create filters object
         filters = PropertyFilters(
+            state=state,
             county=county,
             min_price=min_price,
             max_price=max_price,

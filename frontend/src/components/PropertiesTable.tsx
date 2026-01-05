@@ -171,6 +171,13 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
       cell: ({ getValue }) => getValue() as string || 'Unknown',
     },
 
+    // State
+    {
+      accessorKey: 'state',
+      header: 'State',
+      cell: ({ getValue }) => getValue() as string || 'AL',
+    },
+
     // Description (truncated)
     {
       accessorKey: 'description',

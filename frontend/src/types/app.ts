@@ -166,6 +166,7 @@ export interface PropertyFilters {
   waterOnly?: boolean
   county?: string
   counties?: string[]
+  state?: string  // State code filter: AL, AR, TX, FL
   minInvestmentScore?: number
   minCountyMarketScore?: number
   minGeographicScore?: number

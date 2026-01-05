@@ -24,6 +24,11 @@ class Property(Base):
     acreage = Column(Float, nullable=True, comment="Property acreage")
     price_per_acre = Column(Float, nullable=True, comment="Calculated: amount / acreage")
 
+    # Acreage data lineage (for tracking data quality)
+    acreage_source = Column(String(20), nullable=True, comment="Source: api, parsed_explicit, parsed_plss, parsed_dimensions")
+    acreage_confidence = Column(String(10), nullable=True, comment="Confidence: high, medium, low")
+    acreage_raw_text = Column(String(200), nullable=True, comment="Original text that was parsed for acreage")
+
     # Calculated algorithm fields - MUST use exact Python algorithms
     water_score = Column(Float, default=0.0, comment="Water feature score (0.0-15.0+)")
     investment_score = Column(Float, nullable=True, comment="Investment score (0.0-100.0)")
@@ -102,6 +107,9 @@ class Property(Base):
             "amount": self.amount,
             "acreage": self.acreage,
             "price_per_acre": self.price_per_acre,
+            "acreage_source": self.acreage_source,
+            "acreage_confidence": self.acreage_confidence,
+            "acreage_raw_text": self.acreage_raw_text,
             "water_score": self.water_score,
             "investment_score": self.investment_score,
             "estimated_all_in_cost": self.estimated_all_in_cost,
