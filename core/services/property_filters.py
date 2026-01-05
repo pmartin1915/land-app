@@ -85,6 +85,7 @@ class PropertyFilterSpec:
     county: Optional[str] = None
     year_sold: Optional[str] = None
 
+    min_year_sold: Optional[int] = None  # Minimum delinquency year (exclude pre-X properties)
     # Feature filters
     water_features: Optional[bool] = None
 
@@ -109,6 +110,7 @@ class PropertyFilterSpec:
             self.max_acreage is not None,
             self.county is not None and self.county != "All",
             self.year_sold is not None,
+            self.min_year_sold is not None,
             self.water_features is not None,
             self.min_investment_score is not None,
             self.max_investment_score is not None,
@@ -201,6 +203,8 @@ class PropertyFilterSpec:
             spec.county = model.county
         if hasattr(model, "year_sold") and model.year_sold:
             spec.year_sold = model.year_sold
+        if hasattr(model, "min_year_sold") and model.min_year_sold is not None:
+            spec.min_year_sold = model.min_year_sold
         if hasattr(model, "water_features") and model.water_features is not None:
             spec.water_features = model.water_features
         if hasattr(model, "min_investment_score") and model.min_investment_score is not None:
@@ -378,6 +382,12 @@ def build_sql_where_clause(
     if filter_spec.year_sold:
         conditions.append("year_sold = ?")
         params.append(filter_spec.year_sold)
+
+    # Minimum year sold (range filter for delinquency year)
+    # "Fail open" for NULL: properties with unknown delinquency year are included
+    if filter_spec.min_year_sold is not None:
+        conditions.append("(year_sold >= ? OR year_sold IS NULL OR year_sold = '')")
+        params.append(str(filter_spec.min_year_sold))
 
     # Score filters
     score_columns = [

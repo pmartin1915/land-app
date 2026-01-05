@@ -301,8 +301,9 @@ class PropertyFilters(BaseModel):
     water_features: Optional[bool] = Field(None, description="Has water features (water_score > 0)")
     min_investment_score: Optional[float] = Field(None, description="Minimum investment score", ge=0, le=100)
     max_investment_score: Optional[float] = Field(None, description="Maximum investment score", ge=0, le=100)
-    year_sold: Optional[str] = Field(None, description="Filter by sale year")
+    year_sold: Optional[str] = Field(None, description="Filter by exact sale year")
     search_query: Optional[str] = Field(None, description="Search in description and owner name")
+    min_year_sold: Optional[int] = Field(None, description="Minimum delinquency year (exclude pre-X properties)", ge=1900, le=2100)
 
     # Advanced Intelligence Filters
     min_county_market_score: Optional[float] = Field(None, description="Minimum county market score", ge=0)

@@ -33,6 +33,10 @@ DEFAULT_CAPITAL_LIMIT = 10000.0
 MIN_WHOLESALE_SPREAD_DOLLARS = 3000.0
 MIN_WHOLESALE_SPREAD_PCT = 0.40  # 40% margin required
 
+# Market reject threshold: properties delinquent before this year are penalized
+# Properties sitting unsold for 10+ years indicate fundamental problems
+STALE_DELINQUENCY_THRESHOLD = 2015
+
 
 @dataclass
 class PropertyScoreInput:
@@ -45,6 +49,7 @@ class PropertyScoreInput:
     assessed_value: Optional[float] = None
     estimated_market_value: Optional[float] = None
     description_score: float = 0.0  # Pre-computed from utils.py
+    year_sold: Optional[str] = None  # Delinquency year for market reject check
 
     def get_effective_cost(self) -> float:
         """
@@ -78,6 +83,24 @@ class PropertyScoreInput:
 
         return None
 
+    def is_market_reject(self) -> bool:
+        """
+        Check if property is a "market reject" - delinquent for too long.
+        Properties sitting unsold for 10+ years indicate fundamental problems
+        (landlocked, flood zone, environmental issues, clouded title, etc.)
+        
+        Returns True if should be penalized, False otherwise.
+        "Fail open" for NULL year_sold: don't penalize if data is missing.
+        """
+        if not self.year_sold:
+            return False  # Fail open - don't penalize missing data
+        
+        try:
+            year_int = int(self.year_sold)
+            return year_int < STALE_DELINQUENCY_THRESHOLD
+        except (ValueError, TypeError):
+            return False  # Handle malformed data gracefully
+
 
 @dataclass
 class ScoreResult:
@@ -89,6 +112,7 @@ class ScoreResult:
     wholesale_spread: Optional[float]
     time_penalty_factor: float
     capital_viable: bool
+    is_market_reject: bool = False  # Pre-2015 delinquency (stale inventory)
     notes: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -100,6 +124,7 @@ class ScoreResult:
             'wholesale_spread': self.wholesale_spread,
             'time_penalty_factor': self.time_penalty_factor,
             'capital_viable': self.capital_viable,
+            'is_market_reject': self.is_market_reject,
             'notes': self.notes
         }
 
@@ -131,6 +156,11 @@ class ScoringEngine:
         effective_cost = data.get_effective_cost()
         market_value = data.get_market_value_estimate()
 
+        # Market reject check (stale delinquency)
+        is_reject = data.is_market_reject()
+        if is_reject:
+            notes.append(f"MARKET REJECT: Delinquent since {data.year_sold} (pre-{STALE_DELINQUENCY_THRESHOLD})")
+
         # Capital viability check
         capital_viable = effective_cost <= self.capital_limit
         if not capital_viable:
@@ -144,9 +174,13 @@ class ScoringEngine:
         if market_value:
             spread = market_value - effective_cost
 
-        # Calculate both scores
-        buy_hold = self._calculate_buy_hold_score(data, effective_cost, time_penalty, capital_viable)
-        wholesale = self._calculate_wholesale_score(data, effective_cost, market_value, spread)
+        # Calculate both scores (zeroed if market reject)
+        if is_reject:
+            buy_hold = 0.0
+            wholesale = 0.0
+        else:
+            buy_hold = self._calculate_buy_hold_score(data, effective_cost, time_penalty, capital_viable)
+            wholesale = self._calculate_wholesale_score(data, effective_cost, market_value, spread)
 
         # Add context notes
         state_config = get_state_config(data.state)
@@ -164,6 +198,7 @@ class ScoringEngine:
             wholesale_spread=round(spread, 2) if spread else None,
             time_penalty_factor=round(time_penalty, 3),
             capital_viable=capital_viable,
+            is_market_reject=is_reject,
             notes=notes
         )
 

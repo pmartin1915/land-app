@@ -168,6 +168,7 @@ export interface PropertyFilters {
   counties?: string[]
   state?: string  // State code filter: AL, AR, TX, FL
   minInvestmentScore?: number
+  minYearSold?: number  // Exclude pre-X delinquencies (e.g., 2015)
   minCountyMarketScore?: number
   minGeographicScore?: number
   minMarketTimingScore?: number

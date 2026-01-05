@@ -43,7 +43,8 @@ async def list_properties(
     water_features: Optional[bool] = Query(None, description="Has water features"),
     min_investment_score: Optional[float] = Query(None, description="Minimum investment score", ge=0, le=100),
     max_investment_score: Optional[float] = Query(None, description="Maximum investment score", ge=0, le=100),
-    year_sold: Optional[str] = Query(None, description="Filter by sale year"),
+    year_sold: Optional[str] = Query(None, description="Filter by exact sale year"),
+    min_year_sold: Optional[int] = Query(None, description="Minimum delinquency year (exclude pre-X properties)", ge=1900, le=2100),
     search_query: Optional[str] = Query(None, description="Search in description and owner name"),
     # Advanced Intelligence Filters
     min_county_market_score: Optional[float] = Query(None, description="Minimum county market score", ge=0),
@@ -74,6 +75,7 @@ async def list_properties(
             min_investment_score=min_investment_score,
             max_investment_score=max_investment_score,
             year_sold=year_sold,
+            min_year_sold=min_year_sold,
             search_query=search_query,
             # Advanced Intelligence Filters
             min_county_market_score=min_county_market_score,

@@ -398,6 +398,17 @@ class PropertyService:
             if filters.year_sold:
                 query = query.filter(Property.year_sold == filters.year_sold)
 
+            # Minimum year sold filter (exclude pre-X delinquencies)
+            # "Fail open" for NULL: properties with unknown delinquency year are included
+            if filters.min_year_sold is not None:
+                query = query.filter(
+                    or_(
+                        Property.year_sold >= str(filters.min_year_sold),
+                        Property.year_sold.is_(None),
+                        Property.year_sold == ''
+                    )
+                )
+
             if filters.search_query:
                 search_term = f"%{filters.search_query}%"
                 query = query.filter(

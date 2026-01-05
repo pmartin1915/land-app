@@ -171,6 +171,23 @@ function FilterPopover({ isOpen, onClose, filters, onFiltersChange }: FilterPopo
           </label>
         </div>
 
+        {/* Hide Stale Delinquencies Toggle */}
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            id="hide-stale"
+            checked={localFilters.minYearSold === 2015}
+            onChange={(e) => setLocalFilters({
+              ...localFilters,
+              minYearSold: e.target.checked ? 2015 : undefined
+            })}
+            className="w-4 h-4 text-accent-primary border-neutral-1 rounded focus:ring-accent-primary"
+          />
+          <label htmlFor="hide-stale" className="ml-2 text-sm text-text-primary">
+            Hide stale delinquencies (pre-2015)
+          </label>
+        </div>
+
         {/* Score Filters */}
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-text-primary">Minimum Scores</h4>
