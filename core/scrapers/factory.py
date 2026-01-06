@@ -129,23 +129,36 @@ class ScraperFactory:
 
         logger.info(f"Starting Alabama ADOR scrape for county: {county} (via subprocess)")
 
-        try:
-            # Create temp file for JSON output
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-                output_file = f.name
+        # Create temp file for JSON output
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            output_file = f.name
 
-            # Run scraper in subprocess
+        process = None
+        try:
+            # Run scraper in subprocess using Popen for better control
             script_path = Path(__file__).parent / 'alabama_dor.py'
-            result = subprocess.run(
+            process = subprocess.Popen(
                 ['python', str(script_path), county, '--json-output', output_file],
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=180,  # 3 minute timeout
                 cwd=str(Path(__file__).parent.parent.parent)  # Set working dir to project root
             )
 
-            if result.returncode != 0:
-                error_msg = result.stderr.strip() if result.stderr else "Unknown error"
+            try:
+                stdout, stderr = process.communicate(timeout=180)  # 3 minute timeout
+            except subprocess.TimeoutExpired:
+                logger.error("Alabama scraper timed out, killing subprocess")
+                process.kill()
+                process.wait(timeout=5)
+                return ScrapeResult(
+                    properties=[],
+                    items_found=0,
+                    error_message="Alabama scraper timed out after 3 minutes"
+                )
+
+            if process.returncode != 0:
+                error_msg = stderr.strip() if stderr else "Unknown error"
                 logger.error(f"Alabama subprocess failed: {error_msg}")
                 return ScrapeResult(
                     properties=[],
@@ -157,7 +170,6 @@ class ScraperFactory:
             if os.path.exists(output_file):
                 with open(output_file, 'r') as f:
                     prop_dicts = json.load(f)
-                os.unlink(output_file)  # Clean up
             else:
                 prop_dicts = []
 
@@ -168,17 +180,24 @@ class ScraperFactory:
                 items_found=len(prop_dicts)
             )
 
-        except subprocess.TimeoutExpired:
-            logger.error("Alabama scraper timed out")
-            return ScrapeResult(
-                properties=[],
-                items_found=0,
-                error_message="Alabama scraper timed out after 3 minutes"
-            )
         except Exception as e:
             logger.error(f"Alabama scraper error: {e}")
+            # Ensure subprocess is terminated on any error
+            if process and process.poll() is None:
+                try:
+                    process.kill()
+                    process.wait(timeout=5)
+                except Exception:
+                    pass
             return ScrapeResult(
                 properties=[],
                 items_found=0,
                 error_message=f"Alabama scraper error: {str(e)}"
             )
+        finally:
+            # Always clean up temp file
+            if os.path.exists(output_file):
+                try:
+                    os.unlink(output_file)
+                except OSError:
+                    pass  # Ignore cleanup errors
