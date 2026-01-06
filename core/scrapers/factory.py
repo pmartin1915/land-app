@@ -110,11 +110,15 @@ class ScraperFactory:
     @staticmethod
     async def _scrape_alabama(county: Optional[str]) -> ScrapeResult:
         """
-        Run Alabama ADOR scraper.
+        Run Alabama ADOR scraper via subprocess.
 
         Note: Alabama requires a county parameter (county-based system).
+        Uses subprocess to avoid Playwright/asyncio conflicts in FastAPI on Windows.
         """
-        from .alabama_dor import AlabamaDORScraper, CountyValidationError
+        import subprocess
+        import json
+        import tempfile
+        import os
 
         if not county:
             return ScrapeResult(
@@ -123,13 +127,39 @@ class ScraperFactory:
                 error_message="County is required for Alabama scraping. Alabama uses a county-based system."
             )
 
-        logger.info(f"Starting Alabama ADOR scrape for county: {county}")
+        logger.info(f"Starting Alabama ADOR scrape for county: {county} (via subprocess)")
 
         try:
-            async with AlabamaDORScraper() as scraper:
-                properties = await scraper.scrape_county(county)
+            # Create temp file for JSON output
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                output_file = f.name
 
-            prop_dicts = [prop.to_dict() for prop in properties]
+            # Run scraper in subprocess
+            script_path = Path(__file__).parent / 'alabama_dor.py'
+            result = subprocess.run(
+                ['python', str(script_path), county, '--json-output', output_file],
+                capture_output=True,
+                text=True,
+                timeout=180,  # 3 minute timeout
+                cwd=str(Path(__file__).parent.parent.parent)  # Set working dir to project root
+            )
+
+            if result.returncode != 0:
+                error_msg = result.stderr.strip() if result.stderr else "Unknown error"
+                logger.error(f"Alabama subprocess failed: {error_msg}")
+                return ScrapeResult(
+                    properties=[],
+                    items_found=0,
+                    error_message=f"Alabama scraper failed: {error_msg}"
+                )
+
+            # Read results from JSON file
+            if os.path.exists(output_file):
+                with open(output_file, 'r') as f:
+                    prop_dicts = json.load(f)
+                os.unlink(output_file)  # Clean up
+            else:
+                prop_dicts = []
 
             logger.info(f"Alabama scrape complete: {len(prop_dicts)} properties")
 
@@ -138,9 +168,17 @@ class ScraperFactory:
                 items_found=len(prop_dicts)
             )
 
-        except CountyValidationError as e:
+        except subprocess.TimeoutExpired:
+            logger.error("Alabama scraper timed out")
             return ScrapeResult(
                 properties=[],
                 items_found=0,
-                error_message=f"Invalid county: {e}"
+                error_message="Alabama scraper timed out after 3 minutes"
+            )
+        except Exception as e:
+            logger.error(f"Alabama scraper error: {e}")
+            return ScrapeResult(
+                properties=[],
+                items_found=0,
+                error_message=f"Alabama scraper error: {str(e)}"
             )

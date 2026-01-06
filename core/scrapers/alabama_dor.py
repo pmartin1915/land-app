@@ -325,11 +325,13 @@ async def scrape_alabama_county(county: str, max_pages: int = 50) -> List[Alabam
 
 if __name__ == "__main__":
     import argparse
+    import json
 
     parser = argparse.ArgumentParser(description="Scrape Alabama ADOR delinquent properties")
     parser.add_argument("county", help="County code (e.g., '05') or name (e.g., 'Baldwin')")
     parser.add_argument("--max-pages", type=int, default=50, help="Maximum pages to scrape")
     parser.add_argument("--output", help="Output CSV file path")
+    parser.add_argument("--json-output", help="Output JSON file path (for API integration)")
 
     args = parser.parse_args()
 
@@ -337,7 +339,13 @@ if __name__ == "__main__":
         try:
             properties = await scrape_alabama_county(args.county, max_pages=args.max_pages)
 
-            if args.output:
+            if args.json_output:
+                # JSON output for API subprocess integration
+                prop_dicts = [p.to_dict() for p in properties]
+                with open(args.json_output, 'w') as f:
+                    json.dump(prop_dicts, f)
+                # Silent success for subprocess
+            elif args.output:
                 df = pd.DataFrame([p.to_dict() for p in properties])
                 df.to_csv(args.output, index=False)
                 print(f"Saved {len(properties)} properties to: {args.output}")
@@ -349,11 +357,10 @@ if __name__ == "__main__":
                     print(f"  ... and {len(properties) - 5} more")
 
         except CountyValidationError as e:
-            print(f"Error: {e}")
-            print(f"Valid counties: {', '.join(sorted(ALABAMA_COUNTY_CODES.values()))}")
+            print(f"Error: {e}", file=sys.stderr)
             exit(1)
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"Error: {e}", file=sys.stderr)
             exit(1)
 
     asyncio.run(main())
