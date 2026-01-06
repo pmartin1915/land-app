@@ -374,23 +374,26 @@ class ApplicationNotification(Base):
         return f"<ApplicationNotification(id={self.id}, type={self.notification_type})>"
 
 
-# Initialize Alabama counties with ADOR alphabetical mapping
-# CRITICAL: This mapping MUST match iOS CountyValidator.swift exactly
+# Alabama counties with ADOR (Dept of Revenue) official codes
+# Source: https://www.revenue.alabama.gov/property-tax/delinquent-search/
+# CRITICAL: This mapping MUST match iOS CountyValidator.swift AND core/scrapers/alabama_dor.py
+# Note: ADOR uses non-sequential codes. Jefferson County is split into Birmingham (01) and Bessemer (68).
 ALABAMA_COUNTIES = {
-    "01": "Autauga", "02": "Mobile", "03": "Baldwin", "04": "Barbour", "05": "Bibb",
-    "06": "Blount", "07": "Bullock", "08": "Butler", "09": "Calhoun", "10": "Chambers",
-    "11": "Cherokee", "12": "Chilton", "13": "Choctaw", "14": "Clarke", "15": "Clay",
-    "16": "Cleburne", "17": "Coffee", "18": "Colbert", "19": "Conecuh", "20": "Coosa",
-    "21": "Covington", "22": "Crenshaw", "23": "Cullman", "24": "Dale", "25": "Dallas",
-    "26": "DeKalb", "27": "Elmore", "28": "Escambia", "29": "Etowah", "30": "Fayette",
-    "31": "Franklin", "32": "Geneva", "33": "Greene", "34": "Hale", "35": "Henry",
-    "36": "Houston", "37": "Jackson", "38": "Jefferson", "39": "Lamar", "40": "Lauderdale",
-    "41": "Lawrence", "42": "Lee", "43": "Limestone", "44": "Lowndes", "45": "Macon",
-    "46": "Madison", "47": "Marengo", "48": "Marion", "49": "Marshall", "50": "Monroe",
-    "51": "Montgomery", "52": "Morgan", "53": "Perry", "54": "Pickens", "55": "Pike",
-    "56": "Randolph", "57": "Russell", "58": "St. Clair", "59": "Shelby", "60": "Sumter",
-    "61": "Talladega", "62": "Tallapoosa", "63": "Tuscaloosa", "64": "Walker", "65": "Washington",
-    "66": "Wilcox", "67": "Winston"
+    "01": "Jefferson-Bham", "02": "Mobile", "03": "Montgomery",
+    "04": "Autauga", "05": "Baldwin", "06": "Barbour", "07": "Bibb", "08": "Blount",
+    "09": "Bullock", "10": "Butler", "11": "Calhoun", "12": "Chambers", "13": "Cherokee",
+    "14": "Chilton", "15": "Choctaw", "16": "Clarke", "17": "Clay", "18": "Cleburne",
+    "19": "Coffee", "20": "Colbert", "21": "Conecuh", "22": "Coosa", "23": "Covington",
+    "24": "Crenshaw", "25": "Cullman", "26": "Dale", "27": "Dallas", "28": "DeKalb",
+    "29": "Elmore", "30": "Escambia", "31": "Etowah", "32": "Fayette", "33": "Franklin",
+    "34": "Geneva", "35": "Greene", "36": "Hale", "37": "Henry", "38": "Houston",
+    "39": "Jackson", "40": "Lamar", "41": "Lauderdale", "42": "Lawrence", "43": "Lee",
+    "44": "Limestone", "45": "Lowndes", "46": "Macon", "47": "Madison", "48": "Marengo",
+    "49": "Marion", "50": "Marshall", "51": "Monroe", "52": "Morgan", "53": "Perry",
+    "54": "Pickens", "55": "Pike", "56": "Randolph", "57": "Russell", "58": "Shelby",
+    "59": "St_Clair", "60": "Sumter", "61": "Talladega", "62": "Tallapoosa",
+    "63": "Tuscaloosa", "64": "Walker", "65": "Washington", "66": "Wilcox", "67": "Winston",
+    "68": "Jefferson-Bess"
 }
 
 def initialize_counties():
