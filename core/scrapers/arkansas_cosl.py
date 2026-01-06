@@ -139,10 +139,25 @@ class ArkansasCOSLScraper:
     # Default page size for grid requests
     DEFAULT_PAGE_SIZE = 500
 
-    def __init__(self, session: Optional[aiohttp.ClientSession] = None):
-        """Initialize scraper with optional session."""
+    # Retry configuration
+    DEFAULT_MAX_RETRIES = 3
+    DEFAULT_BASE_DELAY = 1.0  # seconds
+    MAX_DELAY = 30.0  # cap for exponential backoff
+
+    def __init__(self, session: Optional[aiohttp.ClientSession] = None,
+                 max_retries: int = DEFAULT_MAX_RETRIES,
+                 base_delay: float = DEFAULT_BASE_DELAY):
+        """Initialize scraper with optional session and retry configuration.
+
+        Args:
+            session: Optional aiohttp session to reuse
+            max_retries: Number of retry attempts on transient failures (default: 3)
+            base_delay: Base delay in seconds for exponential backoff (default: 1.0)
+        """
         self._session = session
         self._owns_session = session is None
+        self._max_retries = max_retries
+        self._base_delay = base_delay
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -194,10 +209,41 @@ class ArkansasCOSLScraper:
                                 page_size: int = None,
                                 county_filter: Optional[str] = None) -> Dict[str, Any]:
         """
-        Fetch a single page of grid data.
+        Fetch a single page of grid data with exponential backoff retry.
+
+        Retries on transient failures (network errors, timeouts, HTTP 5xx).
+        Does NOT retry on client errors (4xx) or JSON decode errors.
 
         Returns:
             Dict with 'Data' (list of properties) and 'Total' (total count)
+        """
+        for attempt in range(self._max_retries):
+            try:
+                return await self._fetch_grid_page_inner(endpoint, page, page_size, county_filter)
+            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+                if attempt == self._max_retries - 1:
+                    logger.error(f"Failed after {self._max_retries} attempts: {e}")
+                    return {'Data': [], 'Total': 0}
+                delay = min(self._base_delay * (2 ** attempt), self.MAX_DELAY)
+                logger.warning(f"Retry {attempt + 1}/{self._max_retries} after {delay:.1f}s: {e}")
+                await asyncio.sleep(delay)
+
+        return {'Data': [], 'Total': 0}
+
+    async def _fetch_grid_page_inner(self, endpoint: str, page: int = 1,
+                                      page_size: int = None,
+                                      county_filter: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Internal method to fetch a single page of grid data.
+
+        Raises exceptions on transient failures to trigger retry logic.
+
+        Returns:
+            Dict with 'Data' (list of properties) and 'Total' (total count)
+
+        Raises:
+            aiohttp.ClientError: On network errors or HTTP 5xx responses
+            asyncio.TimeoutError: On request timeout
         """
         if not self._session:
             raise RuntimeError("Session not initialized. Use async with context manager.")
@@ -205,21 +251,23 @@ class ArkansasCOSLScraper:
         url = f"{self.BASE_URL}{endpoint}"
         payload = self._build_kendo_request(page, page_size, county_filter)
 
-        try:
-            async with self._session.post(url, data=payload) as response:
-                if response.status != 200:
-                    logger.error(f"COSL API error: {response.status}")
-                    return {'Data': [], 'Total': 0}
+        async with self._session.post(url, data=payload) as response:
+            # Retry on server errors (5xx)
+            if response.status >= 500:
+                raise aiohttp.ClientError(f"Server error: HTTP {response.status}")
 
+            # Don't retry on client errors (4xx) - these are not transient
+            if response.status >= 400:
+                logger.error(f"COSL API client error: HTTP {response.status}")
+                return {'Data': [], 'Total': 0}
+
+            try:
                 data = await response.json()
                 return data
-
-        except aiohttp.ClientError as e:
-            logger.error(f"Network error fetching COSL data: {e}")
-            return {'Data': [], 'Total': 0}
-        except json.JSONDecodeError as e:
-            logger.error(f"JSON decode error from COSL: {e}")
-            return {'Data': [], 'Total': 0}
+            except json.JSONDecodeError as e:
+                # Don't retry JSON errors - likely a data issue, not transient
+                logger.error(f"JSON decode error from COSL: {e}")
+                return {'Data': [], 'Total': 0}
 
     def _parse_property(self, raw_data: Dict[str, Any]) -> COSLProperty:
         """
