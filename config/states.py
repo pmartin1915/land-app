@@ -65,11 +65,11 @@ STATE_CONFIGS: Dict[str, StateConfig] = {
         interest_rate=0.25,  # 25% penalty
         quiet_title_cost_estimate=2000.0,
         time_to_ownership_days=180,
-        auction_platform='County-specific',
+        auction_platform='RealAuction',
         scraper_module='core.scrapers.texas_counties',
-        is_active=False,  # Not yet implemented
+        is_active=True,  # Enabled - supports Harris, Dallas, Tarrant, Travis, Collin, Denton, El Paso, Fort Bend
         recommended_for_beginners=True,
-        notes='Can take possession during 6-month redemption. 25% penalty if owner redeems.'
+        notes='Can take possession during 6-month redemption. 25% penalty if owner redeems. First Tuesday auction schedule.'
     ),
     'FL': StateConfig(
         state_code='FL',
