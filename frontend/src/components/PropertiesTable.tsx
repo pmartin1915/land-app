@@ -446,7 +446,7 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
     </div>
   )
 
-  // Bulk add to watchlist
+  // Bulk add to watchlist (parallel execution)
   const bulkAddToWatchlist = async () => {
     const selectedRows = table.getFilteredSelectedRowModel().rows
     const propertyIds = selectedRows.map(row => row.original.id)
@@ -458,10 +458,10 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
     }
 
     setBulkLoading(true)
-    let successCount = 0
 
-    for (const propertyId of toAdd) {
-      try {
+    // Parallel execution with Promise.allSettled
+    const results = await Promise.allSettled(
+      toAdd.map(async (propertyId) => {
         const response = await fetch(`/api/v1/watchlist/property/${propertyId}/watch`, {
           method: 'POST',
           headers: {
@@ -469,23 +469,35 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
           }
         })
 
-        if (response.ok) {
-          const result = await response.json()
-          setWatchlistStatus(prev => ({
-            ...prev,
-            [propertyId]: result.is_watched
-          }))
-          successCount++
+        if (!response.ok) {
+          throw new Error(`Failed for ${propertyId}`)
         }
-      } catch (err) {
-        console.error('Failed to add to watchlist:', err)
+
+        const result = await response.json()
+        return { propertyId, is_watched: result.is_watched }
+      })
+    )
+
+    // Process results
+    const newStatus: WatchlistStatus = {}
+    let successCount = 0
+
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        newStatus[result.value.propertyId] = result.value.is_watched
+        successCount++
       }
     }
 
+    // Batch state update (single re-render)
+    setWatchlistStatus(prev => ({ ...prev, ...newStatus }))
     setBulkLoading(false)
 
     if (successCount > 0) {
       showToast.success(`Added ${successCount} properties to watchlist`)
+    }
+    if (successCount < toAdd.length) {
+      showToast.warning(`${toAdd.length - successCount} properties failed to add`)
     }
 
     // Clear selection after bulk action

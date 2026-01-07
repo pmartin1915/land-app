@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 
 type SkeletonVariant = 'text' | 'card' | 'row' | 'circular' | 'rectangular'
 
@@ -74,6 +74,18 @@ export function TableSkeleton({
   showHeader = true,
   className = ''
 }: TableSkeletonProps) {
+  // Generate random widths once (prevents layout thrashing on re-render)
+  const widths = useMemo(() => ({
+    header: Array(columns).fill(0).map((_, i) =>
+      i === 0 ? 24 : 60 + Math.random() * 40
+    ),
+    cells: Array(rows).fill(0).map(() =>
+      Array(columns).fill(0).map((_, i) =>
+        i === 0 ? 24 : 60 + Math.random() * 60
+      )
+    )
+  }), [rows, columns])
+
   return (
     <div className={`w-full ${className}`}>
       {showHeader && (
@@ -82,7 +94,7 @@ export function TableSkeleton({
             <div
               key={`header-${i}`}
               className="animate-pulse bg-neutral-1 rounded h-4"
-              style={{ width: i === 0 ? '24px' : `${60 + Math.random() * 40}px` }}
+              style={{ width: `${widths.header[i]}px` }}
             />
           ))}
         </div>
@@ -96,7 +108,7 @@ export function TableSkeleton({
             <div
               key={`cell-${rowIndex}-${colIndex}`}
               className="animate-pulse bg-surface rounded h-4"
-              style={{ width: colIndex === 0 ? '24px' : `${60 + Math.random() * 60}px` }}
+              style={{ width: `${widths.cells[rowIndex][colIndex]}px` }}
             />
           ))}
         </div>
