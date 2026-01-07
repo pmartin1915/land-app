@@ -15,6 +15,11 @@ Subprocess scrapers communicate via exit codes (see `core/scrapers/EXIT_CODES.md
 
 ### Known Issues Fixed
 - 2026-01-06: Fixed Alabama acreage parsing - `extract_acreage_with_lineage()` returns `AcreageResult` dataclass, not dict. Use attribute access (`.acreage`) not `.get('acreage')`
+- 2026-01-07: Fixed subprocess import error - Changed `.utils` to `core.scrapers.utils` in alabama_dor.py and texas_counties.py to support both module and script execution
+
+### Known Data Quality Issues
+- El Paso County acreage format: Uses "(0371 AC)" to mean 0.0371 acres (no decimal). Parser reads as 371.0 acres. Low priority - affects only El Paso County.
+- Harris County listings: Empty during non-auction periods (next sale date shown on page). Not a bug.
 
 ### Testing
 - Factory retry tests: `pytest tests/unit/test_factory_retry.py -v`

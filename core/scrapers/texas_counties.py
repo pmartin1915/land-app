@@ -28,7 +28,7 @@ sys.path.insert(0, str(project_root))
 
 from playwright.async_api import async_playwright, Browser, Page, Playwright, TimeoutError as PlaywrightTimeoutError
 from config.logging_config import get_logger
-from .utils import EXIT_SUCCESS, EXIT_TRANSIENT, EXIT_PERMANENT, EXIT_RATE_LIMIT, save_debug_snapshot
+from core.scrapers.utils import EXIT_SUCCESS, EXIT_TRANSIENT, EXIT_PERMANENT, EXIT_RATE_LIMIT, save_debug_snapshot
 
 logger = get_logger(__name__)
 
