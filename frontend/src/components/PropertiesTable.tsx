@@ -15,18 +15,21 @@ import {
 import {
   ChevronUp,
   ChevronDown,
-  MoreHorizontal,
   Eye,
   EyeOff,
   Download,
   Star,
-  StarOff,
-  AlertTriangle,
-  MapPin
+  MapPin,
+  Share2,
+  Loader2
 } from 'lucide-react'
 import { Property, PropertyFilters, SearchParams } from '../types'
 import { useProperties } from '../lib/hooks'
-import { useComponentTheme } from '../lib/theme-provider'
+import { useUrlState } from '../lib/useUrlState'
+import { TableSkeleton } from './ui/LoadingSkeleton'
+import { ErrorState } from './ui/ErrorState'
+import { EmptyState, FilterEmptyState } from './ui/EmptyState'
+import { showToast } from './ui/Toast'
 
 interface PropertiesTableProps {
   onRowSelect?: (property: Property | null) => void
@@ -40,21 +43,50 @@ interface WatchlistStatus {
 }
 
 export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: PropertiesTableProps) {
-  const theme = useComponentTheme()
+  // URL state for shareable links
+  const {
+    sortBy,
+    sortOrder,
+    page,
+    perPage,
+    setPage,
+    setPerPage,
+    setSorting,
+    activeFilterCount,
+    resetFilters,
+    copyUrlToClipboard
+  } = useUrlState({ defaultPerPage: 25 })
 
-  // Table state
-  const [sorting, setSorting] = useState<SortingState>([])
+  // Table state - sync with URL state
+  const [sorting, setLocalSorting] = useState<SortingState>(() =>
+    sortBy ? [{ id: sortBy, desc: sortOrder === 'desc' }] : []
+  )
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 25,
+  const [pagination, setLocalPagination] = useState({
+    pageIndex: page - 1,
+    pageSize: perPage,
   })
 
   // Watchlist state
   const [watchlistStatus, setWatchlistStatus] = useState<WatchlistStatus>({})
   const [togglingWatch, setTogglingWatch] = useState<string | null>(null)
+  const [bulkLoading, setBulkLoading] = useState(false)
+
+  // Sync URL state with local state
+  useEffect(() => {
+    if (sorting.length > 0) {
+      setSorting(sorting[0].id, sorting[0].desc ? 'desc' : 'asc')
+    } else {
+      setSorting(undefined, undefined)
+    }
+  }, [sorting, setSorting])
+
+  useEffect(() => {
+    setPage(pagination.pageIndex + 1)
+    setPerPage(pagination.pageSize)
+  }, [pagination, setPage, setPerPage])
 
   // Build search params for API
   const searchParams: SearchParams = useMemo(() => ({
@@ -101,10 +133,17 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
   const toggleWatch = useCallback(async (propertyId: string, e: React.MouseEvent) => {
     e.stopPropagation()
 
-    if (togglingWatch) return // Prevent double-click
+    if (togglingWatch) return
+
+    const wasWatched = watchlistStatus[propertyId] || false
 
     try {
       setTogglingWatch(propertyId)
+      // Optimistic update
+      setWatchlistStatus(prev => ({
+        ...prev,
+        [propertyId]: !wasWatched
+      }))
 
       const response = await fetch(`/api/v1/watchlist/property/${propertyId}/watch`, {
         method: 'POST',
@@ -119,15 +158,30 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
           ...prev,
           [propertyId]: result.is_watched
         }))
+        showToast.success(
+          result.is_watched ? 'Added to watchlist' : 'Removed from watchlist'
+        )
+      } else {
+        // Revert on error
+        setWatchlistStatus(prev => ({
+          ...prev,
+          [propertyId]: wasWatched
+        }))
+        showToast.error('Failed to update watchlist')
       }
     } catch (err) {
-      console.error('Failed to toggle watch:', err)
+      // Revert on error
+      setWatchlistStatus(prev => ({
+        ...prev,
+        [propertyId]: wasWatched
+      }))
+      showToast.error('Failed to update watchlist')
     } finally {
       setTogglingWatch(null)
     }
-  }, [togglingWatch])
+  }, [togglingWatch, watchlistStatus])
 
-  // Column definitions
+  // Column definitions - memoized with stable dependencies
   const columns = useMemo<ColumnDef<Property>[]>(() => [
     // Selection column
     {
@@ -138,6 +192,7 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
           checked={table.getIsAllPageRowsSelected()}
           onChange={(e) => table.toggleAllPageRowsSelected(e.target.checked)}
           className="w-4 h-4 text-accent-primary border-neutral-1 rounded focus:ring-accent-primary"
+          aria-label="Select all rows"
         />
       ),
       cell: ({ row }) => (
@@ -146,6 +201,7 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
           checked={row.getIsSelected()}
           onChange={(e) => row.toggleSelected(e.target.checked)}
           className="w-4 h-4 text-accent-primary border-neutral-1 rounded focus:ring-accent-primary"
+          aria-label={`Select row ${row.index + 1}`}
         />
       ),
       enableSorting: false,
@@ -223,10 +279,7 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
       cell: ({ getValue }) => {
         const score = getValue() as number
         return score ? (
-          <div className="flex items-center space-x-1">
-            <span className="text-accent-secondary">{score.toFixed(1)}</span>
-            {score >= 80 && <span className="text-accent-secondary">💧</span>}
-          </div>
+          <span className="text-accent-secondary">{score.toFixed(1)}</span>
         ) : 'N/A'
       },
     },
@@ -278,11 +331,11 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
       cell: ({ getValue }) => getValue() as string || 'N/A',
     },
 
-    // Actions
+    // Actions - note: this column uses external state, but we handle it via cell render
     {
       id: 'actions',
       header: 'Actions',
-      cell: ({ row }) => {
+      cell: function ActionsCell({ row }) {
         const propertyId = row.original.id
         const isWatched = watchlistStatus[propertyId] || false
         const isToggling = togglingWatch === propertyId
@@ -293,6 +346,7 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
               onClick={() => onRowSelect?.(row.original)}
               className="p-1 hover:bg-surface rounded transition-colors"
               title="View Details"
+              aria-label="View property details"
             >
               <Eye className="w-4 h-4" />
             </button>
@@ -305,12 +359,18 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
                   : 'text-text-muted hover:text-warning'
               } ${isToggling ? 'opacity-50' : ''}`}
               title={isWatched ? 'Remove from Watchlist' : 'Add to Watchlist'}
+              aria-label={isWatched ? 'Remove from watchlist' : 'Add to watchlist'}
             >
-              <Star className={`w-4 h-4 ${isWatched ? 'fill-warning' : ''}`} />
+              {isToggling ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Star className={`w-4 h-4 ${isWatched ? 'fill-warning' : ''}`} />
+              )}
             </button>
             <button
               className="p-1 hover:bg-surface rounded transition-colors"
               title="View on Map"
+              aria-label="View property on map"
             >
               <MapPin className="w-4 h-4" />
             </button>
@@ -335,11 +395,11 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
       pagination,
     },
     enableRowSelection: true,
-    onSortingChange: setSorting,
+    onSortingChange: setLocalSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    onPaginationChange: setPagination,
+    onPaginationChange: setLocalPagination,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -351,7 +411,10 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
   // Column visibility toggle component
   const ColumnVisibilityToggle = () => (
     <div className="relative group">
-      <button className="px-3 py-2 bg-surface text-text-primary border border-neutral-1 rounded-lg hover:bg-card transition-colors flex items-center space-x-2">
+      <button
+        className="px-3 py-2 bg-surface text-text-primary border border-neutral-1 rounded-lg hover:bg-card transition-colors flex items-center space-x-2"
+        aria-label="Toggle column visibility"
+      >
         <EyeOff className="w-4 h-4" />
         <span>Columns</span>
       </button>
@@ -363,7 +426,7 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
             {table.getAllLeafColumns()
               .filter(column => column.getCanHide())
               .map(column => (
-                <label key={column.id} className="flex items-center space-x-2 text-sm">
+                <label key={column.id} className="flex items-center space-x-2 text-sm cursor-pointer">
                   <input
                     type="checkbox"
                     checked={column.getIsVisible()}
@@ -387,32 +450,58 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
   const bulkAddToWatchlist = async () => {
     const selectedRows = table.getFilteredSelectedRowModel().rows
     const propertyIds = selectedRows.map(row => row.original.id)
+    const toAdd = propertyIds.filter(id => !watchlistStatus[id])
 
-    for (const propertyId of propertyIds) {
-      if (!watchlistStatus[propertyId]) {
-        try {
-          const response = await fetch(`/api/v1/watchlist/property/${propertyId}/watch`, {
-            method: 'POST',
-            headers: {
-              'X-API-Key': localStorage.getItem('aw_api_key') || 'AW_dev_automated_development_key_001'
-            }
-          })
+    if (toAdd.length === 0) {
+      showToast.info('All selected properties are already in your watchlist')
+      return
+    }
 
-          if (response.ok) {
-            const result = await response.json()
-            setWatchlistStatus(prev => ({
-              ...prev,
-              [propertyId]: result.is_watched
-            }))
+    setBulkLoading(true)
+    let successCount = 0
+
+    for (const propertyId of toAdd) {
+      try {
+        const response = await fetch(`/api/v1/watchlist/property/${propertyId}/watch`, {
+          method: 'POST',
+          headers: {
+            'X-API-Key': localStorage.getItem('aw_api_key') || 'AW_dev_automated_development_key_001'
           }
-        } catch (err) {
-          console.error('Failed to add to watchlist:', err)
+        })
+
+        if (response.ok) {
+          const result = await response.json()
+          setWatchlistStatus(prev => ({
+            ...prev,
+            [propertyId]: result.is_watched
+          }))
+          successCount++
         }
+      } catch (err) {
+        console.error('Failed to add to watchlist:', err)
       }
+    }
+
+    setBulkLoading(false)
+
+    if (successCount > 0) {
+      showToast.success(`Added ${successCount} properties to watchlist`)
     }
 
     // Clear selection after bulk action
     table.resetRowSelection()
+  }
+
+  // Share URL handler
+  const handleShareUrl = async () => {
+    const success = await copyUrlToClipboard()
+    if (success) {
+      showToast.success('Link copied to clipboard', {
+        description: 'Share this link to show the same filtered view'
+      })
+    } else {
+      showToast.error('Failed to copy link')
+    }
   }
 
   // Bulk actions component
@@ -429,8 +518,10 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
         <div className="flex space-x-2 ml-auto">
           <button
             onClick={bulkAddToWatchlist}
-            className="px-3 py-1 bg-accent-primary text-white text-sm rounded hover:bg-opacity-90 transition-colors"
+            disabled={bulkLoading}
+            className="px-3 py-1 bg-accent-primary text-white text-sm rounded hover:bg-opacity-90 transition-colors flex items-center gap-1 disabled:opacity-50"
           >
+            {bulkLoading && <Loader2 className="w-3 h-3 animate-spin" />}
             Add to Watchlist
           </button>
           <button className="px-3 py-1 bg-surface text-text-primary border border-neutral-1 text-sm rounded hover:bg-card transition-colors flex items-center space-x-1">
@@ -442,20 +533,18 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
     )
   }
 
+  // Determine empty state type
+  const hasFiltersApplied = activeFilterCount > 0 || searchQuery
+
   return (
     <div className="space-y-4">
       {/* Error State */}
       {error && (
-        <div className="p-4 bg-danger/10 border border-danger/20 rounded-lg flex items-center space-x-2">
-          <AlertTriangle className="w-5 h-5 text-danger" />
-          <span className="text-danger text-sm">Error loading properties: {error}</span>
-          <button
-            onClick={() => refetch()}
-            className="ml-auto px-3 py-1 bg-danger text-white text-sm rounded hover:bg-opacity-90 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
+        <ErrorState
+          error={error}
+          onRetry={refetch}
+          compact
+        />
       )}
 
       {/* Table Controls */}
@@ -464,7 +553,7 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
           <span className="text-sm text-text-muted">
             {loading ? 'Loading...' : `${data?.total || 0} properties`}
           </span>
-          {data?.total && (
+          {data?.total !== undefined && data.total > 0 && (
             <span className="text-xs text-text-muted">
               (Page {pagination.pageIndex + 1} of {data.pages})
             </span>
@@ -472,12 +561,23 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
         </div>
 
         <div className="flex items-center space-x-2">
+          <button
+            onClick={handleShareUrl}
+            className="px-3 py-2 bg-surface text-text-primary border border-neutral-1 rounded-lg hover:bg-card transition-colors flex items-center space-x-2"
+            title="Copy shareable link"
+            aria-label="Copy shareable link"
+          >
+            <Share2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Share</span>
+          </button>
+
           <ColumnVisibilityToggle />
 
           <select
             value={pagination.pageSize}
-            onChange={(e) => setPagination(prev => ({ ...prev, pageSize: Number(e.target.value), pageIndex: 0 }))}
+            onChange={(e) => setLocalPagination(prev => ({ ...prev, pageSize: Number(e.target.value), pageIndex: 0 }))}
             className="px-3 py-2 bg-surface text-text-primary border border-neutral-1 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary"
+            aria-label="Rows per page"
           >
             <option value={10}>10 per page</option>
             <option value={25}>25 per page</option>
@@ -534,26 +634,29 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
             <tbody>
               {loading ? (
                 // Loading skeleton
-                Array(pagination.pageSize).fill(0).map((_, i) => (
-                  <tr key={i} className="border-b border-neutral-1">
-                    {columns.map((_, j) => (
-                      <td key={j} className="px-4 py-3">
-                        <div className="animate-pulse bg-surface rounded h-4"></div>
-                      </td>
-                    ))}
-                  </tr>
-                ))
+                <tr>
+                  <td colSpan={columns.length}>
+                    <TableSkeleton rows={pagination.pageSize} columns={columns.length} showHeader={false} />
+                  </td>
+                </tr>
               ) : table.getRowModel().rows.length === 0 ? (
                 // Empty state
                 <tr>
-                  <td colSpan={columns.length} className="px-4 py-8 text-center">
-                    <div className="text-text-muted">
-                      <svg className="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2 2m16-7h-3m-13 0h3m-3 0h3m-3 0v-3.5" />
-                      </svg>
-                      <p>No properties found</p>
-                      <p className="text-sm">Try adjusting your search or filters</p>
-                    </div>
+                  <td colSpan={columns.length}>
+                    {hasFiltersApplied ? (
+                      <FilterEmptyState
+                        activeFilterCount={activeFilterCount}
+                        onResetFilters={resetFilters}
+                      />
+                    ) : (
+                      <EmptyState
+                        type="no-data"
+                        title="No properties yet"
+                        description="Start by running a scrape job or importing data to populate your property database."
+                        actionLabel="Go to Scrape Jobs"
+                        onAction={() => window.location.href = '/scrape-jobs'}
+                      />
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -586,6 +689,7 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
                 className="px-3 py-1 text-sm border border-neutral-1 rounded hover:bg-surface transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Go to first page"
               >
                 First
               </button>
@@ -593,6 +697,7 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
                 className="px-3 py-1 text-sm border border-neutral-1 rounded hover:bg-surface transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Go to previous page"
               >
                 Previous
               </button>
@@ -607,6 +712,7 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
                 className="px-3 py-1 text-sm border border-neutral-1 rounded hover:bg-surface transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Go to next page"
               >
                 Next
               </button>
@@ -614,6 +720,7 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
                 className="px-3 py-1 text-sm border border-neutral-1 rounded hover:bg-surface transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Go to last page"
               >
                 Last
               </button>

@@ -11,6 +11,7 @@ import { ScrapeJobs } from './pages/ScrapeJobs'
 import { Watchlist } from './pages/Watchlist'
 import { Reports } from './pages/Reports'
 import { Settings } from './pages/Settings'
+import { Toaster } from './components/ui/Toast'
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
                 <Route path="/settings" element={<Settings />} />
               </Routes>
             </Layout>
+            <Toaster />
           </div>
         </Router>
       </AppProvider>

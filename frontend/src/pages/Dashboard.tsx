@@ -1,7 +1,49 @@
-import React, { useState } from 'react'
+import React, { useState, Suspense, memo } from 'react'
 import { usePropertyStats, useTriageQueue, useCounties, useWorkflowStats } from '../lib/hooks'
 import { PropertyFilters } from '../types'
-import { DashboardCharts } from '../components/DashboardCharts'
+import { KPICardsSkeleton, ListSkeleton } from '../components/ui/LoadingSkeleton'
+import { ErrorState } from '../components/ui/ErrorState'
+import { EmptyState } from '../components/ui/EmptyState'
+
+// Lazy load DashboardCharts to improve initial page load
+const DashboardCharts = React.lazy(() =>
+  import('../components/DashboardCharts').then(m => ({ default: m.DashboardCharts }))
+)
+
+// Helper function for relative time formatting (extracted outside component to avoid recreation)
+function formatRelativeTime(timestamp: string): string {
+  try {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+
+    if (diffDays > 0) return `${diffDays}d ago`
+    if (diffHours > 0) return `${diffHours}h ago`
+    if (diffMins > 0) return `${diffMins}m ago`
+    return 'Just now'
+  } catch {
+    return ''
+  }
+}
+
+// Fallback component for lazy-loaded charts
+function ChartsFallback() {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {Array(4).fill(0).map((_, i) => (
+        <div key={i} className="bg-card rounded-lg p-6 border border-neutral-1 shadow-card">
+          <div className="animate-pulse">
+            <div className="h-6 bg-surface rounded mb-4 w-1/3"></div>
+            <div className="h-64 bg-surface rounded"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 interface KPICardProps {
   title: string
@@ -14,7 +56,8 @@ interface KPICardProps {
   isLoading?: boolean
 }
 
-function KPICard({ title, value, subtitle, icon, trend, trendText, className = '', isLoading }: KPICardProps) {
+// Memoized KPICard to prevent unnecessary re-renders
+const KPICard = memo(function KPICard({ title, value, subtitle, icon, trend, trendText, className = '', isLoading }: KPICardProps) {
   const trendColors = {
     up: 'text-success',
     down: 'text-danger',
@@ -45,7 +88,7 @@ function KPICard({ title, value, subtitle, icon, trend, trendText, className = '
       )}
     </div>
   )
-}
+})
 
 export function Dashboard() {
   const [filters] = useState<PropertyFilters>({})
@@ -71,9 +114,12 @@ export function Dashboard() {
 
       {/* Error State */}
       {statsError && (
-        <div className="mb-6 p-4 bg-danger/10 border border-danger/20 rounded-lg">
-          <p className="text-danger text-sm">Error loading dashboard data: {statsError}</p>
-        </div>
+        <ErrorState
+          error={statsError}
+          onRetry={() => window.location.reload()}
+          compact
+          className="mb-6"
+        />
       )}
 
       {/* KPI Cards */}
@@ -301,7 +347,9 @@ export function Dashboard() {
           <h2 className="text-xl font-semibold text-text-primary mb-2">Analytics & Insights</h2>
           <p className="text-text-muted">Visual analysis of property data and trends</p>
         </div>
-        <DashboardCharts stats={stats} isLoading={statsLoading} />
+        <Suspense fallback={<ChartsFallback />}>
+          <DashboardCharts stats={stats} isLoading={statsLoading} />
+        </Suspense>
       </div>
 
       {/* Timeline and Recent Activity */}
@@ -350,30 +398,11 @@ export function Dashboard() {
                                activity.type === 'purchased' ? 'bg-success' :
                                activity.type === 'rejected' ? 'bg-danger' : 'bg-accent-alt'
 
-              // Format timestamp to relative time
-              const formatTime = (timestamp: string) => {
-                try {
-                  const date = new Date(timestamp)
-                  const now = new Date()
-                  const diffMs = now.getTime() - date.getTime()
-                  const diffMins = Math.floor(diffMs / 60000)
-                  const diffHours = Math.floor(diffMins / 60)
-                  const diffDays = Math.floor(diffHours / 24)
-
-                  if (diffDays > 0) return `${diffDays}d ago`
-                  if (diffHours > 0) return `${diffHours}h ago`
-                  if (diffMins > 0) return `${diffMins}m ago`
-                  return 'Just now'
-                } catch {
-                  return ''
-                }
-              }
-
               return (
                 <div key={index} className="flex items-center space-x-3 p-2 rounded hover:bg-surface transition-colors duration-150">
                   <div className={`w-2 h-2 rounded-full flex-shrink-0 ${typeColor}`}></div>
                   <span className="text-text-muted flex-1 text-sm">{activity.description}</span>
-                  <span className="text-xs text-text-muted">{formatTime(activity.timestamp)}</span>
+                  <span className="text-xs text-text-muted">{formatRelativeTime(activity.timestamp)}</span>
                 </div>
               )
             }) || (

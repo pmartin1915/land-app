@@ -2,8 +2,11 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useComponentTheme, ThemeToggle } from '../lib/theme-provider'
 import { usePropertySearch, useCounties } from '../lib/hooks'
+import { useUrlState } from '../lib/useUrlState'
 import { PropertyFilters } from '../types'
-import { Search, Filter, Download, Upload, Settings, Calendar, ChevronDown, X } from 'lucide-react'
+import { Search, Filter, Download, Upload, Settings, Calendar, ChevronDown, X, Share2 } from 'lucide-react'
+import { SearchEmptyState } from './ui/EmptyState'
+import { showToast } from './ui/Toast'
 
 interface TopBarProps {
   title: string
@@ -25,6 +28,7 @@ function FilterPopover({ isOpen, onClose, filters, onFiltersChange }: FilterPopo
   const handleApplyFilters = () => {
     onFiltersChange(localFilters)
     onClose()
+    showToast.success('Filters applied')
   }
 
   const handleResetFilters = () => {
@@ -32,6 +36,7 @@ function FilterPopover({ isOpen, onClose, filters, onFiltersChange }: FilterPopo
     setLocalFilters(resetFilters)
     onFiltersChange(resetFilters)
     onClose()
+    showToast.info('Filters reset')
   }
 
   // Handle escape key
@@ -415,34 +420,41 @@ export function TopBar({ title, onFiltersChange, onSearchChange }: TopBarProps) 
         </div>
 
         {/* Search Results Dropdown */}
-        {searchQuery && searchResults.length > 0 && (
+        {searchQuery && searchQuery.length > 2 && (
           <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-neutral-1 rounded-lg shadow-elevated max-h-96 overflow-y-auto z-50">
-            {searchResults.slice(0, 10).map((property) => (
-              <button
-                key={property.id}
-                onClick={() => handleSelectProperty(property.id)}
-                className="w-full px-4 py-3 text-left hover:bg-surface transition-colors border-b border-neutral-1 last:border-b-0"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium text-text-primary">
-                      {property.parcel_id}
-                    </p>
-                    <p className="text-sm text-text-muted">
-                      {property.description?.substring(0, 60)}...
-                    </p>
-                    <p className="text-xs text-text-muted">
-                      {property.county} • ${property.amount?.toLocaleString()}
-                    </p>
+            {searchResults.length > 0 ? (
+              searchResults.slice(0, 10).map((property) => (
+                <button
+                  key={property.id}
+                  onClick={() => handleSelectProperty(property.id)}
+                  className="w-full px-4 py-3 text-left hover:bg-surface transition-colors border-b border-neutral-1 last:border-b-0"
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium text-text-primary">
+                        {property.parcel_id}
+                      </p>
+                      <p className="text-sm text-text-muted">
+                        {property.description?.substring(0, 60)}...
+                      </p>
+                      <p className="text-xs text-text-muted">
+                        {property.county} • ${property.amount?.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-accent-primary">
+                        Score: {property.investment_score || 'N/A'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-accent-primary">
-                      Score: {property.investment_score || 'N/A'}
-                    </p>
-                  </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              ))
+            ) : !isSearching ? (
+              <SearchEmptyState
+                query={searchQuery}
+                onClear={() => setSearchQuery('')}
+              />
+            ) : null}
           </div>
         )}
       </div>
