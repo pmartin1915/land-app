@@ -26,8 +26,10 @@ import sys
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from playwright.async_api import async_playwright, Browser, Page, Playwright
+from playwright.async_api import async_playwright, Browser, Page, Playwright, TimeoutError as PlaywrightTimeoutError
 from config.logging_config import get_logger
+from scripts.acreage_processor import extract_acreage_with_lineage
+from .utils import EXIT_SUCCESS, EXIT_TRANSIENT, EXIT_PERMANENT, EXIT_RATE_LIMIT, save_debug_snapshot
 
 logger = get_logger(__name__)
 
@@ -74,6 +76,20 @@ class AlabamaProperty:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for database insertion."""
+        # Parse acreage from description if available
+        acreage = None
+        acreage_source = None
+        acreage_confidence = None
+        acreage_raw_text = None
+
+        if self.description:
+            result = extract_acreage_with_lineage(self.description)
+            if result and result.acreage:
+                acreage = result.acreage
+                acreage_source = result.source
+                acreage_confidence = result.confidence
+                acreage_raw_text = result.raw_text
+
         return {
             'parcel_id': self.parcel_number,
             'county': self.county,
@@ -87,11 +103,10 @@ class AlabamaProperty:
             'time_to_ownership_days': 2000,  # ~5.5 years total
             'data_source': 'alabama_dor',
             'auction_platform': 'ADOR Search',
-            # Alabama doesn't provide acreage in ADOR search
-            'acreage': None,
-            'acreage_source': None,
-            'acreage_confidence': None,
-            'acreage_raw_text': None,
+            'acreage': acreage,
+            'acreage_source': acreage_source,
+            'acreage_confidence': acreage_confidence,
+            'acreage_raw_text': acreage_raw_text,
         }
 
 
@@ -143,6 +158,9 @@ class AlabamaDORScraper:
             raise CountyValidationError("County is required for Alabama search")
 
         county_input = str(county_input).strip()
+
+        if not county_input:
+            raise CountyValidationError("County is required for Alabama search")
 
         # Check if it's a numeric code
         if county_input.isdigit() and len(county_input) <= 2:
@@ -297,8 +315,23 @@ class AlabamaDORScraper:
                     # No more pages
                     break
 
+            # Save debug snapshot if no properties found (potential parsing issue)
+            if not properties:
+                logger.warning(f"No properties found for {county_name} - saving debug snapshot")
+                try:
+                    content = await page.content()
+                    save_debug_snapshot(content, 'AL', county_name, "no_properties_found", logger=logger)
+                except Exception:
+                    pass
+
         except Exception as e:
             logger.error(f"Playwright error scraping {county_name}: {e}")
+            # Save debug snapshot on error
+            try:
+                content = await page.content()
+                save_debug_snapshot(content, 'AL', county_name, str(e), logger=logger)
+            except Exception:
+                pass  # Don't fail on snapshot error
             raise
         finally:
             await page.close()
@@ -345,22 +378,44 @@ if __name__ == "__main__":
                 with open(args.json_output, 'w') as f:
                     json.dump(prop_dicts, f)
                 # Silent success for subprocess
+                sys.exit(EXIT_SUCCESS)
             elif args.output:
                 df = pd.DataFrame([p.to_dict() for p in properties])
                 df.to_csv(args.output, index=False)
                 print(f"Saved {len(properties)} properties to: {args.output}")
+                sys.exit(EXIT_SUCCESS)
             else:
                 print(f"Scraped {len(properties)} properties")
                 for prop in properties[:5]:
                     print(f"  - {prop.parcel_number}: ${prop.balance:.2f} ({prop.owner})")
                 if len(properties) > 5:
                     print(f"  ... and {len(properties) - 5} more")
+                sys.exit(EXIT_SUCCESS)
 
         except CountyValidationError as e:
+            # Invalid county - permanent error, don't retry
             print(f"Error: {e}", file=sys.stderr)
-            exit(1)
+            sys.exit(EXIT_PERMANENT)
+        except PlaywrightTimeoutError as e:
+            # Timeout - transient error, retry
+            print(f"Timeout error: {e}", file=sys.stderr)
+            sys.exit(EXIT_TRANSIENT)
+        except ConnectionError as e:
+            # Network error - transient, retry
+            print(f"Connection error: {e}", file=sys.stderr)
+            sys.exit(EXIT_TRANSIENT)
         except Exception as e:
+            error_msg = str(e).lower()
+            # Check for rate limiting indicators
+            if 'rate limit' in error_msg or '429' in error_msg or 'too many requests' in error_msg:
+                print(f"Rate limited: {e}", file=sys.stderr)
+                sys.exit(EXIT_RATE_LIMIT)
+            # Check for access denied (may indicate rate limiting)
+            if 'access denied' in error_msg or '403' in error_msg:
+                print(f"Access denied (possible rate limit): {e}", file=sys.stderr)
+                sys.exit(EXIT_RATE_LIMIT)
+            # Default to transient for unknown errors (allow retry)
             print(f"Error: {e}", file=sys.stderr)
-            exit(1)
+            sys.exit(EXIT_TRANSIENT)
 
     asyncio.run(main())
