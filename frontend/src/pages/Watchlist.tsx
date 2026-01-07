@@ -60,6 +60,8 @@ export function Watchlist() {
   const [page, setPage] = useState(1)
   const [editingNotes, setEditingNotes] = useState<string | null>(null)
   const [noteText, setNoteText] = useState('')
+  const [updatingRating, setUpdatingRating] = useState<string | null>(null)
+  const [savingNotes, setSavingNotes] = useState<string | null>(null)
 
   const pageSize = 20
 
@@ -125,19 +127,15 @@ export function Watchlist() {
   }
 
   const updateRating = async (propertyId: string, rating: number) => {
+    if (updatingRating) return // Prevent concurrent rating updates
+
+    // Capture previous state for rollback
+    const previousWatchlist = watchlist
+
     try {
-      const response = await fetch(`/api/v1/watchlist/property/${propertyId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': localStorage.getItem('aw_api_key') || 'AW_dev_automated_development_key_001'
-        },
-        body: JSON.stringify({ star_rating: rating })
-      })
+      setUpdatingRating(propertyId)
 
-      if (!response.ok) throw new Error('Failed to update rating')
-
-      // Update local state
+      // Optimistic update
       setWatchlist(prev => {
         if (!prev) return prev
         return {
@@ -149,41 +147,68 @@ export function Watchlist() {
           )
         }
       })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update rating')
-    }
-  }
 
-  const saveNotes = async (propertyId: string) => {
-    try {
       const response = await fetch(`/api/v1/watchlist/property/${propertyId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'X-API-Key': localStorage.getItem('aw_api_key') || 'AW_dev_automated_development_key_001'
         },
-        body: JSON.stringify({ user_notes: noteText })
+        body: JSON.stringify({ star_rating: rating })
       })
 
-      if (!response.ok) throw new Error('Failed to save notes')
+      if (!response.ok) throw new Error('Failed to update rating')
+    } catch (err) {
+      // Rollback on error
+      setWatchlist(previousWatchlist)
+      setError(err instanceof Error ? err.message : 'Failed to update rating')
+    } finally {
+      setUpdatingRating(null)
+    }
+  }
 
-      // Update local state
+  const saveNotes = async (propertyId: string) => {
+    if (savingNotes) return // Prevent concurrent saves
+
+    // Capture previous state for rollback
+    const previousWatchlist = watchlist
+    const savedNoteText = noteText
+
+    try {
+      setSavingNotes(propertyId)
+
+      // Optimistic update
       setWatchlist(prev => {
         if (!prev) return prev
         return {
           ...prev,
           items: prev.items.map(item =>
             item.property.id === propertyId
-              ? { ...item, interaction: { ...item.interaction, user_notes: noteText } }
+              ? { ...item, interaction: { ...item.interaction, user_notes: savedNoteText } }
               : item
           )
         }
       })
 
+      const response = await fetch(`/api/v1/watchlist/property/${propertyId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': localStorage.getItem('aw_api_key') || 'AW_dev_automated_development_key_001'
+        },
+        body: JSON.stringify({ user_notes: savedNoteText })
+      })
+
+      if (!response.ok) throw new Error('Failed to save notes')
+
       setEditingNotes(null)
       setNoteText('')
     } catch (err) {
+      // Rollback on error
+      setWatchlist(previousWatchlist)
       setError(err instanceof Error ? err.message : 'Failed to save notes')
+    } finally {
+      setSavingNotes(null)
     }
   }
 
@@ -289,7 +314,9 @@ export function Watchlist() {
                         <button
                           key={rating}
                           onClick={() => updateRating(property.id, rating)}
-                          className="p-0.5"
+                          disabled={updatingRating === property.id}
+                          aria-label={`Rate ${rating} star${rating > 1 ? 's' : ''}${interaction.star_rating === rating ? ' (current rating)' : ''}`}
+                          className={`p-0.5 ${updatingRating === property.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                           <Star
                             className={`w-5 h-5 ${
@@ -306,6 +333,7 @@ export function Watchlist() {
                       onClick={() => removeFromWatchlist(property.id)}
                       className="p-2 text-text-muted hover:text-danger"
                       title="Remove from watchlist"
+                      aria-label="Remove from watchlist"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -361,16 +389,18 @@ export function Watchlist() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => saveNotes(property.id)}
-                          className="px-3 py-1 bg-primary text-white text-sm rounded hover:bg-primary/90"
+                          disabled={savingNotes === property.id}
+                          className="px-3 py-1 bg-primary text-white text-sm rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Save
+                          {savingNotes === property.id ? 'Saving...' : 'Save'}
                         </button>
                         <button
                           onClick={() => {
                             setEditingNotes(null)
                             setNoteText('')
                           }}
-                          className="px-3 py-1 border border-neutral-1 text-text-primary text-sm rounded hover:bg-surface"
+                          disabled={savingNotes === property.id}
+                          className="px-3 py-1 border border-neutral-1 text-text-primary text-sm rounded hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Cancel
                         </button>

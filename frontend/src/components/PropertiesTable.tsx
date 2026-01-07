@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -71,8 +71,14 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
 
   // Watchlist state
   const [watchlistStatus, setWatchlistStatus] = useState<WatchlistStatus>({})
-  const [togglingWatch, setTogglingWatch] = useState<string | null>(null)
+  const [togglingWatch, setTogglingWatch] = useState<Set<string>>(new Set())
   const [bulkLoading, setBulkLoading] = useState(false)
+
+  // Ref to track current watchlist status for bulk operations (avoids stale closures)
+  const watchlistStatusRef = useRef(watchlistStatus)
+  useEffect(() => {
+    watchlistStatusRef.current = watchlistStatus
+  }, [watchlistStatus])
 
   // Sync URL state with local state
   useEffect(() => {
@@ -133,12 +139,14 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
   const toggleWatch = useCallback(async (propertyId: string, e: React.MouseEvent) => {
     e.stopPropagation()
 
-    if (togglingWatch) return
+    // Check if THIS property is already toggling (allows concurrent toggles on different properties)
+    if (togglingWatch.has(propertyId)) return
 
     const wasWatched = watchlistStatus[propertyId] || false
 
     try {
-      setTogglingWatch(propertyId)
+      // Add to in-flight set
+      setTogglingWatch(prev => new Set(prev).add(propertyId))
       // Optimistic update
       setWatchlistStatus(prev => ({
         ...prev,
@@ -177,7 +185,12 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
       }))
       showToast.error('Failed to update watchlist')
     } finally {
-      setTogglingWatch(null)
+      // Remove from in-flight set
+      setTogglingWatch(prev => {
+        const next = new Set(prev)
+        next.delete(propertyId)
+        return next
+      })
     }
   }, [togglingWatch, watchlistStatus])
 
@@ -338,7 +351,7 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
       cell: function ActionsCell({ row }) {
         const propertyId = row.original.id
         const isWatched = watchlistStatus[propertyId] || false
-        const isToggling = togglingWatch === propertyId
+        const isToggling = togglingWatch.has(propertyId)
 
         return (
           <div className="flex items-center space-x-2">
@@ -450,7 +463,8 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
   const bulkAddToWatchlist = async () => {
     const selectedRows = table.getFilteredSelectedRowModel().rows
     const propertyIds = selectedRows.map(row => row.original.id)
-    const toAdd = propertyIds.filter(id => !watchlistStatus[id])
+    // Use ref to get current status (avoids stale closure)
+    const toAdd = propertyIds.filter(id => !watchlistStatusRef.current[id])
 
     if (toAdd.length === 0) {
       showToast.info('All selected properties are already in your watchlist')

@@ -20,6 +20,9 @@ Subprocess scrapers communicate via exit codes (see `core/scrapers/EXIT_CODES.md
 - 2026-01-07: Fixed useUrlState infinite loop - Added ref to track programmatic URL updates
 - 2026-01-07: Fixed sequential bulk watchlist operations - Now uses Promise.allSettled() for parallel execution
 - 2026-01-07: Fixed Math.random in LoadingSkeleton render - Moved to useMemo to prevent layout thrashing
+- 2026-01-07: Fixed PropertiesTable toggleWatch race condition - Changed `togglingWatch` from `string | null` to `Set<string>` to allow concurrent toggles on different properties
+- 2026-01-07: Fixed Watchlist optimistic update rollback - Added proper rollback on failure for `updateRating` and `saveNotes`
+- 2026-01-07: Added accessibility labels - Star rating buttons, state filter select now have proper aria-labels
 
 ### Known Data Quality Issues
 - El Paso County acreage format: Uses "(0371 AC)" to mean 0.0371 acres (no decimal). Parser reads as 371.0 acres. Low priority - affects only El Paso County.
