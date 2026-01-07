@@ -28,6 +28,9 @@ data/processed/*
 *_report_*.json
 nul
 
+# Debug snapshots from scraper failures
+debug_failures/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
