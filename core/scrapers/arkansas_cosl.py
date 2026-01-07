@@ -37,8 +37,16 @@ sys.path.insert(0, str(project_root))
 
 from config.logging_config import get_logger
 from scripts.acreage_processor import extract_acreage_with_lineage
+from .utils import save_debug_snapshot
 
 logger = get_logger(__name__)
+
+
+class RateLimitError(Exception):
+    """Raised when the API returns HTTP 429 (Too Many Requests)."""
+    def __init__(self, retry_after: int = 60):
+        self.retry_after = retry_after
+        super().__init__(f"Rate limited, retry after {retry_after}s")
 
 
 # Arkansas County FIPS codes (75 counties)
@@ -143,6 +151,7 @@ class ArkansasCOSLScraper:
     DEFAULT_MAX_RETRIES = 3
     DEFAULT_BASE_DELAY = 1.0  # seconds
     MAX_DELAY = 30.0  # cap for exponential backoff
+    RATE_LIMIT_DELAY = 60.0  # seconds - cooldown for HTTP 429
 
     def __init__(self, session: Optional[aiohttp.ClientSession] = None,
                  max_retries: int = DEFAULT_MAX_RETRIES,
@@ -212,7 +221,8 @@ class ArkansasCOSLScraper:
         Fetch a single page of grid data with exponential backoff retry.
 
         Retries on transient failures (network errors, timeouts, HTTP 5xx).
-        Does NOT retry on client errors (4xx) or JSON decode errors.
+        Uses extended cooldown (60s) for HTTP 429 rate limiting.
+        Does NOT retry on other client errors (4xx) or JSON decode errors.
 
         Returns:
             Dict with 'Data' (list of properties) and 'Total' (total count)
@@ -220,6 +230,14 @@ class ArkansasCOSLScraper:
         for attempt in range(self._max_retries):
             try:
                 return await self._fetch_grid_page_inner(endpoint, page, page_size, county_filter)
+            except RateLimitError as e:
+                # Rate limited - use longer cooldown
+                if attempt == self._max_retries - 1:
+                    logger.error(f"Rate limited after {self._max_retries} attempts")
+                    return {'Data': [], 'Total': 0}
+                delay = e.retry_after or self.RATE_LIMIT_DELAY
+                logger.warning(f"Rate limited, retry {attempt + 1}/{self._max_retries} after {delay:.1f}s cooldown")
+                await asyncio.sleep(delay)
             except (aiohttp.ClientError, asyncio.TimeoutError) as e:
                 if attempt == self._max_retries - 1:
                     logger.error(f"Failed after {self._max_retries} attempts: {e}")
@@ -252,11 +270,20 @@ class ArkansasCOSLScraper:
         payload = self._build_kendo_request(page, page_size, county_filter)
 
         async with self._session.post(url, data=payload) as response:
+            # Handle rate limiting (429) - raise special exception for longer backoff
+            if response.status == 429:
+                retry_after_str = response.headers.get('Retry-After', '60')
+                try:
+                    retry_after = int(retry_after_str)
+                except ValueError:
+                    retry_after = 60
+                raise RateLimitError(retry_after=retry_after)
+
             # Retry on server errors (5xx)
             if response.status >= 500:
                 raise aiohttp.ClientError(f"Server error: HTTP {response.status}")
 
-            # Don't retry on client errors (4xx) - these are not transient
+            # Don't retry on other client errors (4xx) - these are not transient
             if response.status >= 400:
                 logger.error(f"COSL API client error: HTTP {response.status}")
                 return {'Data': [], 'Total': 0}
@@ -267,6 +294,12 @@ class ArkansasCOSLScraper:
             except json.JSONDecodeError as e:
                 # Don't retry JSON errors - likely a data issue, not transient
                 logger.error(f"JSON decode error from COSL: {e}")
+                # Save debug snapshot for diagnosis
+                try:
+                    text = await response.text()
+                    save_debug_snapshot(text, 'AR', 'unknown', f"json_decode_error: {e}", extension='json', logger=logger)
+                except Exception:
+                    pass
                 return {'Data': [], 'Total': 0}
 
     def _parse_property(self, raw_data: Dict[str, Any]) -> COSLProperty:
@@ -399,6 +432,13 @@ class ArkansasCOSLScraper:
                     all_properties.append(prop)
                 except Exception as e:
                     logger.warning(f"Failed to parse property: {e}")
+                    # Save debug snapshot of failed property data
+                    county = raw_prop.get('CoSLCountyName', 'unknown')
+                    save_debug_snapshot(
+                        json.dumps(raw_prop, indent=2, default=str),
+                        'AR', county, f"parse_error: {e}",
+                        extension='json', logger=logger
+                    )
 
             total_fetched += len(properties)
             logger.info(f"Page {page}: fetched {len(properties)} properties ({total_fetched}/{total} total)")
@@ -420,6 +460,13 @@ class ArkansasCOSLScraper:
                     all_properties.append(prop)
                 except Exception as e:
                     logger.warning(f"Failed to parse ongoing property: {e}")
+                    # Save debug snapshot of failed property data
+                    county = raw_prop.get('CoSLCountyName', 'unknown')
+                    save_debug_snapshot(
+                        json.dumps(raw_prop, indent=2, default=str),
+                        'AR', county, f"ongoing_parse_error: {e}",
+                        extension='json', logger=logger
+                    )
 
         logger.info(f"Total properties scraped: {len(all_properties)}")
         return all_properties
