@@ -408,6 +408,52 @@ class TestAcreageParsing:
         assert source is None
         assert confidence is None
 
+    @pytest.mark.unit
+    def test_parse_acreage_el_paso_format_with_parens(self):
+        """El Paso format '(0371 AC)' should parse as 0.0371 acres."""
+        scraper = TexasRealAuctionScraper()
+        # El Paso uses (0XXX AC) to mean 0.0XXX acres
+        acreage, source, confidence = scraper._parse_acreage('LOT 1 BLOCK 2 (0371 AC)')
+        assert acreage == pytest.approx(0.0371, rel=0.01)
+        assert source == 'parsed_el_paso_format'
+        assert confidence == 'high'
+
+    @pytest.mark.unit
+    def test_parse_acreage_el_paso_format_larger(self):
+        """El Paso format '(0500 AC)' should parse as 0.0500 acres."""
+        scraper = TexasRealAuctionScraper()
+        acreage, source, confidence = scraper._parse_acreage('PROPERTY (0500 AC) RESIDENTIAL')
+        assert acreage == pytest.approx(0.05, rel=0.01)
+        assert source == 'parsed_el_paso_format'
+        assert confidence == 'high'
+
+    @pytest.mark.unit
+    def test_parse_acreage_el_paso_format_small(self):
+        """El Paso format '(0125 AC)' should parse as 0.0125 acres."""
+        scraper = TexasRealAuctionScraper()
+        acreage, source, confidence = scraper._parse_acreage('(0125 AC)')
+        assert acreage == pytest.approx(0.0125, rel=0.01)
+        assert source == 'parsed_el_paso_format'
+        assert confidence == 'high'
+
+    @pytest.mark.unit
+    def test_parse_acreage_standard_format_not_confused(self):
+        """Standard '2.5 acres' should not be misinterpreted as El Paso format."""
+        scraper = TexasRealAuctionScraper()
+        acreage, source, confidence = scraper._parse_acreage('LOT SIZE 2.5 acres')
+        assert acreage == 2.5
+        assert source == 'parsed_explicit'
+        assert confidence == 'high'
+
+    @pytest.mark.unit
+    def test_parse_acreage_large_standard_acreage(self):
+        """Large acreage like '150 acres' should parse correctly."""
+        scraper = TexasRealAuctionScraper()
+        acreage, source, confidence = scraper._parse_acreage('RANCH 150 acres')
+        assert acreage == 150.0
+        assert source == 'parsed_explicit'
+        assert confidence == 'high'
+
 
 # =============================================================================
 # TestAsyncContextManager

@@ -271,11 +271,34 @@ class TexasRealAuctionScraper:
 
         text_lower = text.lower()
 
-        # Pattern: "X.XX acres" or "X.XX ac"
+        # El Paso County special format: "(0371 AC)" means 0.0371 acres
+        # The format uses leading zeros to indicate decimal placement (no decimal point)
+        # Pattern: parentheses with 4-digit number starting with 0, followed by AC
+        el_paso_match = re.search(r'\(0(\d{3})\s*ac\)', text_lower)
+        if el_paso_match:
+            try:
+                # "0371" -> 0.0371 (divide by 10000)
+                digits = el_paso_match.group(1)
+                acreage = float(f"0.0{digits}")
+                return acreage, 'parsed_el_paso_format', 'high'
+            except ValueError:
+                pass
+
+        # Standard pattern: "X.XX acres" or "X.XX ac"
         acre_match = re.search(r'(\d+\.?\d*)\s*(?:acres?|ac\.?)\b', text_lower)
         if acre_match:
             try:
                 acreage = float(acre_match.group(1))
+                # Sanity check: El Paso format without parens might still slip through
+                # If we see a 3-4 digit integer that seems too large, it might be El Paso format
+                if acreage >= 100 and '.' not in acre_match.group(1):
+                    # Check if this looks like El Paso's no-decimal format
+                    # e.g., "371 AC" when they mean 0.0371
+                    raw_digits = acre_match.group(1)
+                    if len(raw_digits) <= 4 and raw_digits.startswith('0'):
+                        # Likely El Paso format without parens
+                        acreage = float(raw_digits) / 10000
+                        return acreage, 'parsed_el_paso_format', 'medium'
                 return acreage, 'parsed_explicit', 'high'
             except ValueError:
                 pass

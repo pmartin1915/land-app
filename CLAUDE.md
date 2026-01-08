@@ -23,9 +23,9 @@ Subprocess scrapers communicate via exit codes (see `core/scrapers/EXIT_CODES.md
 - 2026-01-07: Fixed PropertiesTable toggleWatch race condition - Changed `togglingWatch` from `string | null` to `Set<string>` to allow concurrent toggles on different properties
 - 2026-01-07: Fixed Watchlist optimistic update rollback - Added proper rollback on failure for `updateRating` and `saveNotes`
 - 2026-01-07: Added accessibility labels - Star rating buttons, state filter select now have proper aria-labels
+- 2026-01-07: Fixed El Paso County acreage parsing - "(0371 AC)" format now correctly parsed as 0.0371 acres instead of 371.0
 
 ### Known Data Quality Issues
-- El Paso County acreage format: Uses "(0371 AC)" to mean 0.0371 acres (no decimal). Parser reads as 371.0 acres. Low priority - affects only El Paso County.
 - Harris County listings: Empty during non-auction periods (next sale date shown on page). Not a bug.
 
 ### Testing
