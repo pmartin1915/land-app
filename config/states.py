@@ -159,6 +159,38 @@ def get_state_time_to_ownership(state_code: str) -> int:
     return config.time_to_ownership_days if config else 0
 
 
+# =============================================================================
+# County Lists for Scraping
+# =============================================================================
+
+# Alabama counties (all 67)
+ALABAMA_COUNTIES = [
+    'Autauga', 'Baldwin', 'Barbour', 'Bibb', 'Blount', 'Bullock', 'Butler', 'Calhoun',
+    'Chambers', 'Cherokee', 'Chilton', 'Choctaw', 'Clarke', 'Clay', 'Cleburne', 'Coffee',
+    'Colbert', 'Conecuh', 'Coosa', 'Covington', 'Crenshaw', 'Cullman', 'Dale', 'Dallas',
+    'DeKalb', 'Elmore', 'Escambia', 'Etowah', 'Fayette', 'Franklin', 'Geneva', 'Greene',
+    'Hale', 'Henry', 'Houston', 'Jackson', 'Jefferson', 'Lamar', 'Lauderdale', 'Lawrence',
+    'Lee', 'Limestone', 'Lowndes', 'Macon', 'Madison', 'Marengo', 'Marion', 'Marshall',
+    'Mobile', 'Monroe', 'Montgomery', 'Morgan', 'Perry', 'Pickens', 'Pike', 'Randolph',
+    'Russell', 'Shelby', 'St_Clair', 'Sumter', 'Talladega', 'Tallapoosa', 'Tuscaloosa',
+    'Walker', 'Washington', 'Wilcox', 'Winston'
+]
+
+# Alabama counties that have NOT been scraped yet (based on DB analysis as of 2026-01-08)
+# Update this list after each scraping run
+ALABAMA_MISSING_COUNTIES = [
+    'Bibb', 'Bullock', 'Chambers', 'Chilton', 'Choctaw', 'Clay', 'Cleburne', 'Coffee',
+    'Colbert', 'Crenshaw', 'Dale', 'Dallas', 'Etowah', 'Geneva', 'Greene', 'Henry',
+    'Houston', 'Jackson', 'Lauderdale', 'Lee', 'Marion', 'Marshall', 'Monroe',
+    'Montgomery', 'Pickens', 'Washington', 'Wilcox', 'Winston'
+]
+
+# Texas supported counties (8 counties with RealAuction sites)
+TEXAS_COUNTIES = [
+    'Harris', 'Dallas', 'Tarrant', 'Travis', 'Collin', 'Denton', 'El Paso', 'Fort Bend'
+]
+
+
 # Assessment ratios by state (for market value estimation)
 # Used when no external API is available
 ASSESSMENT_RATIOS: Dict[str, float] = {
