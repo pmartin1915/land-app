@@ -43,6 +43,60 @@ interface WatchlistStatus {
   [propertyId: string]: boolean
 }
 
+// Memoized ActionsCell component to prevent column recreation on watchlist state changes
+interface ActionsCellProps {
+  property: Property
+  isWatched: boolean
+  isToggling: boolean
+  onView: ((property: Property) => void) | undefined
+  onToggleWatch: (propertyId: string, e: React.MouseEvent) => void
+}
+
+const ActionsCell = React.memo(function ActionsCell({
+  property,
+  isWatched,
+  isToggling,
+  onView,
+  onToggleWatch
+}: ActionsCellProps) {
+  return (
+    <div className="flex items-center space-x-2">
+      <button
+        onClick={() => onView?.(property)}
+        className="p-1 hover:bg-surface rounded transition-colors"
+        title="View Details"
+        aria-label="View property details"
+      >
+        <Eye className="w-4 h-4" />
+      </button>
+      <button
+        onClick={(e) => onToggleWatch(property.id, e)}
+        disabled={isToggling}
+        className={`p-1 rounded transition-colors ${
+          isWatched
+            ? 'text-warning hover:text-warning/80'
+            : 'text-text-muted hover:text-warning'
+        } ${isToggling ? 'opacity-50' : ''}`}
+        title={isWatched ? 'Remove from Watchlist' : 'Add to Watchlist'}
+        aria-label={isWatched ? 'Remove from watchlist' : 'Add to watchlist'}
+      >
+        {isToggling ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Star className={`w-4 h-4 ${isWatched ? 'fill-warning' : ''}`} />
+        )}
+      </button>
+      <button
+        className="p-1 hover:bg-surface rounded transition-colors"
+        title="View on Map"
+        aria-label="View property on map"
+      >
+        <MapPin className="w-4 h-4" />
+      </button>
+    </div>
+  )
+})
+
 export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: PropertiesTableProps) {
   // URL state for shareable links
   const {
@@ -321,56 +375,23 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
       cell: ({ getValue }) => getValue() as string || 'N/A',
     },
 
-    // Actions - note: this column uses external state, but we handle it via cell render
+    // Actions - uses memoized ActionsCell component defined outside to avoid recreation
     {
       id: 'actions',
       header: 'Actions',
-      cell: function ActionsCell({ row }) {
-        const propertyId = row.original.id
-        const isWatched = watchlistStatus[propertyId] || false
-        const isToggling = togglingWatch.has(propertyId)
-
-        return (
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => onRowSelect?.(row.original)}
-              className="p-1 hover:bg-surface rounded transition-colors"
-              title="View Details"
-              aria-label="View property details"
-            >
-              <Eye className="w-4 h-4" />
-            </button>
-            <button
-              onClick={(e) => toggleWatch(propertyId, e)}
-              disabled={isToggling}
-              className={`p-1 rounded transition-colors ${
-                isWatched
-                  ? 'text-warning hover:text-warning/80'
-                  : 'text-text-muted hover:text-warning'
-              } ${isToggling ? 'opacity-50' : ''}`}
-              title={isWatched ? 'Remove from Watchlist' : 'Add to Watchlist'}
-              aria-label={isWatched ? 'Remove from watchlist' : 'Add to watchlist'}
-            >
-              {isToggling ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Star className={`w-4 h-4 ${isWatched ? 'fill-warning' : ''}`} />
-              )}
-            </button>
-            <button
-              className="p-1 hover:bg-surface rounded transition-colors"
-              title="View on Map"
-              aria-label="View property on map"
-            >
-              <MapPin className="w-4 h-4" />
-            </button>
-          </div>
-        )
-      },
+      cell: ({ row }) => (
+        <ActionsCell
+          property={row.original}
+          isWatched={watchlistStatus[row.original.id] || false}
+          isToggling={togglingWatch.has(row.original.id)}
+          onView={onRowSelect}
+          onToggleWatch={toggleWatch}
+        />
+      ),
       enableSorting: false,
       enableHiding: false,
     },
-  ], [onRowSelect, watchlistStatus, togglingWatch, toggleWatch])
+  ], [onRowSelect, toggleWatch]) // Removed watchlistStatus and togglingWatch - handled by cell render
 
   // Create table instance
   const table = useReactTable({
