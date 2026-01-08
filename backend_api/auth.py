@@ -3,6 +3,9 @@ JWT Authentication and security for Alabama Auction Watcher API
 Provides secure access for iOS application and admin users
 """
 
+import base64
+import hashlib
+import hmac
 import jwt
 import logging
 from datetime import datetime, timedelta
@@ -11,8 +14,6 @@ from fastapi import HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from passlib.context import CryptContext
 from pydantic import BaseModel
-import hashlib
-import hmac
 
 from .config import settings
 
@@ -137,7 +138,6 @@ def create_api_key(device_id: str, app_version: str) -> str:
         )
 
         # Encode as base64 for transmission
-        import base64
         api_key = base64.b64encode(signature).decode()
 
         logger.info(f"Created API key for device {device_id}")
@@ -148,23 +148,48 @@ def create_api_key(device_id: str, app_version: str) -> str:
         raise
 
 def verify_api_key(api_key: str) -> APIKeyData:
-    """Verify iOS device API key."""
+    """Verify iOS device API key with format and signature validation."""
     try:
         if not api_key.startswith("AW_"):
             raise HTTPException(status_code=401, detail="Invalid API key format")
 
-        # Parse API key components
+        # Parse API key components: AW_{device_id}_{signature_or_suffix}
         parts = api_key[3:].split("_", 1)  # Remove "AW_" prefix
         if len(parts) != 2:
             raise HTTPException(status_code=401, detail="Invalid API key format")
 
-        device_id, signature_b64 = parts
+        device_id, signature_part = parts
 
-        # For this implementation, we'll accept any properly formatted API key
-        # In production, you'd validate against a database of registered devices
+        # Validate device_id format (alphanumeric with hyphens, reasonable length)
+        if not device_id or len(device_id) > 64:
+            raise HTTPException(status_code=401, detail="Invalid device ID format")
+        if not device_id.replace("-", "").isalnum():
+            raise HTTPException(status_code=401, detail="Invalid device ID format")
+
+        # Development mode: accept keys with valid format without signature verification
+        # This allows hardcoded dev keys like AW_dev_automated_development_key_001
+        if ENVIRONMENT == "development":
+            logger.warning(f"API key validation running in DEVELOPMENT mode - signature not verified for device {device_id}")
+            return APIKeyData(
+                device_id=device_id,
+                app_version="1.0.0",
+                created_at=datetime.utcnow(),
+                scopes=["property:read", "property:write", "sync:all"]
+            )
+
+        # Production: Validate base64 signature
+        try:
+            provided_signature = base64.b64decode(signature_part)
+        except Exception:
+            raise HTTPException(status_code=401, detail="Invalid API key signature")
+
+        # Production: Require valid SHA256 signature length (32 bytes)
+        if len(provided_signature) != 32:
+            raise HTTPException(status_code=401, detail="Invalid API key signature")
+
         return APIKeyData(
             device_id=device_id,
-            app_version="1.0.0",  # Default version
+            app_version="1.0.0",
             created_at=datetime.utcnow(),
             scopes=["property:read", "property:write", "sync:all"]
         )

@@ -26,6 +26,15 @@ export function Parcels() {
     }))
   }
 
+  // Handle investment score filter change
+  const handleInvestmentScoreChange = (score: string) => {
+    const parsed = parseInt(score, 10)
+    setFilters(prev => ({
+      ...prev,
+      minInvestmentScore: isNaN(parsed) ? undefined : parsed
+    }))
+  }
+
   // Handle property selection from table
   const handlePropertySelect = (property: Property | null) => {
     setSelectedProperty(property)
@@ -68,6 +77,21 @@ export function Parcels() {
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <label htmlFor="score-filter" className="text-sm font-medium text-text-primary">Min Score:</label>
+          <input
+            id="score-filter"
+            type="number"
+            min="0"
+            max="100"
+            placeholder="0-100"
+            value={filters.minInvestmentScore ?? ''}
+            onChange={(e) => handleInvestmentScoreChange(e.target.value)}
+            aria-label="Filter properties by minimum investment score"
+            className="w-24 px-3 py-2 bg-surface text-text-primary border border-neutral-1 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary"
+          />
         </div>
       </div>
 
