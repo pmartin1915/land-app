@@ -24,6 +24,7 @@ import {
   Loader2
 } from 'lucide-react'
 import { Property, PropertyFilters, SearchParams } from '../types'
+import { api } from '../lib/api'
 import { useProperties } from '../lib/hooks'
 import { useUrlState } from '../lib/useUrlState'
 import { TableSkeleton } from './ui/LoadingSkeleton'
@@ -112,16 +113,8 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
     if (propertyIds.length === 0) return
 
     try {
-      const response = await fetch(`/api/v1/watchlist/bulk-status?property_ids=${propertyIds.join(',')}`, {
-        headers: {
-          'X-API-Key': localStorage.getItem('aw_api_key') || 'AW_dev_automated_development_key_001'
-        }
-      })
-
-      if (response.ok) {
-        const statusData = await response.json()
-        setWatchlistStatus(prev => ({ ...prev, ...statusData }))
-      }
+      const statusData = await api.watchlist.getBulkStatus(propertyIds)
+      setWatchlistStatus(prev => ({ ...prev, ...statusData }))
     } catch (err) {
       console.error('Failed to fetch watchlist status:', err)
     }
@@ -153,30 +146,14 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
         [propertyId]: !wasWatched
       }))
 
-      const response = await fetch(`/api/v1/watchlist/property/${propertyId}/watch`, {
-        method: 'POST',
-        headers: {
-          'X-API-Key': localStorage.getItem('aw_api_key') || 'AW_dev_automated_development_key_001'
-        }
-      })
-
-      if (response.ok) {
-        const result = await response.json()
-        setWatchlistStatus(prev => ({
-          ...prev,
-          [propertyId]: result.is_watched
-        }))
-        showToast.success(
-          result.is_watched ? 'Added to watchlist' : 'Removed from watchlist'
-        )
-      } else {
-        // Revert on error
-        setWatchlistStatus(prev => ({
-          ...prev,
-          [propertyId]: wasWatched
-        }))
-        showToast.error('Failed to update watchlist')
-      }
+      const result = await api.watchlist.toggleWatch(propertyId)
+      setWatchlistStatus(prev => ({
+        ...prev,
+        [propertyId]: result.is_watched
+      }))
+      showToast.success(
+        result.is_watched ? 'Added to watchlist' : 'Removed from watchlist'
+      )
     } catch (err) {
       // Revert on error
       setWatchlistStatus(prev => ({
@@ -476,18 +453,7 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
     // Parallel execution with Promise.allSettled
     const results = await Promise.allSettled(
       toAdd.map(async (propertyId) => {
-        const response = await fetch(`/api/v1/watchlist/property/${propertyId}/watch`, {
-          method: 'POST',
-          headers: {
-            'X-API-Key': localStorage.getItem('aw_api_key') || 'AW_dev_automated_development_key_001'
-          }
-        })
-
-        if (!response.ok) {
-          throw new Error(`Failed for ${propertyId}`)
-        }
-
-        const result = await response.json()
+        const result = await api.watchlist.toggleWatch(propertyId)
         return { propertyId, is_watched: result.is_watched }
       })
     )

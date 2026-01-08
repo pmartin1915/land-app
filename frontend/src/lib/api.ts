@@ -3,10 +3,11 @@
 
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios'
 
-// Extend Axios config to include metadata for performance tracking
+// Extend Axios config to include metadata for performance tracking and retry count
 declare module 'axios' {
   interface InternalAxiosRequestConfig {
     metadata?: { startTime: number }
+    _retryCount?: number
   }
 }
 
@@ -42,16 +43,8 @@ class AuthManager {
   private static getDeviceId(): string {
     let deviceId = localStorage.getItem(config.auth.deviceIdKey)
     if (!deviceId) {
-      // Create a unique device ID based on browser/app characteristics
-      const userAgent = navigator.userAgent
-      const screen = `${window.screen.width}x${window.screen.height}`
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-      const platform = navigator.platform
-
-      // Create a hash-like ID from these characteristics
-      const combined = `${userAgent}-${screen}-${timezone}-${platform}-${Date.now()}`
-      deviceId = btoa(combined).replace(/[^a-zA-Z0-9]/g, '').substring(0, 20)
-
+      // Use crypto.randomUUID() for privacy-preserving unique ID
+      deviceId = crypto.randomUUID()
       localStorage.setItem(config.auth.deviceIdKey, deviceId)
     }
     return deviceId
@@ -78,7 +71,7 @@ class AuthManager {
       const response = await axios.post(`${API_BASE_URL}/auth/device/token`, {
         device_id: deviceId,
         app_version: '1.0.0',
-        device_name: `Desktop-${navigator.platform}`,
+        device_name: 'Web Client',
       })
 
       const tokenData = response.data
@@ -234,9 +227,10 @@ const createApiClient = (): AxiosInstance => {
     async (error: AxiosError<APIError>) => {
       const originalRequest = error.config as any
 
-      // Handle 401 Unauthorized errors with automatic retry
-      if (error.response?.status === 401 && !originalRequest._retry) {
-        originalRequest._retry = true
+      // Handle 401 Unauthorized errors with automatic retry (max 1 retry)
+      const retryCount = originalRequest._retryCount || 0
+      if (error.response?.status === 401 && retryCount < 1) {
+        originalRequest._retryCount = retryCount + 1
 
         try {
           console.warn('Authentication failed, attempting to refresh token...')
@@ -437,8 +431,9 @@ export const propertiesApi = {
 
   // Search properties
   searchProperties: async (query: string, filters?: PropertyFilters): Promise<Property[]> => {
+    const flatFilters = filters ? flattenFilters(filters) : {}
     const response = await apiClient.get('/properties/search', {
-      params: { q: query, ...filters }
+      params: { q: query, ...flatFilters }
     })
     return handleResponse(response)
   },
@@ -650,6 +645,43 @@ export const applicationApi = {
   },
 }
 
+// Watchlist API
+export const watchlistApi = {
+  // Get watchlist with pagination
+  getWatchlist: async (page: number = 1, pageSize: number = 20): Promise<any> => {
+    const response = await apiClient.get('/watchlist', {
+      params: { page, page_size: pageSize }
+    })
+    return handleResponse(response)
+  },
+
+  // Get watchlist statistics
+  getStats: async (): Promise<any> => {
+    const response = await apiClient.get('/watchlist/stats')
+    return handleResponse(response)
+  },
+
+  // Get bulk watch status for multiple properties
+  getBulkStatus: async (propertyIds: string[]): Promise<Record<string, boolean>> => {
+    const response = await apiClient.get('/watchlist/bulk-status', {
+      params: { property_ids: propertyIds.join(',') }
+    })
+    return handleResponse(response)
+  },
+
+  // Toggle watch status for a property
+  toggleWatch: async (propertyId: string): Promise<{ is_watched: boolean }> => {
+    const response = await apiClient.post(`/watchlist/property/${propertyId}/watch`)
+    return handleResponse(response)
+  },
+
+  // Update property interaction (rating, notes)
+  updateInteraction: async (propertyId: string, data: { star_rating?: number; user_notes?: string }): Promise<any> => {
+    const response = await apiClient.put(`/watchlist/property/${propertyId}`, data)
+    return handleResponse(response)
+  },
+}
+
 // Sync API
 export const syncApi = {
   // Get sync status
@@ -728,6 +760,7 @@ export const api = {
   export: exportApi,
   user: userApi,
   applications: applicationApi,
+  watchlist: watchlistApi,
   sync: syncApi,
   system: systemApi,
   auth: authApi,

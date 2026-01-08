@@ -92,15 +92,8 @@ export class WebAuthAdapter implements AuthAdapter {
     let deviceId = localStorage.getItem(this.config.deviceIdKey)
 
     if (!deviceId) {
-      // Generate a unique device ID based on browser characteristics
-      const userAgent = navigator.userAgent
-      const screen = `${window.screen.width}x${window.screen.height}`
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-      const platform = navigator.platform
-
-      const combined = `${userAgent}-${screen}-${timezone}-${platform}-${Date.now()}`
-      deviceId = btoa(combined).replace(/[^a-zA-Z0-9]/g, '').substring(0, 20)
-
+      // Use crypto.randomUUID() for privacy-preserving unique ID
+      deviceId = crypto.randomUUID()
       localStorage.setItem(this.config.deviceIdKey, deviceId)
     }
 

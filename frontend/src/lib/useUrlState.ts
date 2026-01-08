@@ -255,10 +255,17 @@ export function useUrlState(options: UseUrlStateOptions = {}) {
 
   // Ref to track programmatic URL updates (prevents infinite loop)
   const isUpdatingUrl = useRef(false)
+  // Ref to store debounce timer for cancellation on navigation
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Debounced URL update
   useEffect(() => {
-    const timer = setTimeout(() => {
+    // Clear any existing timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
       const newParams = stateToUrlParams(localState)
       const currentParams = searchParams.toString()
       const newParamsString = newParams.toString()
@@ -270,7 +277,11 @@ export function useUrlState(options: UseUrlStateOptions = {}) {
       }
     }, debounceMs)
 
-    return () => clearTimeout(timer)
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
   }, [localState, debounceMs, setSearchParams])
 
   // Sync from URL changes (e.g., browser back/forward)
@@ -279,6 +290,11 @@ export function useUrlState(options: UseUrlStateOptions = {}) {
     if (isUpdatingUrl.current) {
       isUpdatingUrl.current = false
       return
+    }
+    // Cancel any pending debounced updates to prevent overwriting navigation
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+      debounceTimerRef.current = null
     }
     const urlState = parseUrlParams(searchParams)
     setLocalState(urlState)

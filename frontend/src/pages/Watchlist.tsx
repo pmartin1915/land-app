@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Star, Trash2, StickyNote, AlertTriangle, RefreshCw, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
+import { api } from '../lib/api'
 
 // Types
 interface PropertyInteraction {
@@ -60,8 +61,8 @@ export function Watchlist() {
   const [page, setPage] = useState(1)
   const [editingNotes, setEditingNotes] = useState<string | null>(null)
   const [noteText, setNoteText] = useState('')
-  const [updatingRating, setUpdatingRating] = useState<string | null>(null)
-  const [savingNotes, setSavingNotes] = useState<string | null>(null)
+  const [updatingRatings, setUpdatingRatings] = useState<Set<string>>(new Set())
+  const [savingNotesSet, setSavingNotesSet] = useState<Set<string>>(new Set())
 
   const pageSize = 20
 
@@ -73,15 +74,7 @@ export function Watchlist() {
   const fetchWatchlist = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`/api/v1/watchlist?page=${page}&page_size=${pageSize}`, {
-        headers: {
-          'X-API-Key': localStorage.getItem('aw_api_key') || 'AW_dev_automated_development_key_001'
-        }
-      })
-
-      if (!response.ok) throw new Error('Failed to load watchlist')
-
-      const data: WatchlistResponse = await response.json()
+      const data: WatchlistResponse = await api.watchlist.getWatchlist(page, pageSize)
       setWatchlist(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load watchlist')
@@ -92,15 +85,7 @@ export function Watchlist() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/v1/watchlist/stats', {
-        headers: {
-          'X-API-Key': localStorage.getItem('aw_api_key') || 'AW_dev_automated_development_key_001'
-        }
-      })
-
-      if (!response.ok) throw new Error('Failed to load stats')
-
-      const data: WatchlistStats = await response.json()
+      const data: WatchlistStats = await api.watchlist.getStats()
       setStats(data)
     } catch (err) {
       console.error('Failed to load stats:', err)
@@ -109,15 +94,7 @@ export function Watchlist() {
 
   const removeFromWatchlist = async (propertyId: string) => {
     try {
-      const response = await fetch(`/api/v1/watchlist/property/${propertyId}/watch`, {
-        method: 'POST',
-        headers: {
-          'X-API-Key': localStorage.getItem('aw_api_key') || 'AW_dev_automated_development_key_001'
-        }
-      })
-
-      if (!response.ok) throw new Error('Failed to update watchlist')
-
+      await api.watchlist.toggleWatch(propertyId)
       // Refresh list
       fetchWatchlist()
       fetchStats()
@@ -127,13 +104,15 @@ export function Watchlist() {
   }
 
   const updateRating = async (propertyId: string, rating: number) => {
-    if (updatingRating) return // Prevent concurrent rating updates
+    // Check if THIS property is already updating (allows concurrent updates on different properties)
+    if (updatingRatings.has(propertyId)) return
 
     // Capture previous state for rollback
     const previousWatchlist = watchlist
 
     try {
-      setUpdatingRating(propertyId)
+      // Add to in-flight set
+      setUpdatingRatings(prev => new Set(prev).add(propertyId))
 
       // Optimistic update
       setWatchlist(prev => {
@@ -148,34 +127,32 @@ export function Watchlist() {
         }
       })
 
-      const response = await fetch(`/api/v1/watchlist/property/${propertyId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': localStorage.getItem('aw_api_key') || 'AW_dev_automated_development_key_001'
-        },
-        body: JSON.stringify({ star_rating: rating })
-      })
-
-      if (!response.ok) throw new Error('Failed to update rating')
+      await api.watchlist.updateInteraction(propertyId, { star_rating: rating })
     } catch (err) {
       // Rollback on error
       setWatchlist(previousWatchlist)
       setError(err instanceof Error ? err.message : 'Failed to update rating')
     } finally {
-      setUpdatingRating(null)
+      // Remove from in-flight set
+      setUpdatingRatings(prev => {
+        const next = new Set(prev)
+        next.delete(propertyId)
+        return next
+      })
     }
   }
 
   const saveNotes = async (propertyId: string) => {
-    if (savingNotes) return // Prevent concurrent saves
+    // Check if THIS property is already saving (allows concurrent saves on different properties)
+    if (savingNotesSet.has(propertyId)) return
 
     // Capture previous state for rollback
     const previousWatchlist = watchlist
     const savedNoteText = noteText
 
     try {
-      setSavingNotes(propertyId)
+      // Add to in-flight set
+      setSavingNotesSet(prev => new Set(prev).add(propertyId))
 
       // Optimistic update
       setWatchlist(prev => {
@@ -190,16 +167,7 @@ export function Watchlist() {
         }
       })
 
-      const response = await fetch(`/api/v1/watchlist/property/${propertyId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': localStorage.getItem('aw_api_key') || 'AW_dev_automated_development_key_001'
-        },
-        body: JSON.stringify({ user_notes: savedNoteText })
-      })
-
-      if (!response.ok) throw new Error('Failed to save notes')
+      await api.watchlist.updateInteraction(propertyId, { user_notes: savedNoteText })
 
       setEditingNotes(null)
       setNoteText('')
@@ -208,7 +176,12 @@ export function Watchlist() {
       setWatchlist(previousWatchlist)
       setError(err instanceof Error ? err.message : 'Failed to save notes')
     } finally {
-      setSavingNotes(null)
+      // Remove from in-flight set
+      setSavingNotesSet(prev => {
+        const next = new Set(prev)
+        next.delete(propertyId)
+        return next
+      })
     }
   }
 
@@ -314,9 +287,9 @@ export function Watchlist() {
                         <button
                           key={rating}
                           onClick={() => updateRating(property.id, rating)}
-                          disabled={updatingRating === property.id}
+                          disabled={updatingRatings.has(property.id)}
                           aria-label={`Rate ${rating} star${rating > 1 ? 's' : ''}${interaction.star_rating === rating ? ' (current rating)' : ''}`}
-                          className={`p-0.5 ${updatingRating === property.id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          className={`p-0.5 ${updatingRatings.has(property.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                           <Star
                             className={`w-5 h-5 ${
@@ -389,17 +362,17 @@ export function Watchlist() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => saveNotes(property.id)}
-                          disabled={savingNotes === property.id}
+                          disabled={savingNotesSet.has(property.id)}
                           className="px-3 py-1 bg-primary text-white text-sm rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {savingNotes === property.id ? 'Saving...' : 'Save'}
+                          {savingNotesSet.has(property.id) ? 'Saving...' : 'Save'}
                         </button>
                         <button
                           onClick={() => {
                             setEditingNotes(null)
                             setNoteText('')
                           }}
-                          disabled={savingNotes === property.id}
+                          disabled={savingNotesSet.has(property.id)}
                           className="px-3 py-1 border border-neutral-1 text-text-primary text-sm rounded hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Cancel

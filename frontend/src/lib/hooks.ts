@@ -102,9 +102,12 @@ export function useProperties(params?: SearchParams) {
     [params]
   )
 
+  // Memoize stringified params to prevent unnecessary refetches
+  const stringifiedParams = useMemo(() => JSON.stringify(params), [params])
+
   return useAsyncData<PaginatedResponse<Property>>(
     () => api.properties.getProperties(params),
-    [JSON.stringify(params)],
+    [stringifiedParams],
     {
       cacheKey,
       cacheTTL: 5 * 60 * 1000, // 5 minutes
@@ -135,9 +138,12 @@ export function usePropertyStats(filters?: PropertyFilters) {
     [filters]
   )
 
+  // Memoize stringified filters to prevent unnecessary refetches
+  const stringifiedFilters = useMemo(() => JSON.stringify(filters), [filters])
+
   return useAsyncData(
     () => api.properties.getPropertyStats(filters),
-    [JSON.stringify(filters)],
+    [stringifiedFilters],
     {
       cacheKey,
       cacheTTL: 2 * 60 * 1000, // 2 minutes
