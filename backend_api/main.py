@@ -22,7 +22,7 @@ from .config import settings, limiter
 
 # Import routers
 from .routers import properties, counties, sync, auth, predictions, testing, applications, ai
-from .routers import settings as settings_router, watchlist, exports, scrape
+from .routers import settings as settings_router, watchlist, exports, scrape, portfolio
 from .database.connection import database, connect_db, disconnect_db
 from .auth import add_security_headers, require_sync_access
 
@@ -287,6 +287,13 @@ app.include_router(
     scrape.router,
     prefix=f"{API_V1_PREFIX}/scrape",
     tags=["Scrape Jobs"],
+    dependencies=[]  # Auth applied per endpoint for granular control
+)
+
+app.include_router(
+    portfolio.router,
+    prefix=f"{API_V1_PREFIX}/portfolio",
+    tags=["Portfolio Analytics"],
     dependencies=[]  # Auth applied per endpoint for granular control
 )
 
