@@ -78,12 +78,12 @@ STATE_CONFIGS: Dict[str, StateConfig] = {
         redemption_period_days=0,  # After tax deed auction
         interest_rate=0.18,  # On lien phase
         quiet_title_cost_estimate=1500.0,
-        time_to_ownership_days=730,  # ~2 years through lien phase
-        auction_platform='County + tax-sale.info',
+        time_to_ownership_days=0,  # Immediate at deed auction (lien phase already passed)
+        auction_platform='RealTaxDeed',
         scraper_module='core.scrapers.florida_counties',
-        is_active=False,  # Not yet implemented
+        is_active=True,  # Enabled - supports Orange, Miami-Dade, Hillsborough, Duval
         recommended_for_beginners=False,
-        notes='Complex hybrid system (lien then deed). Requires understanding both phases.'
+        notes='Complex hybrid system (lien then deed). We scrape tax deed auctions where ownership is immediate.'
     )
 }
 
@@ -188,6 +188,11 @@ ALABAMA_MISSING_COUNTIES = [
 # Texas supported counties (8 counties with RealAuction sites)
 TEXAS_COUNTIES = [
     'Harris', 'Dallas', 'Tarrant', 'Travis', 'Collin', 'Denton', 'El Paso', 'Fort Bend'
+]
+
+# Florida supported counties (4 high-volume metro counties with RealTaxDeed sites)
+FLORIDA_COUNTIES = [
+    'Orange', 'Miami-Dade', 'Hillsborough', 'Duval'
 ]
 
 

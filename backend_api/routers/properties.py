@@ -52,6 +52,9 @@ async def list_properties(
     min_market_timing_score: Optional[float] = Query(None, description="Minimum market timing score", ge=0),
     min_total_description_score: Optional[float] = Query(None, description="Minimum total description score", ge=0),
     min_road_access_score: Optional[float] = Query(None, description="Minimum road access score", ge=0),
+    # Multi-state scoring filters
+    max_effective_cost: Optional[float] = Query(None, description="Maximum effective cost (bid + quiet title)", ge=0),
+    min_buy_hold_score: Optional[float] = Query(None, description="Minimum buy & hold score", ge=0, le=100),
     page: int = Query(1, description="Page number (1-based)", ge=1),
     page_size: int = Query(100, description="Number of items per page", ge=1, le=1000),
     sort_by: str = Query("investment_score", description="Sort field"),
@@ -83,6 +86,9 @@ async def list_properties(
             min_market_timing_score=min_market_timing_score,
             min_total_description_score=min_total_description_score,
             min_road_access_score=min_road_access_score,
+            # Multi-state scoring filters
+            max_effective_cost=max_effective_cost,
+            min_buy_hold_score=min_buy_hold_score,
             page=page,
             page_size=page_size,
             sort_by=sort_by,

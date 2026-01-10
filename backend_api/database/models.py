@@ -540,6 +540,17 @@ class PropertyInteraction(Base):
                         comment="User notes about this property")
     dismissed = Column(Boolean, default=False,
                        comment="User dismissed/hidden this property")
+
+    # First Deal Tracking (My First Deal feature)
+    is_first_deal = Column(Boolean, default=False,
+                           comment="Whether this is the user's first deal property")
+    first_deal_stage = Column(String(20), nullable=True,
+                              comment="Pipeline stage: research, bid, won, quiet_title, sold, holding")
+    first_deal_assigned_at = Column(DateTime, nullable=True,
+                                    comment="When property was assigned as first deal")
+    first_deal_updated_at = Column(DateTime, nullable=True,
+                                   comment="Last pipeline stage update timestamp")
+
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
@@ -555,6 +566,11 @@ class PropertyInteraction(Base):
             "star_rating": self.star_rating,
             "user_notes": self.user_notes,
             "dismissed": self.dismissed,
+            # First Deal Tracking
+            "is_first_deal": self.is_first_deal,
+            "first_deal_stage": self.first_deal_stage,
+            "first_deal_assigned_at": self.first_deal_assigned_at.isoformat() if self.first_deal_assigned_at else None,
+            "first_deal_updated_at": self.first_deal_updated_at.isoformat() if self.first_deal_updated_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }

@@ -4,6 +4,7 @@ import { PropertyFilters } from '../types'
 import { KPICardsSkeleton, ListSkeleton } from '../components/ui/LoadingSkeleton'
 import { ErrorState } from '../components/ui/ErrorState'
 import { EmptyState } from '../components/ui/EmptyState'
+import { TopPicksCard } from '../components/TopPicksCard'
 
 // Lazy load DashboardCharts to improve initial page load
 const DashboardCharts = React.lazy(() =>
@@ -174,6 +175,11 @@ export function Dashboard() {
           subtitle="Portfolio quality"
           isLoading={statsLoading}
         />
+      </div>
+
+      {/* Top Picks for Beginners */}
+      <div className="mb-8">
+        <TopPicksCard maxBudget={8000} maxItems={5} />
       </div>
 
       {/* Secondary Stats Row */}

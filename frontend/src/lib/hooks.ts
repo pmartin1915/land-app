@@ -486,6 +486,40 @@ export function useApiHealth() {
   }
 }
 
+// Top Picks hook for beginner-friendly properties
+export function useTopPicks(params: {
+  state?: string
+  maxEffectiveCost?: number
+  limit?: number
+} = {}) {
+  const { state = 'AR', maxEffectiveCost = 8000, limit = 5 } = params
+
+  const cacheKey = useMemo(() =>
+    createCacheKey('top-picks', { state, maxEffectiveCost, limit }),
+    [state, maxEffectiveCost, limit]
+  )
+
+  const searchParams: SearchParams = useMemo(() => ({
+    filters: {
+      state,
+      maxEffectiveCost,
+    },
+    sort_by: 'buy_hold_score',
+    sort_order: 'desc',
+    per_page: limit,
+    page: 1,
+  }), [state, maxEffectiveCost, limit])
+
+  return useAsyncData<PaginatedResponse<Property>>(
+    () => api.properties.getProperties(searchParams),
+    [JSON.stringify(searchParams)],
+    {
+      cacheKey,
+      cacheTTL: 5 * 60 * 1000, // 5 minutes
+    }
+  )
+}
+
 // Local storage hook for user preferences
 export function useLocalStorage<T>(key: string, initialValue: T) {
   const [value, setValue] = useState<T>(() => {

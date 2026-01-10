@@ -7,6 +7,7 @@ import base64
 import hashlib
 import hmac
 import jwt
+from jwt.exceptions import PyJWTError
 import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
@@ -111,7 +112,7 @@ def verify_token(token: str) -> Dict[str, Any]:
 
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired")
-    except jwt.JWTError:
+    except PyJWTError:
         raise HTTPException(status_code=401, detail="Could not validate token")
 
 def create_api_key(device_id: str, app_version: str) -> str:

@@ -446,6 +446,12 @@ class PropertyService:
             if filters.min_road_access_score is not None:
                 query = query.filter(Property.road_access_score >= filters.min_road_access_score)
 
+            # Multi-state scoring filters
+            if filters.max_effective_cost is not None:
+                query = query.filter(Property.effective_cost <= filters.max_effective_cost)
+            if filters.min_buy_hold_score is not None:
+                query = query.filter(Property.buy_hold_score >= filters.min_buy_hold_score)
+
             # Get total count before pagination
             total_count = query.count()
 

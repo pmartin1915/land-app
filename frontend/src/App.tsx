@@ -11,6 +11,7 @@ import { ScrapeJobs } from './pages/ScrapeJobs'
 import { Watchlist } from './pages/Watchlist'
 import { Reports } from './pages/Reports'
 import { Settings } from './pages/Settings'
+import { MyFirstDeal } from './pages/MyFirstDeal'
 import { Toaster } from './components/ui/Toast'
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
                 <Route path="/triage" element={<Triage />} />
                 <Route path="/scrape-jobs" element={<ScrapeJobs />} />
                 <Route path="/watchlist" element={<Watchlist />} />
+                <Route path="/my-first-deal" element={<MyFirstDeal />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/settings" element={<Settings />} />
               </Routes>

@@ -22,6 +22,13 @@ export interface Property {
   investment_score?: number
   estimated_all_in_cost?: number
 
+  // Multi-state scoring fields
+  buy_hold_score?: number  // Time-adjusted investment score for buy & hold strategy
+  effective_cost?: number  // Total cost including quiet title and buffer
+  wholesale_score?: number // Score for wholesale flip strategy
+  is_market_reject?: boolean  // Pre-2015 delinquency marker (market rejected)
+  is_delta_region?: boolean   // Arkansas Delta region indicator (economically distressed)
+
   // Enhanced Description Intelligence Fields (Phase 1 Enhancement)
   lot_dimensions_score: number
   shape_efficiency_score: number

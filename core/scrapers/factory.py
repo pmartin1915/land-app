@@ -252,6 +252,8 @@ class ScraperFactory:
                 return await ScraperFactory._scrape_alabama(county)
             elif state == 'TX':
                 return await ScraperFactory._scrape_texas(county)
+            elif state == 'FL':
+                return await ScraperFactory._scrape_florida(county)
             else:
                 return ScrapeResult(
                     properties=[],
@@ -339,4 +341,34 @@ class ScraperFactory:
             args=[county],
             timeout=300,  # 5 minutes per attempt
             state_name='Texas'
+        )
+
+    @staticmethod
+    async def _scrape_florida(county: Optional[str]) -> ScrapeResult:
+        """
+        Run Florida RealTaxDeed scraper via subprocess with retry logic.
+
+        Note: Florida uses county-specific RealTaxDeed sites ([county].realtaxdeed.com).
+        Uses subprocess to avoid Playwright/asyncio conflicts in FastAPI on Windows.
+
+        Supported counties: Orange, Miami-Dade, Hillsborough, Duval
+        """
+        if not county:
+            return ScrapeResult(
+                properties=[],
+                items_found=0,
+                error_message=(
+                    "County is required for Florida scraping. "
+                    "Supported counties: Orange, Miami-Dade, Hillsborough, Duval"
+                )
+            )
+
+        logger.info(f"Starting Florida RealTaxDeed scrape for county: {county} (via subprocess with retry)")
+
+        script_path = Path(__file__).parent / 'florida_counties.py'
+        return await _run_subprocess_with_retry(
+            script_path=script_path,
+            args=[county],
+            timeout=300,  # 5 minutes per attempt
+            state_name='Florida'
         )

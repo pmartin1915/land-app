@@ -29,9 +29,135 @@ import {
 } from '../types'
 import { config } from '../config'
 
+// First Deal Pipeline Types
+export type FirstDealStage = 'research' | 'bid' | 'won' | 'quiet_title' | 'sold' | 'holding'
+
+export interface FirstDealResponse {
+  property: Property | null
+  interaction: {
+    id: string
+    device_id: string
+    property_id: string
+    is_watched: boolean
+    star_rating?: number
+    user_notes?: string
+    dismissed: boolean
+    is_first_deal: boolean
+    first_deal_stage?: FirstDealStage
+    first_deal_assigned_at?: string
+    first_deal_updated_at?: string
+    created_at?: string
+    updated_at?: string
+  } | null
+  stage: FirstDealStage | null
+  has_first_deal: boolean
+}
+
 // API Configuration from centralized config
 const API_BASE_URL = config.api.fullUrl
 const API_TIMEOUT = config.api.timeout
+
+// Retry configuration for connection resilience
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelay: 1000,      // 1 second initial delay
+  maxDelay: 10000,      // 10 second max delay
+  backoffMultiplier: 2, // Exponential backoff
+  retryableErrors: [
+    'ECONNREFUSED',
+    'ECONNRESET',
+    'ETIMEDOUT',
+    'ENOTFOUND',
+    'ERR_NETWORK',
+    'Network Error',
+  ],
+  retryableStatuses: [502, 503, 504], // Bad Gateway, Service Unavailable, Gateway Timeout
+}
+
+// Connection state management
+class ConnectionManager {
+  private static isOnline: boolean = true
+  private static listeners: Set<(online: boolean) => void> = new Set()
+  private static reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  private static reconnectAttempts: number = 0
+  private static readonly MAX_RECONNECT_ATTEMPTS = 10
+
+  static initialize(): void {
+    // Don't re-initialize
+    if (this.listeners.size > 0) return
+
+    // Monitor browser online/offline events
+    window.addEventListener('online', () => this.setOnline(true))
+    window.addEventListener('offline', () => this.setOnline(false))
+  }
+
+  static setOnline(online: boolean): void {
+    const wasOffline = !this.isOnline
+    this.isOnline = online
+
+    if (online && wasOffline) {
+      console.log('[ConnectionManager] Connection restored')
+      this.reconnectAttempts = 0
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer)
+        this.reconnectTimer = null
+      }
+    } else if (!online) {
+      console.warn('[ConnectionManager] Connection lost')
+    }
+
+    this.notifyListeners()
+  }
+
+  static getStatus(): boolean {
+    return this.isOnline
+  }
+
+  static subscribe(callback: (online: boolean) => void): () => void {
+    this.listeners.add(callback)
+    return () => this.listeners.delete(callback)
+  }
+
+  private static notifyListeners(): void {
+    this.listeners.forEach(cb => cb(this.isOnline))
+  }
+
+  static scheduleReconnect(onReconnect: () => Promise<boolean>): void {
+    if (this.reconnectTimer || this.reconnectAttempts >= this.MAX_RECONNECT_ATTEMPTS) {
+      return
+    }
+
+    const delay = Math.min(
+      RETRY_CONFIG.baseDelay * Math.pow(RETRY_CONFIG.backoffMultiplier, this.reconnectAttempts),
+      RETRY_CONFIG.maxDelay
+    )
+
+    console.log(`[ConnectionManager] Scheduling reconnect attempt ${this.reconnectAttempts + 1} in ${delay}ms`)
+
+    this.reconnectTimer = setTimeout(async () => {
+      this.reconnectTimer = null
+      this.reconnectAttempts++
+
+      try {
+        const success = await onReconnect()
+        if (success) {
+          this.setOnline(true)
+        } else {
+          this.scheduleReconnect(onReconnect)
+        }
+      } catch {
+        this.scheduleReconnect(onReconnect)
+      }
+    }, delay)
+  }
+
+  static resetReconnectAttempts(): void {
+    this.reconnectAttempts = 0
+  }
+}
+
+// Initialize connection manager
+ConnectionManager.initialize()
 
 // Authentication Manager for automatic token handling
 class AuthManager {
@@ -181,6 +307,31 @@ class AuthManager {
   }
 }
 
+// Helper to determine if an error is retryable
+function isRetryableError(error: AxiosError): boolean {
+  // Network errors (no response)
+  if (!error.response) {
+    const message = error.message || ''
+    const code = error.code || ''
+    return RETRY_CONFIG.retryableErrors.some(
+      e => message.includes(e) || code.includes(e)
+    )
+  }
+
+  // Server errors that indicate temporary unavailability
+  return RETRY_CONFIG.retryableStatuses.includes(error.response.status)
+}
+
+// Calculate delay with exponential backoff and jitter
+function getRetryDelay(retryCount: number): number {
+  const baseDelay = RETRY_CONFIG.baseDelay * Math.pow(RETRY_CONFIG.backoffMultiplier, retryCount)
+  const jitter = Math.random() * 0.3 * baseDelay // Add up to 30% jitter
+  return Math.min(baseDelay + jitter, RETRY_CONFIG.maxDelay)
+}
+
+// Sleep helper
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
 // Create axios instance with default configuration
 const createApiClient = (): AxiosInstance => {
   const client = axios.create({
@@ -213,9 +364,13 @@ const createApiClient = (): AxiosInstance => {
     (error) => Promise.reject(error)
   )
 
-  // Response interceptor for error handling, logging, and automatic retry on auth failure
+  // Response interceptor for error handling, logging, and automatic retry
   client.interceptors.response.use(
     (response: AxiosResponse) => {
+      // Mark connection as online on successful response
+      ConnectionManager.setOnline(true)
+      ConnectionManager.resetReconnectAttempts()
+
       // Log performance metrics if in development
       if (process.env.NODE_ENV === 'development') {
         const duration = Date.now() - response.config.metadata?.startTime
@@ -226,9 +381,48 @@ const createApiClient = (): AxiosInstance => {
     },
     async (error: AxiosError<APIError>) => {
       const originalRequest = error.config as any
+      const retryCount = originalRequest._retryCount || 0
+
+      // Handle connection/network errors with retry
+      if (isRetryableError(error) && retryCount < RETRY_CONFIG.maxRetries) {
+        originalRequest._retryCount = retryCount + 1
+        const delay = getRetryDelay(retryCount)
+
+        console.warn(
+          `[API] Connection error (attempt ${retryCount + 1}/${RETRY_CONFIG.maxRetries}), ` +
+          `retrying in ${Math.round(delay)}ms...`,
+          { url: originalRequest.url, error: error.message || error.code }
+        )
+
+        // Mark as potentially offline if this is a network error
+        if (!error.response) {
+          ConnectionManager.setOnline(false)
+        }
+
+        await sleep(delay)
+
+        try {
+          const result = await client(originalRequest)
+          // Success - we're back online
+          ConnectionManager.setOnline(true)
+          return result
+        } catch (retryError) {
+          // If all retries exhausted, schedule background reconnection
+          if (retryCount + 1 >= RETRY_CONFIG.maxRetries) {
+            ConnectionManager.scheduleReconnect(async () => {
+              try {
+                await axios.get(`${API_BASE_URL.replace('/api/v1', '')}/health`, { timeout: 5000 })
+                return true
+              } catch {
+                return false
+              }
+            })
+          }
+          throw retryError
+        }
+      }
 
       // Handle 401 Unauthorized errors with automatic retry (max 1 retry)
-      const retryCount = originalRequest._retryCount || 0
       if (error.response?.status === 401 && retryCount < 1) {
         originalRequest._retryCount = retryCount + 1
 
@@ -264,6 +458,7 @@ const createApiClient = (): AxiosInstance => {
         message: error.response?.data?.message || error.message,
         url: error.config?.url,
         method: error.config?.method,
+        retryCount,
       })
 
       // Transform backend errors to frontend format
@@ -307,6 +502,9 @@ const FILTER_MAPPINGS: Record<keyof PropertyFilters, FilterMapping> = {
   excludeDeltaRegion: 'exclude_delta_region',
   createdAfter: 'created_after',
   hasDocuments: 'has_documents',
+  // Multi-state scoring filters
+  maxEffectiveCost: 'max_effective_cost',
+  minBuyHoldScore: 'min_buy_hold_score',
 
   // Complex mappings (ranges that expand to multiple params)
   priceRange: (f) => f.priceRange ? {
@@ -680,6 +878,31 @@ export const watchlistApi = {
     const response = await apiClient.put(`/watchlist/property/${propertyId}`, data)
     return handleResponse(response)
   },
+
+  // First Deal Tracking
+  // Get the user's current first deal property
+  getFirstDeal: async (): Promise<FirstDealResponse> => {
+    const response = await apiClient.get('/watchlist/first-deal')
+    return handleResponse(response)
+  },
+
+  // Set a property as the first deal
+  setFirstDeal: async (propertyId: string): Promise<{ property_id: string; is_first_deal: boolean; stage: string }> => {
+    const response = await apiClient.post(`/watchlist/property/${propertyId}/set-first-deal`)
+    return handleResponse(response)
+  },
+
+  // Update the pipeline stage for the first deal
+  updateFirstDealStage: async (stage: FirstDealStage): Promise<{ property_id: string; stage: string; updated_at: string }> => {
+    const response = await apiClient.put('/watchlist/first-deal/stage', { stage })
+    return handleResponse(response)
+  },
+
+  // Remove the first deal assignment
+  removeFirstDeal: async (): Promise<{ property_id: string; message: string }> => {
+    const response = await apiClient.delete('/watchlist/first-deal')
+    return handleResponse(response)
+  },
 }
 
 // Sync API
@@ -780,8 +1003,8 @@ export const getApiErrorMessage = (error: any): string => {
   return error.message || 'An unexpected error occurred'
 }
 
-// Export AuthManager for debugging and manual authentication management
-export { AuthManager }
+// Export AuthManager and ConnectionManager for debugging and manual management
+export { AuthManager, ConnectionManager }
 
 // Authentication utility functions
 export const getAuthStatus = (): any => {
@@ -813,6 +1036,7 @@ export const waitForApi = async (timeout = 30000): Promise<boolean> => {
 
   while (Date.now() - start < timeout) {
     if (await checkApiConnection()) {
+      ConnectionManager.setOnline(true)
       return true
     }
 
@@ -821,4 +1045,13 @@ export const waitForApi = async (timeout = 30000): Promise<boolean> => {
   }
 
   return false
+}
+
+// Connection status utilities
+export const getConnectionStatus = (): boolean => {
+  return ConnectionManager.getStatus()
+}
+
+export const subscribeToConnectionStatus = (callback: (online: boolean) => void): () => void => {
+  return ConnectionManager.subscribe(callback)
 }

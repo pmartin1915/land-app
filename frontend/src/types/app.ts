@@ -179,6 +179,9 @@ export interface PropertyFilters {
   dateRange?: [string, string]
   hasDocuments?: boolean
   status?: string[]
+  // Multi-state scoring filters
+  maxEffectiveCost?: number  // Maximum total cost (bid + quiet title + buffer)
+  minBuyHoldScore?: number   // Minimum buy & hold score (time-adjusted)
 }
 
 // Map Types

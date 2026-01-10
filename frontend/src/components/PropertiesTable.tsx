@@ -21,7 +21,9 @@ import {
   Star,
   MapPin,
   Share2,
-  Loader2
+  Loader2,
+  AlertTriangle,
+  GitCompare
 } from 'lucide-react'
 import { Property, PropertyFilters, SearchParams } from '../types'
 import { api } from '../lib/api'
@@ -31,6 +33,9 @@ import { TableSkeleton } from './ui/LoadingSkeleton'
 import { ErrorState } from './ui/ErrorState'
 import { EmptyState, FilterEmptyState } from './ui/EmptyState'
 import { showToast } from './ui/Toast'
+import { InvestmentGradeBadge } from './ui/InvestmentGradeBadge'
+import { ScoreTooltip } from './ui/ScoreTooltip'
+import { usePropertyCompare } from './PropertyCompareContext'
 
 interface PropertiesTableProps {
   onRowSelect?: (property: Property | null) => void
@@ -97,6 +102,37 @@ const ActionsCell = React.memo(function ActionsCell({
   )
 })
 
+// Memoized CompareCell component for comparison toggle
+interface CompareCellProps {
+  property: Property
+  isInCompare: boolean
+  isAtLimit: boolean
+  onToggleCompare: (property: Property) => void
+}
+
+const CompareCell = React.memo(function CompareCell({
+  property,
+  isInCompare,
+  isAtLimit,
+  onToggleCompare
+}: CompareCellProps) {
+  const isDisabled = !isInCompare && isAtLimit
+
+  return (
+    <input
+      type="checkbox"
+      checked={isInCompare}
+      disabled={isDisabled}
+      onChange={() => onToggleCompare(property)}
+      className={`w-4 h-4 text-accent-secondary border-neutral-1 rounded focus:ring-accent-secondary ${
+        isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+      }`}
+      title={isDisabled ? 'Maximum 3 properties for comparison' : isInCompare ? 'Remove from comparison' : 'Add to comparison'}
+      aria-label={isDisabled ? 'Maximum 3 properties for comparison' : isInCompare ? 'Remove from comparison' : 'Add to comparison'}
+    />
+  )
+})
+
 export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: PropertiesTableProps) {
   // URL state for shareable links
   const {
@@ -111,6 +147,16 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
     resetFilters,
     copyUrlToClipboard
   } = useUrlState({ defaultPerPage: 25 })
+
+  // Property comparison context
+  const {
+    toggleCompare,
+    isInCompare,
+    isAtLimit,
+    compareCount,
+    setShowCompareModal,
+    clearCompare
+  } = usePropertyCompare()
 
   // Table state - sync with URL state
   const [sorting, setLocalSorting] = useState<SortingState>(() =>
@@ -252,6 +298,26 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
       enableHiding: false,
     },
 
+    // Compare column
+    {
+      id: 'compare',
+      header: () => (
+        <div className="flex items-center gap-1" title="Compare up to 3 properties">
+          <GitCompare className="w-4 h-4" />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <CompareCell
+          property={row.original}
+          isInCompare={isInCompare(row.original.id)}
+          isAtLimit={isAtLimit}
+          onToggleCompare={toggleCompare}
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+
     // Parcel ID
     {
       accessorKey: 'parcel_id',
@@ -296,10 +362,91 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
       },
     },
 
+    // Investment Grade (based on buy_hold_score)
+    {
+      id: 'investment_grade',
+      header: () => (
+        <div className="flex items-center gap-1">
+          <span>Grade</span>
+          <ScoreTooltip scoreType="investment_grade" iconSize={12} />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <InvestmentGradeBadge score={row.original.buy_hold_score} size="sm" />
+      ),
+      enableSorting: false,
+    },
+
+    // Effective Cost (total cost including quiet title)
+    {
+      accessorKey: 'effective_cost',
+      header: () => (
+        <div className="flex items-center gap-1">
+          <span>Total Cost</span>
+          <ScoreTooltip scoreType="effective_cost" iconSize={12} />
+        </div>
+      ),
+      cell: ({ getValue, row }) => {
+        const cost = getValue() as number
+        const budget = 8000 // Could be from user preferences
+        const isOverBudget = cost && cost > budget
+        const isMarketReject = row.original.is_market_reject
+        const isDeltaRegion = row.original.is_delta_region
+
+        return (
+          <div className="flex items-center gap-1">
+            <span className={isOverBudget ? 'text-danger' : 'text-text-primary'}>
+              {cost ? `$${cost.toLocaleString()}` : 'N/A'}
+            </span>
+            {isMarketReject && (
+              <span title="Market Reject: Pre-2015 delinquency">
+                <AlertTriangle className="w-3 h-3 text-danger" />
+              </span>
+            )}
+            {isDeltaRegion && (
+              <span title="Delta Region: Economically distressed area">
+                <AlertTriangle className="w-3 h-3 text-warning" />
+              </span>
+            )}
+          </div>
+        )
+      },
+    },
+
+    // Buy & Hold Score
+    {
+      accessorKey: 'buy_hold_score',
+      header: () => (
+        <div className="flex items-center gap-1">
+          <span>B&H Score</span>
+          <ScoreTooltip scoreType="buy_hold_score" iconSize={12} />
+        </div>
+      ),
+      cell: ({ getValue }) => {
+        const score = getValue() as number
+        if (!score) return 'N/A'
+
+        const color = score >= 80 ? 'text-success' :
+                     score >= 60 ? 'text-accent-primary' :
+                     score >= 40 ? 'text-warning' : 'text-danger'
+
+        return (
+          <span className={`font-semibold ${color}`}>
+            {score.toFixed(1)}
+          </span>
+        )
+      },
+    },
+
     // Investment Score
     {
       accessorKey: 'investment_score',
-      header: 'Investment Score',
+      header: () => (
+        <div className="flex items-center gap-1">
+          <span>Inv Score</span>
+          <ScoreTooltip scoreType="investment_score" iconSize={12} />
+        </div>
+      ),
       cell: ({ getValue }) => {
         const score = getValue() as number
         if (!score) return 'N/A'
@@ -319,7 +466,12 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
     // Water Score
     {
       accessorKey: 'water_score',
-      header: 'Water Score',
+      header: () => (
+        <div className="flex items-center gap-1">
+          <span>Water</span>
+          <ScoreTooltip scoreType="water_score" iconSize={12} />
+        </div>
+      ),
       cell: ({ getValue }) => {
         const score = getValue() as number
         return score ? (
@@ -391,7 +543,7 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
       enableSorting: false,
       enableHiding: false,
     },
-  ], [onRowSelect, toggleWatch]) // Removed watchlistStatus and togglingWatch - handled by cell render
+  ], [onRowSelect, toggleWatch, isInCompare, isAtLimit, toggleCompare]) // Removed watchlistStatus and togglingWatch - handled by cell render
 
   // Create table instance
   const table = useReactTable({
@@ -546,11 +698,38 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
     )
   }
 
+  // Compare actions component - renders as sticky footer bar
+  const CompareActions = () => {
+    if (compareCount === 0) return null
+
+    return (
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center space-x-3 px-5 py-3 bg-card border border-accent-secondary rounded-full shadow-elevated animate-in slide-in-from-bottom-4 duration-200">
+        <GitCompare className="w-5 h-5 text-accent-secondary" />
+        <span className="text-sm font-medium text-text-primary">
+          {compareCount} of 3 selected
+        </span>
+        <button
+          onClick={() => setShowCompareModal(true)}
+          className="px-4 py-1.5 bg-accent-secondary text-white text-sm font-semibold rounded-full hover:bg-opacity-90 transition-colors"
+        >
+          Compare Now
+        </button>
+        <button
+          onClick={clearCompare}
+          className="px-2 py-1.5 text-sm text-text-muted hover:text-text-primary transition-colors"
+          aria-label="Clear comparison selection"
+        >
+          Clear
+        </button>
+      </div>
+    )
+  }
+
   // Determine empty state type
   const hasFiltersApplied = activeFilterCount > 0 || searchQuery
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col h-full space-y-4">
       {/* Error State */}
       {error && (
         <ErrorState
@@ -603,11 +782,14 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
       {/* Bulk Actions */}
       <BulkActions />
 
+      {/* Compare Actions */}
+      <CompareActions />
+
       {/* Table */}
-      <div className="bg-card rounded-lg border border-neutral-1 shadow-card overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="flex-1 min-h-0 bg-card rounded-lg border border-neutral-1 shadow-card overflow-hidden">
+        <div className="h-full overflow-auto">
           <table className="w-full">
-            <thead className="bg-surface border-b border-neutral-1">
+            <thead className="bg-surface border-b border-neutral-1 sticky top-0 z-10">
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map(header => (

@@ -203,3 +203,10 @@ test-results/
 
 # Database backups
 *.backup
+
+# Scrape result files (generated data)
+*_scrape_results.json
+auctiontest_output.json
+
+# Data backups folder
+data/backups/

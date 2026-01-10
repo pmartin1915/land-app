@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from typing import Optional, List
 from pydantic import BaseModel, Field
+from datetime import datetime
 import logging
 import math
 
@@ -424,3 +425,250 @@ async def get_bulk_watch_status(
     except Exception as e:
         logger.error(f"Failed to get bulk status: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to retrieve status")
+
+
+# =============================================================================
+# First Deal Tracking Endpoints (My First Deal feature)
+# =============================================================================
+
+# Valid pipeline stages for first deal tracking
+FIRST_DEAL_STAGES = ["research", "bid", "won", "quiet_title", "sold", "holding"]
+
+
+class FirstDealStageUpdate(BaseModel):
+    """Request model for updating first deal pipeline stage."""
+    stage: str = Field(..., pattern="^(research|bid|won|quiet_title|sold|holding)$")
+
+
+class FirstDealResponse(BaseModel):
+    """Response model for first deal with property data."""
+    property: Optional[dict] = None
+    interaction: Optional[dict] = None
+    stage: Optional[str] = None
+    has_first_deal: bool
+
+
+@router.get("/first-deal", response_model=FirstDealResponse)
+@limiter.limit("60/minute")
+async def get_first_deal(
+    request: Request,
+    auth_data: dict = Depends(get_current_user_or_api_key),
+    db: Session = Depends(get_db)
+):
+    """
+    Get the user's current first deal property (if any).
+    Returns the property marked as is_first_deal=True.
+    """
+    try:
+        device_id = get_device_id_from_auth(auth_data)
+
+        # Find the first deal interaction
+        result = db.query(PropertyInteraction, Property).join(
+            Property, PropertyInteraction.property_id == Property.id
+        ).filter(
+            PropertyInteraction.device_id == device_id,
+            PropertyInteraction.is_first_deal == True,
+            Property.is_deleted == False
+        ).first()
+
+        if not result:
+            return FirstDealResponse(
+                property=None,
+                interaction=None,
+                stage=None,
+                has_first_deal=False
+            )
+
+        interaction, prop = result
+        return FirstDealResponse(
+            property=prop.to_dict(),
+            interaction=interaction.to_dict(),
+            stage=interaction.first_deal_stage,
+            has_first_deal=True
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to get first deal: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve first deal")
+
+
+@router.post("/property/{property_id}/set-first-deal")
+@limiter.limit("30/minute")
+async def set_first_deal(
+    request: Request,
+    property_id: str,
+    auth_data: dict = Depends(get_current_user_or_api_key),
+    db: Session = Depends(get_db)
+):
+    """
+    Set a property as the user's first deal.
+    Only one property can be the first deal at a time.
+    Automatically clears any previous first deal assignment.
+    """
+    try:
+        device_id = get_device_id_from_auth(auth_data)
+
+        # Verify property exists
+        prop = db.query(Property).filter(Property.id == property_id).first()
+        if not prop:
+            raise HTTPException(status_code=404, detail="Property not found")
+
+        # Clear any existing first deal for this device
+        db.query(PropertyInteraction).filter(
+            PropertyInteraction.device_id == device_id,
+            PropertyInteraction.is_first_deal == True
+        ).update({
+            "is_first_deal": False,
+            "first_deal_stage": None,
+            "first_deal_assigned_at": None,
+            "first_deal_updated_at": None
+        })
+
+        # Find or create interaction for this property
+        interaction = db.query(PropertyInteraction).filter(
+            PropertyInteraction.device_id == device_id,
+            PropertyInteraction.property_id == property_id
+        ).first()
+
+        now = datetime.utcnow()
+
+        if interaction:
+            interaction.is_first_deal = True
+            interaction.first_deal_stage = "research"
+            interaction.first_deal_assigned_at = now
+            interaction.first_deal_updated_at = now
+            # Also add to watchlist if not already
+            interaction.is_watched = True
+        else:
+            interaction = PropertyInteraction(
+                device_id=device_id,
+                property_id=property_id,
+                is_watched=True,
+                is_first_deal=True,
+                first_deal_stage="research",
+                first_deal_assigned_at=now,
+                first_deal_updated_at=now
+            )
+            db.add(interaction)
+
+        db.commit()
+        db.refresh(interaction)
+
+        logger.info(f"Set first deal for property {property_id}, device {device_id}")
+
+        return {
+            "property_id": property_id,
+            "is_first_deal": True,
+            "stage": interaction.first_deal_stage,
+            "message": "Property set as your first deal"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to set first deal: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to set first deal")
+
+
+@router.put("/first-deal/stage")
+@limiter.limit("60/minute")
+async def update_first_deal_stage(
+    request: Request,
+    update: FirstDealStageUpdate,
+    auth_data: dict = Depends(get_current_user_or_api_key),
+    db: Session = Depends(get_db)
+):
+    """
+    Update the pipeline stage for the user's first deal.
+    Valid stages: research, bid, won, quiet_title, sold, holding
+    """
+    try:
+        device_id = get_device_id_from_auth(auth_data)
+
+        # Find the first deal interaction
+        interaction = db.query(PropertyInteraction).filter(
+            PropertyInteraction.device_id == device_id,
+            PropertyInteraction.is_first_deal == True
+        ).first()
+
+        if not interaction:
+            raise HTTPException(status_code=404, detail="No first deal assigned")
+
+        # Validate stage
+        if update.stage not in FIRST_DEAL_STAGES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid stage. Must be one of: {', '.join(FIRST_DEAL_STAGES)}"
+            )
+
+        # Update stage
+        interaction.first_deal_stage = update.stage
+        interaction.first_deal_updated_at = datetime.utcnow()
+
+        db.commit()
+        db.refresh(interaction)
+
+        logger.info(f"Updated first deal stage to {update.stage} for device {device_id}")
+
+        return {
+            "property_id": interaction.property_id,
+            "stage": interaction.first_deal_stage,
+            "updated_at": interaction.first_deal_updated_at.isoformat(),
+            "message": f"Stage updated to {update.stage}"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update first deal stage: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to update stage")
+
+
+@router.delete("/first-deal")
+@limiter.limit("30/minute")
+async def remove_first_deal(
+    request: Request,
+    auth_data: dict = Depends(get_current_user_or_api_key),
+    db: Session = Depends(get_db)
+):
+    """
+    Remove the first deal assignment.
+    The property remains on the watchlist but is no longer tracked as first deal.
+    """
+    try:
+        device_id = get_device_id_from_auth(auth_data)
+
+        # Find and update the first deal interaction
+        interaction = db.query(PropertyInteraction).filter(
+            PropertyInteraction.device_id == device_id,
+            PropertyInteraction.is_first_deal == True
+        ).first()
+
+        if not interaction:
+            raise HTTPException(status_code=404, detail="No first deal assigned")
+
+        property_id = interaction.property_id
+
+        # Clear first deal fields but keep other interaction data
+        interaction.is_first_deal = False
+        interaction.first_deal_stage = None
+        interaction.first_deal_assigned_at = None
+        interaction.first_deal_updated_at = None
+
+        db.commit()
+
+        logger.info(f"Removed first deal for device {device_id}")
+
+        return {
+            "property_id": property_id,
+            "message": "First deal assignment removed"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to remove first deal: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to remove first deal")

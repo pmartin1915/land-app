@@ -25,6 +25,8 @@ import {
 import { Property, AISuggestion } from '../types'
 import { usePropertySuggestions, useAISuggestionMutations } from '../lib/hooks'
 import { useComponentTheme } from '../lib/theme-provider'
+import { ScoreTooltip, ScoreType } from './ui/ScoreTooltip'
+import { InvestmentGradeBadge } from './ui/InvestmentGradeBadge'
 
 interface PropertyDetailSlideOverProps {
   property: Property | null
@@ -32,14 +34,27 @@ interface PropertyDetailSlideOverProps {
   onClose: () => void
 }
 
+/** Get quiet title cost by state */
+function getQuietTitleCost(state: string | undefined): string {
+  const costs: Record<string, number> = {
+    AL: 4000,
+    AR: 1500,
+    TX: 2000,
+    FL: 1500,
+  }
+  const cost = state ? costs[state] : undefined
+  return cost ? cost.toLocaleString() : 'N/A'
+}
+
 interface ScoreCardProps {
   title: string
   score: number
   icon: React.ReactNode
   description?: string
+  scoreType?: ScoreType
 }
 
-function ScoreCard({ title, score, icon, description }: ScoreCardProps) {
+function ScoreCard({ title, score, icon, description, scoreType }: ScoreCardProps) {
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-success border-success bg-success/10'
     if (score >= 60) return 'text-accent-primary border-accent-primary bg-accent-primary/10'
@@ -53,6 +68,7 @@ function ScoreCard({ title, score, icon, description }: ScoreCardProps) {
         <div className="flex items-center space-x-2">
           {icon}
           <span className="font-medium text-sm">{title}</span>
+          {scoreType && <ScoreTooltip scoreType={scoreType} iconSize={12} />}
         </div>
         <span className="text-xl font-bold">{score.toFixed(1)}</span>
       </div>
@@ -362,12 +378,67 @@ export function PropertyDetailSlideOver({ property, isOpen, onClose }: PropertyD
 
               {activeTab === 'scores' && (
                 <div className="p-6 space-y-6">
+                  {/* Investment Grade Banner */}
+                  <div className="bg-card p-4 rounded-lg border border-neutral-1 flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-medium text-text-muted block mb-1">Investment Grade</span>
+                      <div className="flex items-center gap-2">
+                        <InvestmentGradeBadge score={property.buy_hold_score} size="lg" />
+                        <span className="text-lg font-semibold text-text-primary">
+                          {property.buy_hold_score ? `${property.buy_hold_score.toFixed(1)} pts` : 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                    <ScoreTooltip scoreType="investment_grade" />
+                  </div>
+
+                  {/* Cost Breakdown */}
+                  <div className="bg-card p-4 rounded-lg border border-neutral-1">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold text-text-primary">Estimated Total Cost</h4>
+                      <ScoreTooltip scoreType="effective_cost" />
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-text-muted">Bid Amount</span>
+                        <span className="text-text-primary">${property.amount?.toLocaleString() || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-text-muted">Quiet Title ({property.state || 'N/A'})</span>
+                        <span className="text-text-muted">
+                          +${getQuietTitleCost(property.state)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-text-muted">Buffer (10%)</span>
+                        <span className="text-text-muted">
+                          +${property.amount ? Math.round(property.amount * 0.1).toLocaleString() : 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between font-semibold pt-2 border-t border-neutral-1">
+                        <span className="text-text-primary">Total</span>
+                        <span className={property.effective_cost && property.effective_cost > 8000 ? 'text-danger' : 'text-success'}>
+                          ${property.effective_cost?.toLocaleString() || 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ScoreCard
+                      title="Buy & Hold Score"
+                      score={property.buy_hold_score || 0}
+                      icon={<Award className="w-4 h-4" />}
+                      description="Time-adjusted investment score"
+                      scoreType="buy_hold_score"
+                    />
+
                     <ScoreCard
                       title="Investment Score"
                       score={property.investment_score || 0}
                       icon={<Award className="w-4 h-4" />}
                       description="Overall investment potential"
+                      scoreType="investment_score"
                     />
 
                     <ScoreCard
@@ -375,6 +446,7 @@ export function PropertyDetailSlideOver({ property, isOpen, onClose }: PropertyD
                       score={property.water_score || 0}
                       icon={<Droplets className="w-4 h-4" />}
                       description="Water access and quality"
+                      scoreType="water_score"
                     />
 
                     <ScoreCard
@@ -382,6 +454,7 @@ export function PropertyDetailSlideOver({ property, isOpen, onClose }: PropertyD
                       score={property.county_market_score || 0}
                       icon={<TrendingUp className="w-4 h-4" />}
                       description="Local market conditions"
+                      scoreType="county_market_score"
                     />
 
                     <ScoreCard
@@ -389,6 +462,7 @@ export function PropertyDetailSlideOver({ property, isOpen, onClose }: PropertyD
                       score={property.geographic_score || 0}
                       icon={<MapIcon className="w-4 h-4" />}
                       description="Location and accessibility"
+                      scoreType="geographic_score"
                     />
 
                     <ScoreCard
@@ -396,6 +470,7 @@ export function PropertyDetailSlideOver({ property, isOpen, onClose }: PropertyD
                       score={property.total_description_score || 0}
                       icon={<FileText className="w-4 h-4" />}
                       description="Property description analysis"
+                      scoreType="total_description_score"
                     />
 
                     <ScoreCard
@@ -403,6 +478,7 @@ export function PropertyDetailSlideOver({ property, isOpen, onClose }: PropertyD
                       score={property.road_access_score || 0}
                       icon={<MapPin className="w-4 h-4" />}
                       description="Road access quality"
+                      scoreType="road_access_score"
                     />
                   </div>
 

@@ -3,8 +3,9 @@
 Insert Scraped Data - Process scraped JSON results and insert into database
 
 Usage:
-    python scripts/insert_scraped_data.py --state AR  # Scrape and insert directly
-    python scripts/insert_scraped_data.py --all       # Scrape and insert all states
+    python scripts/insert_scraped_data.py --state AR  # Scrape and insert Arkansas
+    python scripts/insert_scraped_data.py --state FL  # Scrape and insert Florida
+    python scripts/insert_scraped_data.py --all       # Scrape and insert all states (AR, AL, TX, FL)
 """
 
 import asyncio
@@ -18,7 +19,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from config.logging_config import get_logger
-from config.states import ALABAMA_MISSING_COUNTIES, TEXAS_COUNTIES
+from config.states import ALABAMA_MISSING_COUNTIES, TEXAS_COUNTIES, FLORIDA_COUNTIES
 from core.scrapers.factory import ScraperFactory
 
 # Database imports
@@ -194,6 +195,17 @@ async def scrape_and_insert(state: str, counties: list = None) -> dict:
                 results['total_properties'] += len(result.properties)
             await asyncio.sleep(2)
 
+    elif state == 'FL':
+        counties_to_scrape = counties or FLORIDA_COUNTIES
+        for county in counties_to_scrape:
+            logger.info(f"Scraping Florida - {county}...")
+            result = await ScraperFactory.scrape(state='FL', county=county)
+            if not result.error_message:
+                all_properties.extend(result.properties)
+                results['counties_processed'] += 1
+                results['total_properties'] += len(result.properties)
+            await asyncio.sleep(2)
+
     # Insert into database
     if all_properties:
         logger.info(f"Inserting {len(all_properties)} properties into database...")
@@ -231,17 +243,17 @@ async def process_all_states(states: list) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(description='Insert scraped data into database')
-    parser.add_argument('--state', type=str, help='Scrape and insert state (AR, AL, TX)')
+    parser.add_argument('--state', type=str, help='Scrape and insert state (AR, AL, TX, FL)')
     parser.add_argument('--all', action='store_true', help='Scrape and insert all states')
 
     args = parser.parse_args()
 
     if args.all:
-        states = ['AR', 'AL', 'TX']
+        states = ['AR', 'AL', 'TX', 'FL']
     elif args.state:
         states = [args.state.upper()]
     else:
-        print("Usage: python insert_scraped_data.py --state AR|AL|TX OR --all")
+        print("Usage: python insert_scraped_data.py --state AR|AL|TX|FL OR --all")
         return 1
 
     # Single event loop for all states
