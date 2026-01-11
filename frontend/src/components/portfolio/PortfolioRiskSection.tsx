@@ -5,6 +5,8 @@ interface PortfolioRiskSectionProps {
   risk: RiskAnalysisResponse | null
   performance: PerformanceTrackingResponse | null
   isLoading: boolean
+  errors?: { risk?: string | null; performance?: string | null }
+  onRetry?: () => void
 }
 
 function RiskSkeleton() {
@@ -59,7 +61,7 @@ function RiskFlag({ flag }: { flag: string }) {
   )
 }
 
-export function PortfolioRiskSection({ risk, performance, isLoading }: PortfolioRiskSectionProps) {
+export function PortfolioRiskSection({ risk, performance, isLoading, errors, onRetry }: PortfolioRiskSectionProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -119,6 +121,18 @@ export function PortfolioRiskSection({ risk, performance, isLoading }: Portfolio
               </div>
             )}
           </>
+        ) : errors?.risk ? (
+          <div className="h-40 flex flex-col items-center justify-center text-danger">
+            <span>Failed to load risk data</span>
+            {onRetry && (
+              <button
+                onClick={onRetry}
+                className="mt-2 text-sm underline hover:no-underline focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                Retry
+              </button>
+            )}
+          </div>
         ) : (
           <div className="h-40 flex items-center justify-center text-text-muted">
             No risk data available
@@ -190,6 +204,18 @@ export function PortfolioRiskSection({ risk, performance, isLoading }: Portfolio
               </div>
             )}
           </>
+        ) : errors?.performance ? (
+          <div className="h-40 flex flex-col items-center justify-center text-danger">
+            <span>Failed to load performance data</span>
+            {onRetry && (
+              <button
+                onClick={onRetry}
+                className="mt-2 text-sm underline hover:no-underline focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                Retry
+              </button>
+            )}
+          </div>
         ) : (
           <div className="h-40 flex items-center justify-center text-text-muted">
             No performance data available

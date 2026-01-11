@@ -13,10 +13,10 @@ import { ErrorState } from '../components/ui/ErrorState'
 export function Portfolio() {
   // Fetch all portfolio data in parallel
   const { data: summary, isLoading: summaryLoading, error: summaryError } = usePortfolioSummary()
-  const { data: geographic, isLoading: geoLoading } = usePortfolioGeographic()
-  const { data: scores, isLoading: scoresLoading } = usePortfolioScores()
-  const { data: risk, isLoading: riskLoading } = usePortfolioRisk()
-  const { data: performance, isLoading: perfLoading } = usePortfolioPerformance()
+  const { data: geographic, isLoading: geoLoading, error: geoError, refetch: refetchGeo } = usePortfolioGeographic()
+  const { data: scores, isLoading: scoresLoading, error: scoresError, refetch: refetchScores } = usePortfolioScores()
+  const { data: risk, isLoading: riskLoading, error: riskError, refetch: refetchRisk } = usePortfolioRisk()
+  const { data: performance, isLoading: perfLoading, error: perfError, refetch: refetchPerf } = usePortfolioPerformance()
 
   // Combined loading state for skeleton display
   const isLoadingCharts = geoLoading || scoresLoading || perfLoading
@@ -69,6 +69,8 @@ export function Portfolio() {
         scores={scores}
         performance={performance}
         isLoading={isLoadingCharts}
+        errors={{ geographic: geoError, scores: scoresError, performance: perfError }}
+        onRetry={() => { refetchGeo(); refetchScores(); refetchPerf() }}
       />
 
       {/* Risk & Performance Section */}
@@ -76,6 +78,8 @@ export function Portfolio() {
         risk={risk}
         performance={performance}
         isLoading={isLoadingRisk}
+        errors={{ risk: riskError, performance: perfError }}
+        onRetry={() => { refetchRisk(); refetchPerf() }}
       />
     </div>
   )

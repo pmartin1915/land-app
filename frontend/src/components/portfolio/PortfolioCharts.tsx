@@ -12,6 +12,8 @@ interface PortfolioChartsProps {
   scores: ScoreDistributionResponse | null
   performance: PerformanceTrackingResponse | null
   isLoading: boolean
+  errors?: { geographic?: string | null; scores?: string | null; performance?: string | null }
+  onRetry?: () => void
 }
 
 function ChartSkeleton({ title }: { title: string }) {
@@ -25,7 +27,7 @@ function ChartSkeleton({ title }: { title: string }) {
   )
 }
 
-export function PortfolioCharts({ geographic, scores, performance, isLoading }: PortfolioChartsProps) {
+export function PortfolioCharts({ geographic, scores, performance, isLoading, errors, onRetry }: PortfolioChartsProps) {
   const { isDark } = useComponentTheme()
 
   // Chart theme colors
@@ -51,12 +53,20 @@ export function PortfolioCharts({ geographic, scores, performance, isLoading }: 
       size: 12
     },
     margin: { t: 40, r: 40, b: 40, l: 40 },
-    showlegend: false,
+    showlegend: true,
+    legend: {
+      orientation: 'h' as const,
+      x: 0,
+      y: -0.15,
+      font: { color: chartColors.text }
+    },
   }), [chartColors])
 
-  // Default chart config
+  // Default chart config - enable toolbar for keyboard accessibility
   const defaultConfig = {
-    displayModeBar: false,
+    displayModeBar: true,
+    displaylogo: false,
+    modeBarButtonsToRemove: ['lasso2d', 'select2d'] as ('lasso2d' | 'select2d')[],
     responsive: true
   }
 
@@ -232,17 +242,43 @@ export function PortfolioCharts({ geographic, scores, performance, isLoading }: 
     )
   }
 
+  // Helper to render chart error state
+  const renderChartError = (message: string) => (
+    <div className="h-64 flex flex-col items-center justify-center text-danger">
+      <span>{message}</span>
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          className="mt-2 text-sm underline hover:no-underline focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          Retry
+        </button>
+      )}
+    </div>
+  )
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
       {/* State Distribution */}
-      <div className="bg-card rounded-lg p-6 border border-neutral-1 shadow-card">
+      <div
+        className="bg-card rounded-lg p-6 border border-neutral-1 shadow-card"
+        role="region"
+        aria-label="State Distribution - pie chart showing property counts by state"
+      >
         {stateDistributionChart ? (
-          <Plot
-            data={stateDistributionChart.data}
-            layout={stateDistributionChart.layout}
-            config={defaultConfig}
-            style={{ width: '100%', height: '300px' }}
-          />
+          <>
+            <Plot
+              data={stateDistributionChart.data}
+              layout={stateDistributionChart.layout}
+              config={defaultConfig}
+              style={{ width: '100%', height: '300px' }}
+            />
+            <span className="sr-only">
+              {geographic?.states?.map(s => `${s.state_name}: ${s.count} properties`).join(', ')}
+            </span>
+          </>
+        ) : errors?.geographic ? (
+          renderChartError('Failed to load geographic data')
         ) : (
           <div className="h-64 flex items-center justify-center text-text-muted">
             No geographic data available
@@ -251,7 +287,11 @@ export function PortfolioCharts({ geographic, scores, performance, isLoading }: 
       </div>
 
       {/* Top Counties */}
-      <div className="bg-card rounded-lg p-6 border border-neutral-1 shadow-card">
+      <div
+        className="bg-card rounded-lg p-6 border border-neutral-1 shadow-card"
+        role="region"
+        aria-label="Top Counties - bar chart showing properties by county"
+      >
         {topCountiesChart ? (
           <Plot
             data={topCountiesChart.data}
@@ -259,6 +299,8 @@ export function PortfolioCharts({ geographic, scores, performance, isLoading }: 
             config={defaultConfig}
             style={{ width: '100%', height: '300px' }}
           />
+        ) : errors?.geographic ? (
+          renderChartError('Failed to load county data')
         ) : (
           <div className="h-64 flex items-center justify-center text-text-muted">
             No county data available
@@ -267,14 +309,25 @@ export function PortfolioCharts({ geographic, scores, performance, isLoading }: 
       </div>
 
       {/* Score Distribution */}
-      <div className="bg-card rounded-lg p-6 border border-neutral-1 shadow-card">
+      <div
+        className="bg-card rounded-lg p-6 border border-neutral-1 shadow-card"
+        role="region"
+        aria-label="Investment Score Distribution - histogram showing score ranges"
+      >
         {scoreDistributionChart ? (
-          <Plot
-            data={scoreDistributionChart.data}
-            layout={scoreDistributionChart.layout}
-            config={defaultConfig}
-            style={{ width: '100%', height: '300px' }}
-          />
+          <>
+            <Plot
+              data={scoreDistributionChart.data}
+              layout={scoreDistributionChart.layout}
+              config={defaultConfig}
+              style={{ width: '100%', height: '300px' }}
+            />
+            <span className="sr-only">
+              {scores?.investment_score_buckets?.map(b => `${b.range_label}: ${b.count} properties`).join(', ')}
+            </span>
+          </>
+        ) : errors?.scores ? (
+          renderChartError('Failed to load score data')
         ) : (
           <div className="h-64 flex items-center justify-center text-text-muted">
             No score data available
@@ -283,7 +336,11 @@ export function PortfolioCharts({ geographic, scores, performance, isLoading }: 
       </div>
 
       {/* Activity Timeline */}
-      <div className="bg-card rounded-lg p-6 border border-neutral-1 shadow-card">
+      <div
+        className="bg-card rounded-lg p-6 border border-neutral-1 shadow-card"
+        role="region"
+        aria-label="Weekly Activity - line chart showing properties added per week"
+      >
         {activityTimelineChart ? (
           <Plot
             data={activityTimelineChart.data}
@@ -291,6 +348,8 @@ export function PortfolioCharts({ geographic, scores, performance, isLoading }: 
             config={defaultConfig}
             style={{ width: '100%', height: '300px' }}
           />
+        ) : errors?.performance ? (
+          renderChartError('Failed to load activity data')
         ) : (
           <div className="h-64 flex items-center justify-center text-text-muted">
             No activity data available

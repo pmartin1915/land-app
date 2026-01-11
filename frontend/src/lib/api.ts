@@ -28,6 +28,7 @@ import {
   SyncLog,
 } from '../types'
 import { config } from '../config'
+import { globalCache } from './cache'
 
 // First Deal Pipeline Types
 export type FirstDealStage = 'research' | 'bid' | 'won' | 'quiet_title' | 'sold' | 'holding'
@@ -843,6 +844,17 @@ export const applicationApi = {
   },
 }
 
+// Helper to invalidate portfolio caches when watchlist changes
+const invalidatePortfolioCaches = async () => {
+  await Promise.all([
+    globalCache.remove('portfolio-summary'),
+    globalCache.remove('portfolio-geographic'),
+    globalCache.remove('portfolio-scores'),
+    globalCache.remove('portfolio-risk'),
+    globalCache.remove('portfolio-performance'),
+  ])
+}
+
 // Watchlist API
 export const watchlistApi = {
   // Get watchlist with pagination
@@ -870,13 +882,17 @@ export const watchlistApi = {
   // Toggle watch status for a property
   toggleWatch: async (propertyId: string): Promise<{ is_watched: boolean }> => {
     const response = await apiClient.post(`/watchlist/property/${propertyId}/watch`)
-    return handleResponse(response)
+    const result = handleResponse(response)
+    await invalidatePortfolioCaches()
+    return result
   },
 
   // Update property interaction (rating, notes)
   updateInteraction: async (propertyId: string, data: { star_rating?: number; user_notes?: string }): Promise<any> => {
     const response = await apiClient.put(`/watchlist/property/${propertyId}`, data)
-    return handleResponse(response)
+    const result = handleResponse(response)
+    await invalidatePortfolioCaches()
+    return result
   },
 
   // First Deal Tracking
@@ -889,19 +905,25 @@ export const watchlistApi = {
   // Set a property as the first deal
   setFirstDeal: async (propertyId: string): Promise<{ property_id: string; is_first_deal: boolean; stage: string }> => {
     const response = await apiClient.post(`/watchlist/property/${propertyId}/set-first-deal`)
-    return handleResponse(response)
+    const result = handleResponse(response)
+    await invalidatePortfolioCaches()
+    return result
   },
 
   // Update the pipeline stage for the first deal
   updateFirstDealStage: async (stage: FirstDealStage): Promise<{ property_id: string; stage: string; updated_at: string }> => {
     const response = await apiClient.put('/watchlist/first-deal/stage', { stage })
-    return handleResponse(response)
+    const result = handleResponse(response)
+    await invalidatePortfolioCaches()
+    return result
   },
 
   // Remove the first deal assignment
   removeFirstDeal: async (): Promise<{ property_id: string; message: string }> => {
     const response = await apiClient.delete('/watchlist/first-deal')
-    return handleResponse(response)
+    const result = handleResponse(response)
+    await invalidatePortfolioCaches()
+    return result
   },
 }
 
