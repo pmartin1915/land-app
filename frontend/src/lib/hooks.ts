@@ -544,3 +544,67 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
 
   return [value, setStoredValue] as const
 }
+
+// Portfolio Analytics hooks
+import {
+  PortfolioSummaryResponse,
+  GeographicBreakdownResponse,
+  ScoreDistributionResponse,
+  RiskAnalysisResponse,
+  PerformanceTrackingResponse,
+} from '../types/portfolio'
+
+export function usePortfolioSummary() {
+  return useAsyncData<PortfolioSummaryResponse>(
+    () => api.portfolio.getSummary(),
+    [],
+    {
+      cacheKey: 'portfolio-summary',
+      cacheTTL: 2 * 60 * 1000, // 2 minutes
+    }
+  )
+}
+
+export function usePortfolioGeographic() {
+  return useAsyncData<GeographicBreakdownResponse>(
+    () => api.portfolio.getGeographic(),
+    [],
+    {
+      cacheKey: 'portfolio-geographic',
+      cacheTTL: 2 * 60 * 1000,
+    }
+  )
+}
+
+export function usePortfolioScores() {
+  return useAsyncData<ScoreDistributionResponse>(
+    () => api.portfolio.getScores(),
+    [],
+    {
+      cacheKey: 'portfolio-scores',
+      cacheTTL: 2 * 60 * 1000,
+    }
+  )
+}
+
+export function usePortfolioRisk() {
+  return useAsyncData<RiskAnalysisResponse>(
+    () => api.portfolio.getRisk(),
+    [],
+    {
+      cacheKey: 'portfolio-risk',
+      cacheTTL: 2 * 60 * 1000,
+    }
+  )
+}
+
+export function usePortfolioPerformance() {
+  return useAsyncData<PerformanceTrackingResponse>(
+    () => api.portfolio.getPerformance(),
+    [],
+    {
+      cacheKey: 'portfolio-performance',
+      cacheTTL: 2 * 60 * 1000,
+    }
+  )
+}

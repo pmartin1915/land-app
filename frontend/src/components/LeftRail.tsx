@@ -55,6 +55,12 @@ const navigationItems: NavigationItem[] = [
     route: '/my-first-deal',
   },
   {
+    id: 'portfolio',
+    label: 'Portfolio Analytics',
+    icon: 'pie-chart',
+    route: '/portfolio',
+  },
+  {
     id: 'reports',
     label: 'Reports / Exports',
     icon: 'file-text',
@@ -103,6 +109,12 @@ const IconMap: { [key: string]: React.FC<{ className?: string }> } = {
   sparkles: ({ className }) => (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+    </svg>
+  ),
+  'pie-chart': ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
     </svg>
   ),
   'file-text': ({ className }) => (

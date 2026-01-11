@@ -74,6 +74,22 @@ export type {
   ElectronAPI,
 } from './electron'
 
+// Portfolio Analytics types
+export type {
+  PortfolioSummaryResponse,
+  CountyBreakdown,
+  StateBreakdown,
+  GeographicBreakdownResponse,
+  ScoreBucket,
+  ScoreDistributionResponse,
+  ConcentrationRisk,
+  RiskAnalysisResponse,
+  StarRatingBreakdown,
+  RecentAddition,
+  PerformanceTrackingResponse,
+  PortfolioAnalyticsExport,
+} from './portfolio'
+
 // Re-export commonly used types with aliases for convenience
 export type {
   Property as PropertyData,

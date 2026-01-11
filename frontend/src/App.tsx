@@ -12,6 +12,7 @@ import { Watchlist } from './pages/Watchlist'
 import { Reports } from './pages/Reports'
 import { Settings } from './pages/Settings'
 import { MyFirstDeal } from './pages/MyFirstDeal'
+import { Portfolio } from './pages/Portfolio'
 import { Toaster } from './components/ui/Toast'
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
                 <Route path="/scrape-jobs" element={<ScrapeJobs />} />
                 <Route path="/watchlist" element={<Watchlist />} />
                 <Route path="/my-first-deal" element={<MyFirstDeal />} />
+                <Route path="/portfolio" element={<Portfolio />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/settings" element={<Settings />} />
               </Routes>

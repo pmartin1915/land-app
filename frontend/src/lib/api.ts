@@ -953,6 +953,54 @@ export const systemApi = {
   },
 }
 
+// Portfolio Analytics API
+import {
+  PortfolioSummaryResponse,
+  GeographicBreakdownResponse,
+  ScoreDistributionResponse,
+  RiskAnalysisResponse,
+  PerformanceTrackingResponse,
+  PortfolioAnalyticsExport,
+} from '../types/portfolio'
+
+export const portfolioApi = {
+  // Get portfolio summary metrics
+  getSummary: async (): Promise<PortfolioSummaryResponse> => {
+    const response = await apiClient.get('/portfolio/summary')
+    return handleResponse(response)
+  },
+
+  // Get geographic breakdown
+  getGeographic: async (): Promise<GeographicBreakdownResponse> => {
+    const response = await apiClient.get('/portfolio/geographic')
+    return handleResponse(response)
+  },
+
+  // Get score distribution
+  getScores: async (): Promise<ScoreDistributionResponse> => {
+    const response = await apiClient.get('/portfolio/scores')
+    return handleResponse(response)
+  },
+
+  // Get risk analysis
+  getRisk: async (): Promise<RiskAnalysisResponse> => {
+    const response = await apiClient.get('/portfolio/risk')
+    return handleResponse(response)
+  },
+
+  // Get performance tracking
+  getPerformance: async (): Promise<PerformanceTrackingResponse> => {
+    const response = await apiClient.get('/portfolio/performance')
+    return handleResponse(response)
+  },
+
+  // Get full export (all analytics combined)
+  getExport: async (): Promise<PortfolioAnalyticsExport> => {
+    const response = await apiClient.get('/portfolio/export')
+    return handleResponse(response)
+  },
+}
+
 // Authentication API (for future use)
 export const authApi = {
   // Login
@@ -987,6 +1035,7 @@ export const api = {
   sync: syncApi,
   system: systemApi,
   auth: authApi,
+  portfolio: portfolioApi,
 }
 
 export default api

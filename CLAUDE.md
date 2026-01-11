@@ -30,6 +30,29 @@ Subprocess scrapers communicate via exit codes (see `core/scrapers/EXIT_CODES.md
 - 2026-01-09: Added ConnectionStatus UI component - Shows banner when offline, auto-hides when reconnected
 - 2026-01-09: Fixed PropertiesTable scroll - Added flex container and overflow-auto for vertical scrolling with sticky header
 - 2026-01-10: Added MyFirstDeal enhancements - Deal pipeline tracking, property comparison, external resource links
+- 2026-01-10: Added Portfolio Analytics Dashboard - Visualizes backend Portfolio API with summary cards, charts, and risk analysis
+
+### Portfolio Analytics Dashboard
+The Portfolio page (`/portfolio`) displays aggregate analytics for watched properties:
+- **Summary Cards**: Total properties, portfolio value, avg investment score, capital utilization
+- **Geographic Charts**: State distribution pie chart, top counties bar chart
+- **Score Distribution**: Investment score histogram with color-coded buckets
+- **Activity Timeline**: Weekly additions line chart
+- **Risk Analysis**: Diversification score, concentration metrics, risk flags
+- **Performance Metrics**: Recent additions, star rating breakdown, first deal status
+
+Frontend components:
+- `frontend/src/pages/Portfolio.tsx` - Main page
+- `frontend/src/components/portfolio/` - Summary cards, charts, risk section
+- `frontend/src/lib/hooks.ts` - usePortfolioSummary, usePortfolioGeographic, etc.
+- `frontend/src/lib/api.ts` - portfolioApi object
+
+Backend endpoints used (already implemented):
+- `GET /portfolio/summary` - Aggregate metrics
+- `GET /portfolio/geographic` - State/county breakdown
+- `GET /portfolio/scores` - Score distribution buckets
+- `GET /portfolio/risk` - Risk analysis
+- `GET /portfolio/performance` - Activity tracking
 
 ### MyFirstDeal Feature
 The My First Deal page (`/my-first-deal`) now includes:
