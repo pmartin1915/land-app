@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Play, RefreshCw, AlertTriangle, Check, Clock, XCircle, Database, MapPin, Calendar } from 'lucide-react'
 
 // Types
@@ -69,11 +69,7 @@ export function ScrapeJobs() {
   const [selectedState, setSelectedState] = useState<string>('')
   const [isTriggering, setIsTriggering] = useState(false)
 
-  useEffect(() => {
-    fetchData()
-  }, [])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setIsLoading(true)
       await Promise.all([
@@ -86,7 +82,11 @@ export function ScrapeJobs() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   const fetchJobs = async () => {
     const response = await fetch('/api/v1/scrape/jobs?page_size=20', {

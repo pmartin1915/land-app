@@ -130,9 +130,35 @@ function createTauriAPI(): DesktopAPI {
   }
 }
 
+// Type for the electronAPI exposed via preload
+interface ElectronAPI {
+  onMenuImportCSV?: (callback: () => void) => void
+  onMenuExportData?: (callback: () => void) => void
+  onMenuNavigate?: (callback: (route: string) => void) => void
+  onMenuToggleSearch?: (callback: () => void) => void
+  onMenuToggleTheme?: (callback: () => void) => void
+  onMenuShowShortcuts?: (callback: () => void) => void
+  onMenuShowAbout?: (callback: () => void) => void
+  showSaveDialog?: () => Promise<string | null>
+  showOpenDialog?: () => Promise<string[] | null>
+  writeFile?: (path: string, data: string) => Promise<void>
+  readFile?: (path: string) => Promise<string>
+}
+
+// Type for ipcRenderer
+interface IpcRenderer {
+  invoke: (channel: string, ...args: unknown[]) => Promise<unknown>
+}
+
+// Extended window type for Electron
+interface WindowWithElectron extends Window {
+  electronAPI?: ElectronAPI
+  ipcRenderer?: IpcRenderer
+}
+
 // Electron implementation (legacy support)
 function createElectronAPI(): DesktopAPI {
-  const api = (window as any).electronAPI
+  const api = (window as WindowWithElectron).electronAPI
 
   const noop = () => Promise.resolve(() => {})
 
@@ -181,19 +207,19 @@ function createElectronAPI(): DesktopAPI {
     },
 
     storeAuthToken: async (token, refreshToken) => {
-      return await (window as any).ipcRenderer?.invoke('store-auth-token', token, refreshToken) ?? false
+      return await (window as WindowWithElectron).ipcRenderer?.invoke('store-auth-token', token, refreshToken) as boolean ?? false
     },
 
     getAuthToken: async () => {
-      return await (window as any).ipcRenderer?.invoke('get-auth-token') ?? null
+      return await (window as WindowWithElectron).ipcRenderer?.invoke('get-auth-token') as string | null ?? null
     },
 
     clearAuthTokens: async () => {
-      return await (window as any).ipcRenderer?.invoke('clear-auth-tokens') ?? false
+      return await (window as WindowWithElectron).ipcRenderer?.invoke('clear-auth-tokens') as boolean ?? false
     },
 
     getServerInfo: async () => {
-      const info = await (window as any).ipcRenderer?.invoke('get-server-info')
+      const info = await (window as WindowWithElectron).ipcRenderer?.invoke('get-server-info') as { serverUrl?: string; isDevelopment?: boolean; electronVersion?: string } | undefined
       return {
         serverUrl: info?.serverUrl ?? 'http://localhost:8001',
         isDevelopment: info?.isDevelopment ?? true,
@@ -275,9 +301,14 @@ export const desktopAPI: DesktopAPI = isTauri
     ? createElectronAPI()
     : createWebAPI()
 
+// Extended window type for desktop API debugging
+interface WindowWithDesktopAPI extends Window {
+  desktopAPI?: DesktopAPI
+}
+
 // Attach to window for debugging
 if (typeof window !== 'undefined') {
-  (window as any).desktopAPI = desktopAPI
+  (window as WindowWithDesktopAPI).desktopAPI = desktopAPI
 }
 
 // Export platform detection helpers

@@ -16,7 +16,7 @@ interface PortfolioChartsProps {
   onRetry?: () => void
 }
 
-function ChartSkeleton({ title }: { title: string }) {
+function ChartSkeleton({ title: _title }: { title: string }) {
   return (
     <div className="bg-card rounded-lg p-6 border border-neutral-1 shadow-card">
       <div className="animate-pulse">

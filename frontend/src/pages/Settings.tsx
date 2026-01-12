@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { DollarSign, MapPin, AlertTriangle, Check, X, RefreshCw, Info } from 'lucide-react'
+import { DollarSign, MapPin, AlertTriangle, Check, RefreshCw, Info } from 'lucide-react'
 
 // Types for settings API
 interface UserPreferences {
@@ -36,7 +36,7 @@ interface BudgetRecommendations {
 const BUDGET_PRESETS = [5000, 8000, 10000, 25000, 50000]
 
 export function Settings() {
-  const [preferences, setPreferences] = useState<UserPreferences | null>(null)
+  const [, setPreferences] = useState<UserPreferences | null>(null)
   const [recommendations, setRecommendations] = useState<BudgetRecommendations | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)

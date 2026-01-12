@@ -1,6 +1,5 @@
 import React, { ReactNode, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { ThemeToggle, useComponentTheme } from '../lib/theme-provider'
 import { LeftRail } from './LeftRail'
 import { TopBar } from './TopBar'
 import { ConnectionStatus } from './ui/ConnectionStatus'
@@ -14,9 +13,8 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const location = useLocation()
-  const theme = useComponentTheme()
-  const [globalFilters, setGlobalFilters] = useState<PropertyFilters>({})
-  const [globalSearchQuery, setGlobalSearchQuery] = useState('')
+  const [, setGlobalFilters] = useState<PropertyFilters>({})
+  const [, setGlobalSearchQuery] = useState('')
 
   // Get page title based on current route
   const getPageTitle = (pathname: string): string => {
@@ -40,7 +38,7 @@ export function Layout({ children }: LayoutProps) {
     // TODO: Pass filters to child components via context or props
   }
 
-  const handleSearchChange = (query: string, results: any[]) => {
+  const handleSearchChange = (query: string, _results: unknown[]) => {
     setGlobalSearchQuery(query)
     // TODO: Pass search results to child components via context or props
   }

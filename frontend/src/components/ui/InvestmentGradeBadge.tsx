@@ -121,6 +121,7 @@ export function InvestmentGradeBadge({
  * Get investment grade letter from score.
  * Useful for sorting or filtering.
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function getGradeLetter(score: number | null | undefined): string {
   return getInvestmentGrade(score).grade
 }
@@ -129,6 +130,7 @@ export function getGradeLetter(score: number | null | undefined): string {
  * Get investment grade with full details.
  * Useful for displaying grade information.
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function getGradeDetails(score: number | null | undefined): GradeConfig {
   return getInvestmentGrade(score)
 }

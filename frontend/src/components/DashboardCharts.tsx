@@ -1,17 +1,24 @@
 import React, { useMemo } from 'react'
 import Plot from 'react-plotly.js'
 import { useComponentTheme } from '../lib/theme-provider'
+import { PropertyStatsResponse } from '../lib/api'
+
+// County data for chart display
+interface TopCounty {
+  name: string
+  avg_investment_score: number
+}
 
 interface DashboardChartsProps {
-  stats: any
+  stats: PropertyStatsResponse | null
   isLoading: boolean
 }
 
 export function DashboardCharts({ stats, isLoading }: DashboardChartsProps) {
   const { isDark } = useComponentTheme()
 
-  // Chart theme colors
-  const chartColors = {
+  // Chart theme colors - memoize to avoid recalculating on every render
+  const chartColors = useMemo(() => ({
     primary: '#3B82F6',
     secondary: '#10B981',
     accent: '#F59E0B',
@@ -20,10 +27,10 @@ export function DashboardCharts({ stats, isLoading }: DashboardChartsProps) {
     paper: isDark ? '#374151' : '#F9FAFB',
     text: isDark ? '#F3F4F6' : '#1F2937',
     grid: isDark ? '#4B5563' : '#E5E7EB'
-  }
+  }), [isDark])
 
-  // Default chart layout
-  const defaultLayout = {
+  // Default chart layout - memoize based on chartColors
+  const defaultLayout = useMemo(() => ({
     paper_bgcolor: 'transparent',
     plot_bgcolor: 'transparent',
     font: {
@@ -41,7 +48,7 @@ export function DashboardCharts({ stats, isLoading }: DashboardChartsProps) {
       gridcolor: chartColors.grid,
       zeroline: false
     }
-  }
+  }), [chartColors])
 
   // Default chart config
   const defaultConfig = {
@@ -81,18 +88,18 @@ export function DashboardCharts({ stats, isLoading }: DashboardChartsProps) {
     }
 
     return { data, layout }
-  }, [stats, chartColors])
+  }, [stats, chartColors, defaultLayout])
 
   // County Performance Chart
   const countyPerformanceChart = useMemo(() => {
     if (!stats?.top_counties) return null
 
     const data = [{
-      x: stats.top_counties.map((c: any) => c.name),
-      y: stats.top_counties.map((c: any) => c.avg_investment_score || 0),
+      x: stats.top_counties.map((c: TopCounty) => c.name),
+      y: stats.top_counties.map((c: TopCounty) => c.avg_investment_score || 0),
       type: 'bar' as const,
       marker: {
-        color: stats.top_counties.map((_: any, i: number) =>
+        color: stats.top_counties.map((_: TopCounty, i: number) =>
           i === 0 ? chartColors.primary :
           i === 1 ? chartColors.secondary :
           i === 2 ? chartColors.accent : chartColors.grid
@@ -119,7 +126,7 @@ export function DashboardCharts({ stats, isLoading }: DashboardChartsProps) {
     }
 
     return { data, layout }
-  }, [stats, chartColors])
+  }, [stats, chartColors, defaultLayout])
 
   // Score Distribution Radar Chart
   const scoreDistributionChart = useMemo(() => {
@@ -170,7 +177,7 @@ export function DashboardCharts({ stats, isLoading }: DashboardChartsProps) {
     }
 
     return { data, layout }
-  }, [stats, chartColors])
+  }, [stats, chartColors, defaultLayout])
 
   // Activity Timeline Chart
   const activityTimelineChart = useMemo(() => {
@@ -210,7 +217,7 @@ export function DashboardCharts({ stats, isLoading }: DashboardChartsProps) {
     }
 
     return { data, layout }
-  }, [stats, chartColors])
+  }, [stats, chartColors, defaultLayout])
 
   if (isLoading) {
     return (

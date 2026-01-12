@@ -16,7 +16,7 @@ import {
 // Generic async data hook
 export function useAsyncData<T>(
   fetcher: () => Promise<T>,
-  dependencies: any[] = [],
+  dependencies: unknown[] = [],
   options: {
     cacheKey?: string
     cacheTTL?: number
@@ -26,7 +26,7 @@ export function useAsyncData<T>(
   const [data, setData] = useState<T | null>(null)
   const [loading, setLoading] = useState<LoadingState>('idle')
   const [error, setError] = useState<string | null>(null)
-  const [initialFetchDone, setInitialFetchDone] = useState(false)
+  const [, setInitialFetchDone] = useState(false)
 
   const { cacheKey, cacheTTL, enabled = true } = options
 
@@ -67,10 +67,11 @@ export function useAsyncData<T>(
       setData(result)
       setLoading('succeeded')
       setInitialFetchDone(true)
-    } catch (err: any) {
-      setError(err.message || 'An error occurred')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
       setLoading('failed')
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- spread dependencies are intentional for dynamic dependency list
   }, [fetcher, cacheKey, cacheTTL, enabled, ...dependencies])
 
   useEffect(() => {
@@ -330,8 +331,8 @@ export function usePropertyMutations() {
 
       setLoading(false)
       return updated
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
       setLoading(false)
       throw err
     }
@@ -349,8 +350,8 @@ export function usePropertyMutations() {
 
       setLoading(false)
       return created
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
       setLoading(false)
       throw err
     }
@@ -368,8 +369,8 @@ export function usePropertyMutations() {
       await globalCache.remove(createCacheKey('property', { id }))
 
       setLoading(false)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
       setLoading(false)
       throw err
     }
@@ -401,8 +402,8 @@ export function useAISuggestionMutations() {
 
       setLoading(false)
       return result
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
       setLoading(false)
       throw err
     }
@@ -419,8 +420,8 @@ export function useAISuggestionMutations() {
       await globalCache.remove('triage-queue')
 
       setLoading(false)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
       setLoading(false)
       throw err
     }
@@ -439,8 +440,8 @@ export function useAISuggestionMutations() {
 
       setLoading(false)
       return results
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
       setLoading(false)
       throw err
     }

@@ -219,9 +219,6 @@ test.describe('Properties Filtering', () => {
   test('TopBar filters affect table results', async ({ page }) => {
     await expect(page.locator('table')).toBeVisible({ timeout: 10000 });
 
-    // Get initial row count
-    const initialRows = await page.locator('table tbody tr').count();
-
     // Apply a filter (e.g., county dropdown)
     const countySelect = page.locator('[data-testid="county-filter"], select[name="county"]');
 

@@ -32,7 +32,7 @@ function getRedemptionPeriod(state: string | undefined): string {
 interface ComparisonRow {
   label: string
   getValue: (property: Property) => string | number | null
-  format?: (value: any) => string
+  format?: (value: string | number | null) => string
   highlightBest?: 'high' | 'low'
 }
 

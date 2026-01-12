@@ -7,7 +7,6 @@ import {
   Trophy,
   FileText,
   CheckCircle2,
-  ChevronRight,
   MapPin,
   X,
 } from 'lucide-react'
@@ -146,7 +145,6 @@ export function DealPipelineVisual({
             const Icon = stage.icon
             const isCompleted = currentStageIndex > index
             const isCurrent = currentStageIndex === index
-            const isPending = currentStageIndex < index
 
             return (
               <React.Fragment key={stage.id}>
@@ -232,6 +230,7 @@ export function DealPipelineVisual({
 /**
  * Get the step IDs associated with a pipeline stage
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function getStepIdsForStage(stage: FirstDealStage): string[] {
   const pipelineStage = PIPELINE_STAGES.find(s => s.id === stage)
   return pipelineStage?.stepIds || []
@@ -240,6 +239,7 @@ export function getStepIdsForStage(stage: FirstDealStage): string[] {
 /**
  * Get the pipeline stage for a given step ID
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function getStageForStepId(stepId: string): FirstDealStage | null {
   for (const stage of PIPELINE_STAGES) {
     if (stage.stepIds.includes(stepId)) {

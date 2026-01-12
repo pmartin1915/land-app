@@ -1,5 +1,5 @@
 // PropertyMap.tsx - Interactive map with properties using WebGL layers for performance
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
+import React, { useState, useCallback, useMemo, useRef } from 'react'
 import Map, { Source, Layer, Popup, NavigationControl, ScaleControl, FullscreenControl } from 'react-map-gl'
 import type { MapRef, ViewStateChangeEvent, MapLayerMouseEvent, LayerProps } from 'react-map-gl'
 import type { FeatureCollection, Feature, Point } from 'geojson'
@@ -198,9 +198,9 @@ interface PropertyMapProps {
 
 export function PropertyMap({
   properties,
-  selectedProperty,
+  selectedProperty: _selectedProperty,
   onPropertySelect,
-  showFloodZones = false,
+  showFloodZones: _showFloodZones = false,
   showClusters = true,
   className = ''
 }: PropertyMapProps) {
@@ -269,7 +269,11 @@ export function PropertyMap({
       const mapboxSource = mapRef.current?.getSource('properties-source')
 
       if (mapboxSource && 'getClusterExpansionZoom' in mapboxSource) {
-        (mapboxSource as any).getClusterExpansionZoom(clusterId, (err: any, zoom: number) => {
+        // Type assertion for mapbox cluster source
+        const clusterSource = mapboxSource as unknown as {
+          getClusterExpansionZoom: (clusterId: number, callback: (err: Error | null, zoom: number) => void) => void
+        }
+        clusterSource.getClusterExpansionZoom(clusterId, (err: Error | null, zoom: number) => {
           if (err) return
 
           const geometry = feature.geometry as Point

@@ -543,7 +543,8 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
       enableSorting: false,
       enableHiding: false,
     },
-  ], [onRowSelect, toggleWatch, isInCompare, isAtLimit, toggleCompare]) // Removed watchlistStatus and togglingWatch - handled by cell render
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- watchlistStatus and togglingWatch intentionally omitted, handled by cell render
+  ], [onRowSelect, toggleWatch, isInCompare, isAtLimit, toggleCompare])
 
   // Create table instance
   const table = useReactTable({

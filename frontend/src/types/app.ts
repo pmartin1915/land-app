@@ -1,6 +1,6 @@
 // Frontend-specific types and interfaces
 
-import { Property, AISuggestion, County } from './api'
+import { AISuggestion } from './api'
 
 // Application State Types
 export interface AppState {
@@ -59,7 +59,7 @@ export interface ActivityItem {
   title: string
   description: string
   timestamp: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export interface NavigationItem {
@@ -73,28 +73,28 @@ export interface NavigationItem {
 }
 
 // Table and Data Grid Types
-export interface TableColumn<T = any> {
+export interface TableColumn<T = unknown> {
   id: string
   label: string
-  accessor: keyof T | ((item: T) => any)
+  accessor: keyof T | ((item: T) => unknown)
   sortable?: boolean
   filterable?: boolean
   width?: number | string
   align?: 'left' | 'center' | 'right'
-  format?: (value: any) => string
-  render?: (value: any, item: T) => React.ReactNode
+  format?: (value: unknown) => string
+  render?: (value: unknown, item: T) => React.ReactNode
 }
 
 export interface TableState {
   sortBy?: string
   sortOrder: 'asc' | 'desc'
-  filters: Record<string, any>
+  filters: Record<string, unknown>
   selectedRows: string[]
   page: number
   pageSize: number
 }
 
-export interface TableAction<T = any> {
+export interface TableAction<T = unknown> {
   id: string
   label: string
   icon?: string
@@ -132,14 +132,14 @@ export interface FormField {
   options?: { value: string; label: string }[]
   validation?: ValidationRule[]
   dependsOn?: string
-  conditional?: (values: any) => boolean
+  conditional?: (values: Record<string, unknown>) => boolean
 }
 
 export interface ValidationRule {
   type: 'required' | 'min' | 'max' | 'pattern' | 'custom'
-  value?: any
+  value?: string | number | RegExp
   message: string
-  validator?: (value: any) => boolean
+  validator?: (value: unknown) => boolean
 }
 
 // Search and Filter Types
@@ -201,8 +201,8 @@ export interface MapLayer {
   name: string
   type: 'cluster' | 'heatmap' | 'marker' | 'polygon'
   visible: boolean
-  data: any[]
-  style?: any
+  data: unknown[]
+  style?: Record<string, unknown>
 }
 
 // Triage and AI Types
@@ -343,7 +343,7 @@ export interface StorageData {
   userPreferences: UserPreferences
   cachedData: {
     [key: string]: {
-      data: any
+      data: unknown
       timestamp: number
       ttl: number
     }

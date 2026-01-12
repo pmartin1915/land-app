@@ -1,11 +1,21 @@
 import React, { useState } from 'react'
-import { Download, FileJson, FileSpreadsheet, AlertTriangle, Check, RefreshCw, Eye } from 'lucide-react'
+import { FileJson, FileSpreadsheet, AlertTriangle, Check, RefreshCw, Eye } from 'lucide-react'
+
+// Sample property data for preview
+interface SampleProperty {
+  parcel_id: string
+  state: string
+  county: string
+  amount: number
+  acreage: number | null
+  investment_score: number | null
+}
 
 // Types
 interface ExportPreview {
   total_matching: number
   sample_count: number
-  sample: any[]
+  sample: SampleProperty[]
   filters_applied: {
     state: string | null
     county: string | null

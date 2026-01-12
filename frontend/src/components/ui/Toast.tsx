@@ -2,6 +2,7 @@ import toast, { Toaster as HotToaster, ToastOptions } from 'react-hot-toast'
 import { CheckCircle, XCircle, AlertCircle, Loader2, Info } from 'lucide-react'
 
 // Re-export the toast function with custom defaults
+// eslint-disable-next-line react-refresh/only-export-components
 export { toast }
 
 // Toast wrapper with theme support
@@ -47,6 +48,7 @@ interface CustomToastOptions extends Omit<ToastOptions, 'icon'> {
   description?: string
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const showToast = {
   success: (message: string, options?: CustomToastOptions) => {
     const { description, ...toastOptions } = options || {}
@@ -165,6 +167,7 @@ interface ActionToastOptions extends CustomToastOptions {
   onAction: () => void
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function showActionToast(message: string, options: ActionToastOptions) {
   const { description, actionLabel, onAction, ...toastOptions } = options
 
@@ -198,6 +201,7 @@ interface UndoToastOptions extends Omit<CustomToastOptions, 'duration'> {
   duration?: number
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function showUndoToast(message: string, options: UndoToastOptions) {
   const { onUndo, duration = 5000, ...restOptions } = options
 

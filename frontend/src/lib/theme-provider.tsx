@@ -103,6 +103,7 @@ export function ThemeProvider({
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useTheme() {
   const context = useContext(ThemeContext)
 
@@ -115,7 +116,7 @@ export function useTheme() {
 
 // Theme toggle component
 export function ThemeToggle() {
-  const { theme, setTheme, isDark } = useTheme()
+  const { setTheme, isDark } = useTheme()
 
   const toggleTheme = () => {
     setTheme(isDark ? 'light' : 'dark')
@@ -144,6 +145,7 @@ export function ThemeToggle() {
 }
 
 // Utility hook for component-specific theme values
+// eslint-disable-next-line react-refresh/only-export-components
 export function useComponentTheme() {
   const { isDark } = useTheme()
 

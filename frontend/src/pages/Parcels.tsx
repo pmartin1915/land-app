@@ -16,7 +16,7 @@ const STATE_OPTIONS = [
 ]
 
 export function Parcels() {
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [, setSearchParams] = useSearchParams()
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null)
   const [slideOverOpen, setSlideOverOpen] = useState(false)
   const [filters, setFilters] = useState<PropertyFilters>({})

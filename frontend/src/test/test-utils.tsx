@@ -9,6 +9,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { ThemeProvider } from '@lib/theme-provider'
 
 // All providers needed for most components
+// eslint-disable-next-line react-refresh/only-export-components
 function AllProviders({ children }: { children: React.ReactNode }) {
   return (
     <BrowserRouter>
@@ -26,6 +27,7 @@ const customRender = (
 ) => render(ui, { wrapper: AllProviders, ...options })
 
 // Re-export everything from RTL
+// eslint-disable-next-line react-refresh/only-export-components
 export * from '@testing-library/react'
 export { default as userEvent } from '@testing-library/user-event'
 

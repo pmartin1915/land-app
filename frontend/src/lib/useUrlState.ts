@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useSearchParams, useNavigate, useLocation } from 'react-router-dom'
+import { useSearchParams, useLocation } from 'react-router-dom'
 import { PropertyFilters, SortOrder } from '../types'
 
 interface UrlTableState {
@@ -238,7 +238,6 @@ export function useUrlState(options: UseUrlStateOptions = {}) {
   const { defaultPerPage = DEFAULT_PER_PAGE, debounceMs = DEBOUNCE_MS } = options
 
   const [searchParams, setSearchParams] = useSearchParams()
-  const navigate = useNavigate()
   const location = useLocation()
 
   // Parse initial state from URL
@@ -248,7 +247,8 @@ export function useUrlState(options: UseUrlStateOptions = {}) {
       parsed.perPage = defaultPerPage
     }
     return parsed
-  }, []) // Only parse on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only parse on mount
+  }, [])
 
   // Local state for immediate UI updates
   const [localState, setLocalState] = useState<UrlTableState>(initialState)
@@ -282,6 +282,7 @@ export function useUrlState(options: UseUrlStateOptions = {}) {
         clearTimeout(debounceTimerRef.current)
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- searchParams read via ref pattern to avoid loops
   }, [localState, debounceMs, setSearchParams])
 
   // Sync from URL changes (e.g., browser back/forward)
@@ -298,6 +299,7 @@ export function useUrlState(options: UseUrlStateOptions = {}) {
     }
     const urlState = parseUrlParams(searchParams)
     setLocalState(urlState)
+  // searchParams is the only intentional trigger for browser navigation sync
   }, [searchParams])
 
   // Update functions

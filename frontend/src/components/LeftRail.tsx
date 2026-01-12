@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useComponentTheme } from '../lib/theme-provider'
 import { useApp } from '../lib/context'
 import { NavigationItem } from '../types'
 
@@ -147,7 +146,6 @@ interface LeftRailProps {
 export function LeftRail({ className = '' }: LeftRailProps) {
   const location = useLocation()
   const navigate = useNavigate()
-  const theme = useComponentTheme()
   const { state, dispatch } = useApp()
 
   const [collapsed, setCollapsed] = useState(false)

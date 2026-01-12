@@ -30,6 +30,80 @@ import {
 import { config } from '../config'
 import { globalCache } from './cache'
 
+// API Response Types for endpoints without specific types
+export interface PropertyListResponse {
+  properties: Property[]
+  total_count: number
+  page: number
+  page_size: number
+  total_pages: number
+  has_next: boolean
+  has_previous: boolean
+}
+
+export interface PropertyStatsResponse {
+  total_properties: number
+  total_value: number
+  avg_investment_score: number
+  by_state: Record<string, number>
+  by_status: Record<string, number>
+  price_distribution?: { ranges: string[]; counts: number[] }
+  score_distribution?: Record<string, number>
+  top_counties?: { name: string; avg_investment_score: number }[]
+  activity_timeline?: { dates: string[]; new_properties: number[] }
+}
+
+export interface HealthResponse {
+  status: 'ok' | 'degraded' | 'down'
+  timestamp: string
+  version?: string
+}
+
+export interface DetailedHealthResponse extends HealthResponse {
+  database: boolean
+  cache: boolean
+  api_response_time?: number
+  memory_usage?: number
+}
+
+export interface CacheStatsResponse {
+  hits: number
+  misses: number
+  size: number
+  hit_ratio: number
+}
+
+export interface SyncStatusResponse {
+  status: 'synced' | 'syncing' | 'error'
+  last_sync: string
+  pending_changes: number
+}
+
+export interface CSVPreviewResponse {
+  headers: string[]
+  rows: string[][]
+  total_rows: number
+  mapping?: CSVImportMapping
+}
+
+export interface ImportHistoryItem {
+  id: string
+  filename: string
+  created_at: string
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  imported: number
+  duplicates: number
+  errors: number
+}
+
+export interface WatchlistStatsResponse {
+  watched: number
+  rated: number
+  dismissed: number
+  with_notes: number
+  total_interactions: number
+}
+
 // First Deal Pipeline Types
 export type FirstDealStage = 'research' | 'bid' | 'won' | 'quiet_title' | 'sold' | 'holding'
 
@@ -216,16 +290,18 @@ class AuthManager {
       console.log('Device token obtained successfully')
       return token
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to request device token:', error)
 
       // Log detailed error information for debugging
-      if (error.response) {
-        console.error('Response status:', error.response.status)
-        console.error('Response data:', error.response.data)
+      const axiosError = error as AxiosError
+      if (axiosError.response) {
+        console.error('Response status:', axiosError.response.status)
+        console.error('Response data:', axiosError.response.data)
       }
 
-      throw new Error(`Authentication failed: ${error.message}`)
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      throw new Error(`Authentication failed: ${message}`)
     }
   }
 
@@ -256,8 +332,9 @@ class AuthManager {
       console.log('Token refreshed successfully')
       return token
 
-    } catch (error: any) {
-      console.warn('Token refresh failed, requesting new token:', error.message)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      console.warn('Token refresh failed, requesting new token:', message)
       // If refresh fails, request a new token
       return await this.requestDeviceToken()
     }
@@ -294,7 +371,7 @@ class AuthManager {
   }
 
   // Get current token status for debugging
-  public static getAuthStatus(): any {
+  public static getAuthStatus(): { hasToken: boolean; isExpired: boolean; expiresAt: string | null; deviceId: string } {
     const token = localStorage.getItem(this.TOKEN_KEY)
     const expires = localStorage.getItem(this.TOKEN_EXPIRES_KEY)
     const deviceId = this.getDeviceId()
@@ -355,7 +432,7 @@ const createApiClient = (): AxiosInstance => {
         config.metadata = { startTime: Date.now() }
 
         return config
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Authentication failed in request interceptor:', error)
         // Continue without auth - some endpoints might not require it
         config.metadata = { startTime: Date.now() }
@@ -381,8 +458,8 @@ const createApiClient = (): AxiosInstance => {
       return response
     },
     async (error: AxiosError<APIError>) => {
-      const originalRequest = error.config as any
-      const retryCount = originalRequest._retryCount || 0
+      const originalRequest = error.config as AxiosError['config'] & { _retryCount?: number }
+      const retryCount = originalRequest?._retryCount || 0
 
       // Handle connection/network errors with retry
       if (isRetryableError(error) && retryCount < RETRY_CONFIG.maxRetries) {
@@ -440,7 +517,7 @@ const createApiClient = (): AxiosInstance => {
           console.log('Retrying request with new token')
           return client(originalRequest)
 
-        } catch (authError: any) {
+        } catch (authError: unknown) {
           console.error('Failed to refresh authentication:', authError)
 
           // If auth refresh fails, clear everything and let the request fail
@@ -465,10 +542,10 @@ const createApiClient = (): AxiosInstance => {
       // Transform backend errors to frontend format
       if (error.response?.data) {
         const apiError = error.response.data
-        const transformedError = new Error(apiError.message || 'An API error occurred')
+        const transformedError = new Error(apiError.message || 'An API error occurred') as Error & { status: number; details: APIError }
         transformedError.name = 'APIError'
-        ;(transformedError as any).status = error.response.status
-        ;(transformedError as any).details = apiError
+        transformedError.status = error.response.status
+        transformedError.details = apiError
         return Promise.reject(transformedError)
       }
 
@@ -585,14 +662,15 @@ export const propertiesApi = {
     // Backend uses: properties, total_count, page_size, total_pages, has_previous
     // Frontend expects: items, total, per_page, pages, has_prev
     if ('properties' in data) {
+      const backendData = data as PropertyListResponse
       return {
-        items: (data as any).properties,
-        total: (data as any).total_count,
-        page: (data as any).page,
-        per_page: (data as any).page_size,
-        pages: (data as any).total_pages,
-        has_next: (data as any).has_next,
-        has_prev: (data as any).has_previous,
+        items: backendData.properties,
+        total: backendData.total_count,
+        page: backendData.page,
+        per_page: backendData.page_size,
+        pages: backendData.total_pages,
+        has_next: backendData.has_next,
+        has_prev: backendData.has_previous,
       }
     }
 
@@ -638,13 +716,13 @@ export const propertiesApi = {
   },
 
   // Get property statistics
-  getPropertyStats: async (filters?: PropertyFilters): Promise<any> => {
+  getPropertyStats: async (filters?: PropertyFilters): Promise<PropertyStatsResponse> => {
     const response = await apiClient.get('/properties/stats', { params: filters })
     return handleResponse(response)
   },
 
   // Update property research status
-  updatePropertyStatus: async (id: string, status: string, notes?: string): Promise<any> => {
+  updatePropertyStatus: async (id: string, status: string, notes?: string): Promise<Property> => {
     const response = await apiClient.patch(`/properties/${id}/status`, {
       status,
       triage_notes: notes,
@@ -682,7 +760,7 @@ export const countiesApi = {
   },
 
   // Get county statistics
-  getCountyStats: async (code?: string): Promise<any> => {
+  getCountyStats: async (code?: string): Promise<PropertyStatsResponse> => {
     const endpoint = code ? `/counties/${code}/stats` : '/counties/stats'
     const response = await apiClient.get(endpoint)
     return handleResponse(response)
@@ -724,7 +802,7 @@ export const aiApi = {
 // CSV Import API
 export const importApi = {
   // Upload and preview CSV
-  previewCSV: async (file: File, mapping?: CSVImportMapping): Promise<any> => {
+  previewCSV: async (file: File, mapping?: CSVImportMapping): Promise<CSVPreviewResponse> => {
     const formData = new FormData()
     formData.append('file', file)
     if (mapping) {
@@ -750,7 +828,7 @@ export const importApi = {
   },
 
   // Get import history
-  getImportHistory: async (): Promise<any[]> => {
+  getImportHistory: async (): Promise<ImportHistoryItem[]> => {
     const response = await apiClient.get('/import/history')
     return handleResponse(response)
   },
@@ -800,13 +878,13 @@ export const userApi = {
   },
 
   // Get user preferences
-  getPreferences: async (): Promise<any> => {
+  getPreferences: async (): Promise<Record<string, unknown>> => {
     const response = await apiClient.get('/user/preferences')
     return handleResponse(response)
   },
 
   // Update user preferences
-  updatePreferences: async (preferences: any): Promise<any> => {
+  updatePreferences: async (preferences: Record<string, unknown>): Promise<Record<string, unknown>> => {
     const response = await apiClient.put('/user/preferences', preferences)
     return handleResponse(response)
   },
@@ -838,7 +916,7 @@ export const applicationApi = {
   },
 
   // Generate application forms
-  generateForms: async (applicationIds: string[]): Promise<any> => {
+  generateForms: async (applicationIds: string[]): Promise<{ forms: string[]; generated_count: number }> => {
     const response = await apiClient.post('/applications/generate-forms', { application_ids: applicationIds })
     return handleResponse(response)
   },
@@ -858,7 +936,7 @@ const invalidatePortfolioCaches = async () => {
 // Watchlist API
 export const watchlistApi = {
   // Get watchlist with pagination
-  getWatchlist: async (page: number = 1, pageSize: number = 20): Promise<any> => {
+  getWatchlist: async (page: number = 1, pageSize: number = 20): Promise<PaginatedResponse<Property>> => {
     const response = await apiClient.get('/watchlist', {
       params: { page, page_size: pageSize }
     })
@@ -866,7 +944,7 @@ export const watchlistApi = {
   },
 
   // Get watchlist statistics
-  getStats: async (): Promise<any> => {
+  getStats: async (): Promise<WatchlistStatsResponse> => {
     const response = await apiClient.get('/watchlist/stats')
     return handleResponse(response)
   },
@@ -888,7 +966,7 @@ export const watchlistApi = {
   },
 
   // Update property interaction (rating, notes)
-  updateInteraction: async (propertyId: string, data: { star_rating?: number; user_notes?: string }): Promise<any> => {
+  updateInteraction: async (propertyId: string, data: { star_rating?: number; user_notes?: string }): Promise<{ id: string; star_rating?: number; user_notes?: string }> => {
     const response = await apiClient.put(`/watchlist/property/${propertyId}`, data)
     const result = handleResponse(response)
     await invalidatePortfolioCaches()
@@ -930,7 +1008,7 @@ export const watchlistApi = {
 // Sync API
 export const syncApi = {
   // Get sync status
-  getSyncStatus: async (): Promise<any> => {
+  getSyncStatus: async (): Promise<SyncStatusResponse> => {
     const response = await apiClient.get('/sync/status')
     return handleResponse(response)
   },
@@ -951,25 +1029,25 @@ export const syncApi = {
 // Health and monitoring API
 export const systemApi = {
   // Check API health
-  getHealth: async (): Promise<any> => {
+  getHealth: async (): Promise<HealthResponse> => {
     const response = await apiClient.get('/health')
     return response.data
   },
 
   // Get detailed health
-  getDetailedHealth: async (): Promise<any> => {
+  getDetailedHealth: async (): Promise<DetailedHealthResponse> => {
     const response = await apiClient.get('/health/detailed')
     return response.data
   },
 
   // Get cache statistics
-  getCacheStats: async (): Promise<any> => {
+  getCacheStats: async (): Promise<CacheStatsResponse> => {
     const response = await apiClient.get('/cache/stats')
     return response.data
   },
 
   // Warm cache
-  warmCache: async (): Promise<any> => {
+  warmCache: async (): Promise<{ warmed: boolean; items_cached: number }> => {
     const response = await apiClient.post('/cache/warm')
     return response.data
   },
@@ -1023,10 +1101,18 @@ export const portfolioApi = {
   },
 }
 
+// Auth response types
+export interface LoginResponse {
+  access_token: string
+  refresh_token: string
+  token_type: string
+  expires_in: number
+}
+
 // Authentication API (for future use)
 export const authApi = {
   // Login
-  login: async (email: string, password: string): Promise<any> => {
+  login: async (email: string, password: string): Promise<LoginResponse> => {
     const response = await apiClient.post('/auth/login', { email, password })
     return handleResponse(response)
   },
@@ -1038,7 +1124,7 @@ export const authApi = {
   },
 
   // Refresh token
-  refreshToken: async (): Promise<any> => {
+  refreshToken: async (): Promise<{ access_token: string; expires_in: number }> => {
     const response = await apiClient.post('/auth/refresh')
     return handleResponse(response)
   },
@@ -1063,22 +1149,33 @@ export const api = {
 export default api
 
 // Utility functions
-export const isApiError = (error: any): error is APIError => {
-  return error && error.name === 'APIError'
+export const isApiError = (error: unknown): error is APIError => {
+  return error !== null && typeof error === 'object' && 'name' in error && (error as { name: string }).name === 'APIError'
 }
 
-export const getApiErrorMessage = (error: any): string => {
+export const getApiErrorMessage = (error: unknown): string => {
   if (isApiError(error)) {
     return error.details?.message || error.message
   }
-  return error.message || 'An unexpected error occurred'
+  if (error instanceof Error) {
+    return error.message
+  }
+  return 'An unexpected error occurred'
 }
 
 // Export AuthManager and ConnectionManager for debugging and manual management
 export { AuthManager, ConnectionManager }
 
+// Auth status type
+export interface AuthStatusInfo {
+  hasToken: boolean
+  isExpired: boolean
+  expiresAt: string | null
+  deviceId: string
+}
+
 // Authentication utility functions
-export const getAuthStatus = (): any => {
+export const getAuthStatus = (): AuthStatusInfo => {
   return AuthManager.getAuthStatus()
 }
 

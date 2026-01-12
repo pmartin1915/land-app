@@ -94,6 +94,7 @@ export function PropertyCompareProvider({ children }: PropertyCompareProviderPro
  * Hook to access the property comparison context.
  * Must be used within a PropertyCompareProvider.
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePropertyCompare(): PropertyCompareContextType {
   const context = useContext(PropertyCompareContext)
   if (!context) {

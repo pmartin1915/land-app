@@ -3,7 +3,7 @@
 
 import localforage from 'localforage'
 
-export interface CacheItem<T = any> {
+export interface CacheItem<T = unknown> {
   data: T
   timestamp: number
   ttl: number // Time to live in milliseconds
@@ -85,12 +85,12 @@ export class CacheManager {
     }
   }
 
-  private generateKey(prefix: string, params?: any): string {
+  private generateKey(prefix: string, params?: Record<string, unknown>): string {
     if (!params) return prefix
 
     // Create deterministic key from parameters
     const paramString = JSON.stringify(params, Object.keys(params).sort())
-    return `${prefix}:${btoa(paramString).replace(/[+=\/]/g, '')}`
+    return `${prefix}:${btoa(paramString).replace(/[+=/]/g, '')}`
   }
 
   // Get item from cache (memory first, then persistent)
@@ -255,7 +255,7 @@ export class CacheManager {
   }
 
   // Create a memoized version of an async function
-  memoize<T extends any[], R>(
+  memoize<T extends unknown[], R>(
     fn: (...args: T) => Promise<R>,
     keyGenerator: (...args: T) => string,
     ttl?: number,
@@ -301,11 +301,11 @@ export const uiCache = new CacheManager({
 })
 
 // Cache utility functions
-export const createCacheKey = (prefix: string, params?: any): string => {
+export const createCacheKey = (prefix: string, params?: Record<string, unknown>): string => {
   if (!params) return prefix
 
   const paramString = JSON.stringify(params, Object.keys(params).sort())
-  return `${prefix}:${btoa(paramString).replace(/[+=\/]/g, '')}`
+  return `${prefix}:${btoa(paramString).replace(/[+=/]/g, '')}`
 }
 
 export const invalidatePropertyCache = async (): Promise<void> => {
@@ -318,7 +318,7 @@ export const invalidateCountyCache = async (): Promise<void> => {
 
 // Hook for cache invalidation on filter changes
 export const useFilterCache = () => {
-  const invalidateOnFilterChange = async (filters: any) => {
+  const invalidateOnFilterChange = async (filters: Record<string, unknown>) => {
     // Invalidate cached results when filters change
     const filterTags = Object.keys(filters).map(key => `filter:${key}`)
     await propertyCache.invalidateByTags(filterTags)

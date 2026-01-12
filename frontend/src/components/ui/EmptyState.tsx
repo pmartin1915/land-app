@@ -1,5 +1,5 @@
 import React from 'react'
-import { Search, FileX, Inbox, Filter, Star, MapPin, TrendingUp, Database } from 'lucide-react'
+import { Search, Filter, Star, MapPin, TrendingUp, Database } from 'lucide-react'
 
 type EmptyStateType = 'no-data' | 'no-results' | 'no-matches' | 'empty-watchlist' | 'empty-map' | 'no-activity'
 

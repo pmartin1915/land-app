@@ -3,18 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   X,
   Star,
-  StarOff,
   MapPin,
   Download,
-  ExternalLink,
-  Calendar,
   DollarSign,
   Ruler,
   Award,
   AlertTriangle,
   CheckCircle,
   Clock,
-  User,
   FileText,
   TrendingUp,
   Droplets,
@@ -24,7 +20,6 @@ import {
 } from 'lucide-react'
 import { Property, AISuggestion } from '../types'
 import { usePropertySuggestions, useAISuggestionMutations } from '../lib/hooks'
-import { useComponentTheme } from '../lib/theme-provider'
 import { ScoreTooltip, ScoreType } from './ui/ScoreTooltip'
 import { InvestmentGradeBadge } from './ui/InvestmentGradeBadge'
 
@@ -175,7 +170,6 @@ function AISuggestionCard({ suggestion, onApply, onReject, isLoading }: AISugges
 }
 
 export function PropertyDetailSlideOver({ property, isOpen, onClose }: PropertyDetailSlideOverProps) {
-  const theme = useComponentTheme()
   const [activeTab, setActiveTab] = useState('overview')
 
   // Fetch AI suggestions if property is selected
@@ -206,6 +200,7 @@ export function PropertyDetailSlideOver({ property, isOpen, onClose }: PropertyD
     if (property) {
       setActiveTab('overview')
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- only reset on property id change, not full object
   }, [property?.id])
 
   if (!property) return null

@@ -43,9 +43,6 @@ function getServerUrl(): string {
     return process.env.VITE_DEV_SERVER_URL
   }
 
-  // Try to detect from common development ports
-  const commonPorts = [5173, 5174, 5175, 3000, 3001]
-
   // For now, use the configured port or fallback
   const port = process.env.VITE_DEV_PORT || '5173'
   return `http://localhost:${port}`
@@ -208,9 +205,12 @@ async function createWindow() {
   })
 }
 
+// Electron menu template type
+type MenuTemplate = Electron.MenuItemConstructorOptions[]
+
 // Create application menu
 function createMenu() {
-  const template: any[] = [
+  const template: MenuTemplate = [
     {
       label: 'File',
       submenu: [

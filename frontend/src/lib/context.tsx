@@ -2,10 +2,10 @@ import React, { createContext, useContext, useReducer, ReactNode } from 'react'
 
 // App State Interface
 interface AppState {
-  user: any | null
+  user: unknown | null
   theme: 'light' | 'dark'
   selectedProperties: string[]
-  filters: Record<string, any>
+  filters: Record<string, unknown>
   loading: boolean
   error: string | null
 }
@@ -26,7 +26,7 @@ type AppAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_SELECTED_PROPERTIES'; payload: string[] }
-  | { type: 'SET_FILTERS'; payload: Record<string, any> }
+  | { type: 'SET_FILTERS'; payload: Record<string, unknown> }
   | { type: 'CLEAR_ERROR' }
 
 // Reducer
@@ -67,6 +67,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 }
 
 // Hook
+// eslint-disable-next-line react-refresh/only-export-components
 export function useApp() {
   const context = useContext(AppContext)
   if (!context) {

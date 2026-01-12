@@ -8,7 +8,7 @@ export function Map() {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null)
   const [showFloodZones, setShowFloodZones] = useState(false) // Disabled by default - FEMA server has issues
   const [minScore, setMinScore] = useState<number | undefined>(50)
-  const [filters, setFilters] = useState<PropertyFilters>({})
+  const [filters] = useState<PropertyFilters>({})
 
   // Fetch properties for the map
   const { data: properties, isLoading: loading, error, refetch } = useMapProperties(filters, minScore)

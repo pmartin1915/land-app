@@ -1,17 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useComponentTheme, ThemeToggle } from '../lib/theme-provider'
+import { ThemeToggle } from '../lib/theme-provider'
 import { usePropertySearch, useCounties } from '../lib/hooks'
-import { useUrlState } from '../lib/useUrlState'
 import { PropertyFilters } from '../types'
-import { Search, Filter, Download, Upload, Settings, Calendar, ChevronDown, X, Share2 } from 'lucide-react'
+import { Search, Filter, Download, Upload, Settings, Calendar, ChevronDown, X } from 'lucide-react'
 import { SearchEmptyState } from './ui/EmptyState'
 import { showToast } from './ui/Toast'
 
 interface TopBarProps {
   title: string
   onFiltersChange?: (filters: PropertyFilters) => void
-  onSearchChange?: (query: string, results: any[]) => void
+  onSearchChange?: (query: string, results: unknown[]) => void
 }
 
 interface FilterPopoverProps {
@@ -302,7 +301,6 @@ function FilterPopover({ isOpen, onClose, filters, onFiltersChange }: FilterPopo
 
 export function TopBar({ title, onFiltersChange, onSearchChange }: TopBarProps) {
   const navigate = useNavigate()
-  const theme = useComponentTheme()
 
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)

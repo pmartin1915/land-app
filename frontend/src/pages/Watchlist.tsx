@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { Star, Trash2, StickyNote, AlertTriangle, RefreshCw, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { Star, Trash2, StickyNote, AlertTriangle, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
 import { api } from '../lib/api'
 
 // Types
@@ -66,12 +66,7 @@ export function Watchlist() {
 
   const pageSize = 20
 
-  useEffect(() => {
-    fetchWatchlist()
-    fetchStats()
-  }, [page])
-
-  const fetchWatchlist = async () => {
+  const fetchWatchlist = useCallback(async () => {
     try {
       setIsLoading(true)
       const data: WatchlistResponse = await api.watchlist.getWatchlist(page, pageSize)
@@ -81,16 +76,21 @@ export function Watchlist() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [page])
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const data: WatchlistStats = await api.watchlist.getStats()
       setStats(data)
     } catch (err) {
       console.error('Failed to load stats:', err)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchWatchlist()
+    fetchStats()
+  }, [fetchWatchlist, fetchStats])
 
   const removeFromWatchlist = async (propertyId: string) => {
     try {

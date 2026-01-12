@@ -1,9 +1,7 @@
 import React, { useState, Suspense, memo } from 'react'
 import { usePropertyStats, useTriageQueue, useCounties, useWorkflowStats } from '../lib/hooks'
 import { PropertyFilters } from '../types'
-import { KPICardsSkeleton, ListSkeleton } from '../components/ui/LoadingSkeleton'
 import { ErrorState } from '../components/ui/ErrorState'
-import { EmptyState } from '../components/ui/EmptyState'
 import { TopPicksCard } from '../components/TopPicksCard'
 
 // Lazy load DashboardCharts to improve initial page load

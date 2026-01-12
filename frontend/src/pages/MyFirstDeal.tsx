@@ -475,7 +475,7 @@ export function MyFirstDeal() {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Steps Checklist */}
         <div className="lg:col-span-2 space-y-3">
-          {STEPS.map((step, index) => {
+          {STEPS.map((step, _index) => {
             const isCompleted = completedSteps.has(step.id)
             const isExpanded = expandedStep === step.id
 

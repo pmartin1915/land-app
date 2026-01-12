@@ -109,6 +109,7 @@ export function ConnectionStatus({ className = '', showWhenOnline = false }: Con
 }
 
 // Hook for components that need connection status
+// eslint-disable-next-line react-refresh/only-export-components
 export function useConnectionStatus() {
   const [isOnline, setIsOnline] = useState(getConnectionStatus())
 

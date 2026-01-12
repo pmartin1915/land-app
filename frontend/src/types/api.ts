@@ -88,7 +88,7 @@ export interface AISuggestion {
   id: UUID
   parcel_id: UUID
   field: string // 'auctionDate', 'owner', etc.
-  proposed_value: any
+  proposed_value: string | number | boolean | null
   confidence: number // 0-100
   reason?: string // brief explanation
   source_ids: UUID[] // provenance references
@@ -105,7 +105,7 @@ export interface SourceSnapshot {
   source_name: string
   scraped_at: string
   raw_html?: string
-  extracted_fields: Record<string, any>
+  extracted_fields: Record<string, unknown>
   url?: string
 }
 
@@ -119,7 +119,7 @@ export interface Transaction {
   description: string
   amount?: number
   source?: string
-  raw?: Record<string, any>
+  raw?: Record<string, unknown>
 }
 
 /**

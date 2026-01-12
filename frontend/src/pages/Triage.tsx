@@ -438,7 +438,7 @@ export function Triage() {
   // Reset selection when queue changes
   useEffect(() => {
     if (triageQueue && triageQueue.length > 0) {
-      setSelectedIndex(Math.min(selectedIndex, triageQueue.length - 1))
+      setSelectedIndex(prev => Math.min(prev, triageQueue.length - 1))
     }
   }, [triageQueue])
 
