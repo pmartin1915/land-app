@@ -13,7 +13,7 @@ import {
   LoadingState,
 } from '../types'
 
-// Generic async data hook
+// Generic async data hook with stale-while-revalidate support
 export function useAsyncData<T>(
   fetcher: () => Promise<T>,
   dependencies: unknown[] = [],
@@ -21,14 +21,17 @@ export function useAsyncData<T>(
     cacheKey?: string
     cacheTTL?: number
     enabled?: boolean
+    staleWhileRevalidate?: boolean  // Return stale cache data on error
   } = {}
 ) {
   const [data, setData] = useState<T | null>(null)
   const [loading, setLoading] = useState<LoadingState>('idle')
   const [error, setError] = useState<string | null>(null)
+  const [isStale, setIsStale] = useState(false)
+  const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null)
   const [, setInitialFetchDone] = useState(false)
 
-  const { cacheKey, cacheTTL, enabled = true } = options
+  const { cacheKey, cacheTTL, enabled = true, staleWhileRevalidate = false } = options
 
   const fetchData = useCallback(async (isRefetch = false) => {
     if (!enabled) return
@@ -38,6 +41,7 @@ export function useAsyncData<T>(
       setLoading('loading')
     }
     setError(null)
+    setIsStale(false)
 
     try {
       let result: T
@@ -49,6 +53,7 @@ export function useAsyncData<T>(
           if (cached) {
             setData(cached)
             setLoading('succeeded')
+            setLastFetchTime(new Date())
             setInitialFetchDone(true)
             return
           }
@@ -66,13 +71,28 @@ export function useAsyncData<T>(
 
       setData(result)
       setLoading('succeeded')
+      setLastFetchTime(new Date())
       setInitialFetchDone(true)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      const errorMsg = err instanceof Error ? err.message : 'An error occurred'
+      setError(errorMsg)
+
+      // Graceful degradation: try to use stale cache data on error
+      if (cacheKey && staleWhileRevalidate) {
+        const staleData = await globalCache.get<T>(cacheKey)
+        if (staleData !== null) {
+          setData(staleData)
+          setIsStale(true)
+          setLoading('succeeded')  // Show data, not error state
+          console.warn(`[useAsyncData] Using stale cache for ${cacheKey} due to error: ${errorMsg}`)
+          return
+        }
+      }
+
       setLoading('failed')
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- spread dependencies are intentional for dynamic dependency list
-  }, [fetcher, cacheKey, cacheTTL, enabled, ...dependencies])
+  }, [fetcher, cacheKey, cacheTTL, enabled, staleWhileRevalidate, ...dependencies])
 
   useEffect(() => {
     fetchData(false)
@@ -93,22 +113,33 @@ export function useAsyncData<T>(
     isLoading: loading === 'loading',
     isSuccess: loading === 'succeeded',
     isError: loading === 'failed',
+    isStale,
+    lastFetchTime,
   }
 }
 
 // Properties hooks
 export function useProperties(params?: SearchParams) {
+  // Stringify params for stable dependency - object reference changes on every render
+  const paramsString = JSON.stringify(params)
+
   const cacheKey = useMemo(() =>
     createCacheKey('properties', params),
-    [params]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [paramsString]
   )
 
-  // Memoize stringified params to prevent unnecessary refetches
-  const stringifiedParams = useMemo(() => JSON.stringify(params), [params])
+  // Memoize fetcher to prevent infinite re-render loop
+  // The fetcher must be stable - recreating it triggers useAsyncData's useEffect
+  const fetcher = useCallback(
+    () => api.properties.getProperties(params),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- params object reference changes, use stringified version
+    [paramsString]
+  )
 
   return useAsyncData<PaginatedResponse<Property>>(
-    () => api.properties.getProperties(params),
-    [stringifiedParams],
+    fetcher,
+    [],
     {
       cacheKey,
       cacheTTL: 5 * 60 * 1000, // 5 minutes

@@ -11,6 +11,25 @@ export function ConnectionStatus({ className = '', showWhenOnline = false }: Con
   const [isOnline, setIsOnline] = useState(getConnectionStatus())
   const [isRetrying, setIsRetrying] = useState(false)
   const [showBanner, setShowBanner] = useState(false)
+  const [initialCheckDone, setInitialCheckDone] = useState(false)
+
+  // Run initial API connection check on mount to prevent false offline banner
+  useEffect(() => {
+    const checkInitialConnection = async () => {
+      try {
+        const connected = await checkApiConnection()
+        if (connected) {
+          setIsOnline(true)
+          setShowBanner(false)
+        }
+      } catch {
+        // Ignore errors, let the regular connection monitoring handle it
+      } finally {
+        setInitialCheckDone(true)
+      }
+    }
+    checkInitialConnection()
+  }, [])
 
   useEffect(() => {
     const unsubscribe = subscribeToConnectionStatus((online) => {
@@ -37,6 +56,11 @@ export function ConnectionStatus({ className = '', showWhenOnline = false }: Con
     } finally {
       setIsRetrying(false)
     }
+  }
+
+  // Don't show banner until initial connection check is complete
+  if (!initialCheckDone) {
+    return null
   }
 
   // Don't show anything if online and showWhenOnline is false

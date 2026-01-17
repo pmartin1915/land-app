@@ -1,11 +1,11 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Property, PropertyFilters } from '../types'
 import { PropertiesTable } from '../components/PropertiesTable'
 import { PropertyDetailSlideOver } from '../components/PropertyDetailSlideOver'
 import { ScoreTooltip } from '../components/ui/ScoreTooltip'
 import { Tooltip } from '../components/ui/Tooltip'
-import { Droplets, Sparkles, X, Maximize2, Minimize2 } from 'lucide-react'
+import { Droplets, Sparkles, X, Maximize2, Minimize2, Search } from 'lucide-react'
 
 const STATE_OPTIONS = [
   { value: '', label: 'All States' },
@@ -19,23 +19,35 @@ export function Parcels() {
   const [, setSearchParams] = useSearchParams()
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null)
   const [slideOverOpen, setSlideOverOpen] = useState(false)
-  const [filters, setFilters] = useState<PropertyFilters>({})
+  // Staged filters pattern: draftFilters for UI edits, appliedFilters sent to API
+  const [draftFilters, setDraftFilters] = useState<PropertyFilters>({})
+  const [appliedFilters, setAppliedFilters] = useState<PropertyFilters>({})
   const [beginnerFriendly, setBeginnerFriendly] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
 
-  // Count active filters
+  // Check if draft filters differ from applied filters
+  const hasUnappliedChanges = useMemo(() => {
+    return JSON.stringify(draftFilters) !== JSON.stringify(appliedFilters)
+  }, [draftFilters, appliedFilters])
+
+  // Count active filters (based on draft for UI display)
   const activeFilterCount = [
-    filters.state,
-    filters.minInvestmentScore,
-    filters.maxEffectiveCost,
-    filters.acreageRange,
-    filters.waterOnly,
+    draftFilters.state,
+    draftFilters.minInvestmentScore,
+    draftFilters.maxEffectiveCost,
+    draftFilters.acreageRange,
+    draftFilters.waterOnly,
     beginnerFriendly,
   ].filter(Boolean).length
 
+  // Apply filters - copy draft to applied
+  const handleApplyFilters = useCallback(() => {
+    setAppliedFilters(draftFilters)
+  }, [draftFilters])
+
   // Handle state filter change
   const handleStateChange = (state: string) => {
-    setFilters(prev => ({
+    setDraftFilters(prev => ({
       ...prev,
       state: state || undefined
     }))
@@ -44,7 +56,7 @@ export function Parcels() {
   // Handle investment score filter change
   const handleInvestmentScoreChange = (score: string) => {
     const parsed = parseInt(score, 10)
-    setFilters(prev => ({
+    setDraftFilters(prev => ({
       ...prev,
       minInvestmentScore: isNaN(parsed) ? undefined : parsed
     }))
@@ -53,7 +65,7 @@ export function Parcels() {
   // Handle max budget filter change
   const handleMaxBudgetChange = (budget: string) => {
     const parsed = parseInt(budget, 10)
-    setFilters(prev => ({
+    setDraftFilters(prev => ({
       ...prev,
       maxEffectiveCost: isNaN(parsed) ? undefined : parsed
     }))
@@ -62,7 +74,7 @@ export function Parcels() {
   // Handle min acreage filter change
   const handleMinAcreageChange = (acreage: string) => {
     const parsed = parseFloat(acreage)
-    setFilters(prev => {
+    setDraftFilters(prev => {
       const currentMax = prev.acreageRange?.[1]
       if (isNaN(parsed)) {
         // Remove min, keep max if exists
@@ -81,7 +93,7 @@ export function Parcels() {
   // Handle max acreage filter change
   const handleMaxAcreageChange = (acreage: string) => {
     const parsed = parseFloat(acreage)
-    setFilters(prev => {
+    setDraftFilters(prev => {
       const currentMin = prev.acreageRange?.[0] || 0
       if (isNaN(parsed)) {
         // Remove max, keep min if exists
@@ -99,55 +111,56 @@ export function Parcels() {
 
   // Handle water only filter change
   const handleWaterOnlyChange = (checked: boolean) => {
-    setFilters(prev => ({
+    setDraftFilters(prev => ({
       ...prev,
       waterOnly: checked || undefined
     }))
   }
 
-  // Handle beginner friendly toggle
+  // Handle beginner friendly toggle - auto-applies as it's a preset
   const handleBeginnerFriendlyToggle = useCallback((enabled: boolean) => {
     setBeginnerFriendly(enabled)
-    if (enabled) {
-      setFilters(prev => ({
-        ...prev,
-        state: 'AR',
-        minBuyHoldScore: 25,
-      }))
-    } else {
-      setFilters(prev => ({
-        ...prev,
-        state: undefined,
-        minBuyHoldScore: undefined,
-      }))
-    }
+    const newFilters = enabled
+      ? { state: 'AR' as const, minBuyHoldScore: 25 }
+      : {}
+    setDraftFilters(newFilters)
+    setAppliedFilters(newFilters) // Auto-apply presets immediately
   }, [])
 
   // Clear all filters
   const handleClearFilters = () => {
-    setFilters({})
+    setDraftFilters({})
+    setAppliedFilters({})
     setBeginnerFriendly(false)
   }
 
   // Handle property selection from table
-  const handlePropertySelect = (property: Property | null) => {
+  const handlePropertySelect = useCallback((property: Property | null) => {
     setSelectedProperty(property)
     setSlideOverOpen(!!property)
 
-    // Update URL with selected property ID
-    if (property) {
-      setSearchParams({ selected: property.id })
-    } else {
-      setSearchParams({})
-    }
-  }
+    // Update URL with selected property ID while preserving existing params
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev)
+      if (property) {
+        newParams.set('selected', property.id)
+      } else {
+        newParams.delete('selected')
+      }
+      return newParams
+    }, { replace: true })
+  }, [setSearchParams])
 
   // Close slide over
-  const handleCloseSlideOver = () => {
+  const handleCloseSlideOver = useCallback(() => {
     setSlideOverOpen(false)
     setSelectedProperty(null)
-    setSearchParams({})
-  }
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev)
+      newParams.delete('selected')
+      return newParams
+    }, { replace: true })
+  }, [setSearchParams])
 
   // Handle Escape key to exit fullscreen
   useEffect(() => {
@@ -227,7 +240,7 @@ export function Parcels() {
             <label htmlFor="state-filter" className="text-sm font-medium text-text-primary">State:</label>
             <select
               id="state-filter"
-              value={filters.state || ''}
+              value={draftFilters.state || ''}
               onChange={(e) => handleStateChange(e.target.value)}
               aria-label="Filter properties by state"
               disabled={beginnerFriendly}
@@ -254,7 +267,7 @@ export function Parcels() {
                 min="0"
                 step="1000"
                 placeholder="8000"
-                value={filters.maxEffectiveCost ?? ''}
+                value={draftFilters.maxEffectiveCost ?? ''}
                 onChange={(e) => handleMaxBudgetChange(e.target.value)}
                 aria-label="Filter properties by maximum effective cost"
                 className="w-28 pl-7 pr-3 py-2 bg-surface text-text-primary border border-neutral-1 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary"
@@ -272,7 +285,7 @@ export function Parcels() {
               min="0"
               max="100"
               placeholder="0-100"
-              value={filters.minInvestmentScore ?? ''}
+              value={draftFilters.minInvestmentScore ?? ''}
               onChange={(e) => handleInvestmentScoreChange(e.target.value)}
               aria-label="Filter properties by minimum investment score"
               className="w-24 px-3 py-2 bg-surface text-text-primary border border-neutral-1 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary"
@@ -291,7 +304,7 @@ export function Parcels() {
               min="0"
               step="0.5"
               placeholder="Min"
-              value={filters.acreageRange?.[0] ?? ''}
+              value={draftFilters.acreageRange?.[0] ?? ''}
               onChange={(e) => handleMinAcreageChange(e.target.value)}
               aria-label="Minimum acreage"
               className="w-20 px-3 py-2 bg-surface text-text-primary border border-neutral-1 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary"
@@ -302,7 +315,7 @@ export function Parcels() {
               min="0"
               step="0.5"
               placeholder="Max"
-              value={filters.acreageRange?.[1] ?? ''}
+              value={draftFilters.acreageRange?.[1] ?? ''}
               onChange={(e) => handleMaxAcreageChange(e.target.value)}
               aria-label="Maximum acreage"
               className="w-20 px-3 py-2 bg-surface text-text-primary border border-neutral-1 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary"
@@ -314,7 +327,7 @@ export function Parcels() {
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
-              checked={filters.waterOnly || false}
+              checked={draftFilters.waterOnly || false}
               onChange={(e) => handleWaterOnlyChange(e.target.checked)}
               aria-label="Filter properties with water access"
               className="w-4 h-4 rounded border-neutral-1 text-accent-primary focus:ring-accent-primary"
@@ -323,6 +336,18 @@ export function Parcels() {
             <span className="text-sm font-medium text-text-primary">Water Access</span>
             <ScoreTooltip scoreType="water_score" iconSize={14} />
           </label>
+
+          {/* Apply Filters Button - shows when changes are pending */}
+          {hasUnappliedChanges && (
+            <button
+              onClick={handleApplyFilters}
+              className="flex items-center gap-2 px-4 py-2 bg-accent-primary text-white text-sm font-medium rounded-lg hover:bg-accent-primary/90 transition-colors"
+              aria-label="Apply filter changes"
+            >
+              <Search className="w-4 h-4" />
+              <span>Search</span>
+            </button>
+          )}
 
           {/* Clear Filters Button */}
           {activeFilterCount > 0 && (
@@ -340,7 +365,7 @@ export function Parcels() {
 
       {/* Properties Table */}
       <div className="flex-1 min-h-0">
-        <PropertiesTable onRowSelect={handlePropertySelect} globalFilters={filters} />
+        <PropertiesTable onRowSelect={handlePropertySelect} globalFilters={appliedFilters} />
       </div>
 
       {/* Property Detail Slide Over */}

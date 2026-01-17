@@ -146,7 +146,8 @@ const RETRY_CONFIG = {
     'ERR_NETWORK',
     'Network Error',
   ],
-  retryableStatuses: [502, 503, 504], // Bad Gateway, Service Unavailable, Gateway Timeout
+  retryableStatuses: [429, 502, 503, 504], // Rate Limited, Bad Gateway, Service Unavailable, Gateway Timeout
+  rateLimitDelay: 60000, // 60 second cooldown for rate limits
 }
 
 // Connection state management
@@ -156,6 +157,8 @@ class ConnectionManager {
   private static reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private static reconnectAttempts: number = 0
   private static readonly MAX_RECONNECT_ATTEMPTS = 10
+  private static failureCount: number = 0
+  private static readonly FAILURE_THRESHOLD = 2 // Require 2 consecutive failures before marking offline
 
   static initialize(): void {
     // Don't re-initialize
@@ -167,21 +170,35 @@ class ConnectionManager {
   }
 
   static setOnline(online: boolean): void {
-    const wasOffline = !this.isOnline
-    this.isOnline = online
+    if (online) {
+      // Reset failure count on success
+      this.failureCount = 0
+      const wasOffline = !this.isOnline
+      this.isOnline = true
 
-    if (online && wasOffline) {
-      console.log('[ConnectionManager] Connection restored')
-      this.reconnectAttempts = 0
-      if (this.reconnectTimer) {
-        clearTimeout(this.reconnectTimer)
-        this.reconnectTimer = null
+      if (wasOffline) {
+        console.log('[ConnectionManager] Connection restored')
+        this.reconnectAttempts = 0
+        if (this.reconnectTimer) {
+          clearTimeout(this.reconnectTimer)
+          this.reconnectTimer = null
+        }
+        this.notifyListeners()
       }
-    } else if (!online) {
-      console.warn('[ConnectionManager] Connection lost')
-    }
+    } else {
+      // Require multiple failures before marking offline
+      this.failureCount++
+      if (this.failureCount < this.FAILURE_THRESHOLD) {
+        console.log(`[ConnectionManager] Connection failure ${this.failureCount}/${this.FAILURE_THRESHOLD}, not marking offline yet`)
+        return
+      }
 
-    this.notifyListeners()
+      if (this.isOnline) {
+        console.warn('[ConnectionManager] Connection lost')
+        this.isOnline = false
+        this.notifyListeners()
+      }
+    }
   }
 
   static getStatus(): boolean {
@@ -489,7 +506,8 @@ const createApiClient = (): AxiosInstance => {
           if (retryCount + 1 >= RETRY_CONFIG.maxRetries) {
             ConnectionManager.scheduleReconnect(async () => {
               try {
-                await axios.get(`${API_BASE_URL.replace('/api/v1', '')}/health`, { timeout: 5000 })
+                // Use systemClient for root-level health endpoint
+                await systemClient.get('/health', { timeout: 5000 })
                 return true
               } catch {
                 return false
@@ -498,6 +516,16 @@ const createApiClient = (): AxiosInstance => {
           }
           throw retryError
         }
+      }
+
+      // Handle 429 Rate Limited errors with longer cooldown
+      if (error.response?.status === 429 && retryCount < 1) {
+        originalRequest._retryCount = retryCount + 1
+        console.warn(
+          `[API] Rate limited (429), waiting ${RETRY_CONFIG.rateLimitDelay / 1000} seconds before retry...`
+        )
+        await sleep(RETRY_CONFIG.rateLimitDelay)
+        return client(originalRequest)
       }
 
       // Handle 401 Unauthorized errors with automatic retry (max 1 retry)
@@ -558,6 +586,20 @@ const createApiClient = (): AxiosInstance => {
 
 // Initialize API client
 const apiClient = createApiClient()
+
+// Create separate client for root-level system endpoints (no /api/v1 prefix)
+// Health check, cache stats, etc. are served at root level by the backend
+const createSystemClient = (): AxiosInstance => {
+  return axios.create({
+    baseURL: config.api.baseUrl,  // Uses baseUrl, not fullUrl (no /api/v1)
+    timeout: 5000,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+}
+
+const systemClient = createSystemClient()
 
 /**
  * Filter mapping configuration: frontend key -> backend key or transform function.
@@ -1026,29 +1068,29 @@ export const syncApi = {
   },
 }
 
-// Health and monitoring API
+// Health and monitoring API (uses systemClient - root-level endpoints, no /api/v1 prefix)
 export const systemApi = {
   // Check API health
   getHealth: async (): Promise<HealthResponse> => {
-    const response = await apiClient.get('/health')
+    const response = await systemClient.get('/health')
     return response.data
   },
 
   // Get detailed health
   getDetailedHealth: async (): Promise<DetailedHealthResponse> => {
-    const response = await apiClient.get('/health/detailed')
+    const response = await systemClient.get('/health/detailed')
     return response.data
   },
 
   // Get cache statistics
   getCacheStats: async (): Promise<CacheStatsResponse> => {
-    const response = await apiClient.get('/cache/stats')
+    const response = await systemClient.get('/cache/stats')
     return response.data
   },
 
   // Warm cache
   warmCache: async (): Promise<{ warmed: boolean; items_cached: number }> => {
-    const response = await apiClient.post('/cache/warm')
+    const response = await systemClient.post('/cache/warm')
     return response.data
   },
 }
@@ -1192,9 +1234,11 @@ export const forceTokenRefresh = async (): Promise<string> => {
 export const checkApiConnection = async (): Promise<boolean> => {
   try {
     await systemApi.getHealth()
+    ConnectionManager.setOnline(true)
     return true
   } catch (error) {
     console.error('API connection check failed:', error)
+    ConnectionManager.setOnline(false)
     return false
   }
 }

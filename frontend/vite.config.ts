@@ -9,8 +9,8 @@ const isTauri = process.env.TAURI_PLATFORM !== undefined
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5173,
-    strictPort: true, // Tauri expects a fixed port
+    port: parseInt(process.env.VITE_PORT || '5174'),
+    strictPort: isTauri, // Only strict for Tauri builds, auto-fallback for web dev
     host: true,
     open: false,
     cors: true,

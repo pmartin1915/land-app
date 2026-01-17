@@ -139,10 +139,9 @@ class CachingMiddleware:
             cached_data = self.cache_manager.get(cache_key)
 
             if cached_data:
-                # Add cache hit headers
-                cached_data["headers"].append([b"x-cache", b"HIT"])
-                cached_data["headers"].append([b"x-cache-key", cache_key.encode()])
                 logger.debug(f"Cache hit for key: {cache_key}")
+                # Return cached data as-is - don't add extra headers
+                # Adding headers here would cause Content-Length mismatch
                 return cached_data
 
         except Exception as e:
@@ -156,18 +155,21 @@ class CachingMiddleware:
         try:
             cache_key = self._generate_cache_key(request, cache_config)
 
+            # Copy headers to avoid mutating the original response headers
+            # (mutating would cause Content-Length mismatch errors)
+            cached_headers = list(response_data["headers"])
+
             # Prepare response for caching
             cache_data = {
                 "status_code": status_code,
-                "headers": response_data["headers"],
+                "headers": cached_headers,
                 "body": response_data["body"],
                 "cached_at": time.time(),
                 "cache_ttl": cache_config["ttl"]
             }
 
-            # Add cache miss header to original response
-            cache_data["headers"].append([b"x-cache", b"MISS"])
-            cache_data["headers"].append([b"x-cache-key", cache_key.encode()])
+            # Note: Don't add x-cache headers to cached data - they're added on retrieval
+            # This keeps cached data clean and consistent with original response
 
             self.cache_manager.set(cache_key, cache_data, cache_config["ttl"])
             logger.debug(f"Cached response for key: {cache_key}")

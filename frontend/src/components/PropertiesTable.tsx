@@ -11,6 +11,8 @@ import {
   ColumnFiltersState,
   VisibilityState,
   RowSelectionState,
+  PaginationState,
+  Updater,
 } from '@tanstack/react-table'
 import {
   ChevronUp,
@@ -36,6 +38,7 @@ import { showToast } from './ui/Toast'
 import { InvestmentGradeBadge } from './ui/InvestmentGradeBadge'
 import { ScoreTooltip } from './ui/ScoreTooltip'
 import { usePropertyCompare } from './PropertyCompareContext'
+import { useConnectionStatus } from './ui/ConnectionStatus'
 
 interface PropertiesTableProps {
   onRowSelect?: (property: Property | null) => void
@@ -158,55 +161,64 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
     clearCompare
   } = usePropertyCompare()
 
-  // Table state - sync with URL state
-  const [sorting, setLocalSorting] = useState<SortingState>(() =>
-    sortBy ? [{ id: sortBy, desc: sortOrder === 'desc' }] : []
+  // Connection status for banner space calculation
+  const isOnline = useConnectionStatus()
+  // Reserve bottom padding when any fixed banner might be visible
+  const hasBanners = compareCount > 0 || !isOnline
+
+  // Table state - derived from URL state (single source of truth)
+  // Sorting and pagination are derived, not stored locally, to prevent sync loops
+  const sorting: SortingState = useMemo(() =>
+    sortBy ? [{ id: sortBy, desc: sortOrder === 'desc' }] : [],
+    [sortBy, sortOrder]
   )
+
+  const pagination: PaginationState = useMemo(() => ({
+    pageIndex: page - 1,
+    pageSize: perPage,
+  }), [page, perPage])
+
+  // Local state for table features that don't need URL persistence
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
-  const [pagination, setLocalPagination] = useState({
-    pageIndex: page - 1,
-    pageSize: perPage,
-  })
 
   // Watchlist state
   const [watchlistStatus, setWatchlistStatus] = useState<WatchlistStatus>({})
   const [togglingWatch, setTogglingWatch] = useState<Set<string>>(new Set())
   const [bulkLoading, setBulkLoading] = useState(false)
 
-  // Ref to track current watchlist status for bulk operations (avoids stale closures)
+  // Refs to track current state for callbacks (avoids stale closures and prevents re-renders)
   const watchlistStatusRef = useRef(watchlistStatus)
   useEffect(() => {
     watchlistStatusRef.current = watchlistStatus
   }, [watchlistStatus])
 
-  // Sync URL state with local state
+  const togglingWatchRef = useRef(togglingWatch)
   useEffect(() => {
-    if (sorting.length > 0) {
-      setSorting(sorting[0].id, sorting[0].desc ? 'desc' : 'asc')
-    } else {
-      setSorting(undefined, undefined)
-    }
-  }, [sorting, setSorting])
+    togglingWatchRef.current = togglingWatch
+  }, [togglingWatch])
 
-  useEffect(() => {
-    setPage(pagination.pageIndex + 1)
-    setPerPage(pagination.pageSize)
-  }, [pagination, setPage, setPerPage])
-
-  // Build search params for API
+  // Build search params for API - uses URL state directly (single source of truth)
   const searchParams: SearchParams = useMemo(() => ({
     q: searchQuery,
     filters: globalFilters,
-    sort_by: sorting[0]?.id,
-    sort_order: sorting[0]?.desc ? 'desc' : 'asc',
-    page: pagination.pageIndex + 1,
-    per_page: pagination.pageSize,
-  }), [searchQuery, globalFilters, sorting, pagination])
+    sort_by: sortBy,
+    sort_order: sortOrder,
+    page: page,
+    per_page: perPage,
+  }), [searchQuery, globalFilters, sortBy, sortOrder, page, perPage])
 
   // Fetch data
   const { data, isLoading: loading, error, refetch } = useProperties(searchParams)
+
+  // Stabilize items reference to prevent TanStack Table re-initialization on every render
+  // Use JSON stringify to only update when content changes, not just reference
+  const itemsJson = JSON.stringify(data?.items || [])
+  const stableItems = useMemo(() => data?.items || [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- itemsJson is stable string representation
+    [itemsJson]
+  )
 
   // Fetch watchlist status for visible properties
   const fetchWatchlistStatus = useCallback(async (propertyIds: string[]) => {
@@ -221,21 +233,27 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
   }, [])
 
   // Fetch watchlist status when data changes
+  // Use stringified item IDs as dependency to prevent effect firing on reference changes
+  const itemIds = useMemo(() => stableItems.map(p => p.id), [stableItems])
+  const itemIdsKey = itemIds.join(',')
   useEffect(() => {
-    if (data?.items) {
-      const propertyIds = data.items.map(p => p.id)
-      fetchWatchlistStatus(propertyIds)
+    if (itemIds.length > 0) {
+      fetchWatchlistStatus(itemIds)
     }
-  }, [data?.items, fetchWatchlistStatus])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- itemIdsKey is stable string representation
+  }, [itemIdsKey, fetchWatchlistStatus])
 
   // Toggle watch status for a property
+  // Uses refs for state access to keep callback reference stable (prevents column recreation)
   const toggleWatch = useCallback(async (propertyId: string, e: React.MouseEvent) => {
     e.stopPropagation()
 
     // Check if THIS property is already toggling (allows concurrent toggles on different properties)
-    if (togglingWatch.has(propertyId)) return
+    // Use ref to avoid stale closure and keep callback stable
+    if (togglingWatchRef.current.has(propertyId)) return
 
-    const wasWatched = watchlistStatus[propertyId] || false
+    // Use ref for current watched status
+    const wasWatched = watchlistStatusRef.current[propertyId] || false
 
     try {
       // Add to in-flight set
@@ -269,7 +287,23 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
         return next
       })
     }
-  }, [togglingWatch, watchlistStatus])
+  }, [])  // Empty deps - all state accessed via refs for stability
+
+  // Handlers for table state changes - write directly to URL state
+  const handleSortingChange = useCallback((updater: Updater<SortingState>) => {
+    const newSorting = typeof updater === 'function' ? updater(sorting) : updater
+    if (newSorting.length > 0) {
+      setSorting(newSorting[0].id, newSorting[0].desc ? 'desc' : 'asc')
+    } else {
+      setSorting(undefined, undefined)
+    }
+  }, [sorting, setSorting])
+
+  const handlePaginationChange = useCallback((updater: Updater<PaginationState>) => {
+    const newPagination = typeof updater === 'function' ? updater(pagination) : updater
+    setPage(newPagination.pageIndex + 1)
+    setPerPage(newPagination.pageSize)
+  }, [pagination, setPage, setPerPage])
 
   // Column definitions - memoized with stable dependencies
   const columns = useMemo<ColumnDef<Property>[]>(() => [
@@ -543,12 +577,12 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
       enableSorting: false,
       enableHiding: false,
     },
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- watchlistStatus and togglingWatch intentionally omitted, handled by cell render
-  ], [onRowSelect, toggleWatch, isInCompare, isAtLimit, toggleCompare])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- watchlistStatus and togglingWatch handled by cell render; toggleWatch is stable via refs
+  ], [onRowSelect, isInCompare, isAtLimit, toggleCompare])
 
   // Create table instance
   const table = useReactTable({
-    data: data?.items || [],
+    data: stableItems,
     columns,
     pageCount: data?.pages || 1,
     state: {
@@ -559,11 +593,11 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
       pagination,
     },
     enableRowSelection: true,
-    onSortingChange: setLocalSorting,
+    onSortingChange: handleSortingChange,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    onPaginationChange: setLocalPagination,
+    onPaginationChange: handlePaginationChange,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -768,7 +802,10 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
 
           <select
             value={pagination.pageSize}
-            onChange={(e) => setLocalPagination(prev => ({ ...prev, pageSize: Number(e.target.value), pageIndex: 0 }))}
+            onChange={(e) => {
+              setPerPage(Number(e.target.value))
+              setPage(1)
+            }}
             className="px-3 py-2 bg-surface text-text-primary border border-neutral-1 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary"
             aria-label="Rows per page"
           >
@@ -787,7 +824,7 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
       <CompareActions />
 
       {/* Table */}
-      <div className="flex-1 min-h-0 bg-card rounded-lg border border-neutral-1 shadow-card overflow-hidden">
+      <div className={`flex-1 min-h-0 bg-card rounded-lg border border-neutral-1 shadow-card overflow-hidden ${hasBanners ? 'pb-20' : ''}`}>
         <div className="h-full overflow-auto">
           <table className="w-full">
             <thead className="bg-surface border-b border-neutral-1 sticky top-0 z-10">
@@ -828,42 +865,54 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
             </thead>
 
             <tbody>
-              {loading ? (
-                // Loading skeleton
-                <tr>
-                  <td colSpan={columns.length}>
-                    <TableSkeleton rows={pagination.pageSize} columns={columns.length} showHeader={false} />
-                  </td>
-                </tr>
-              ) : table.getRowModel().rows.length === 0 ? (
-                // Empty state
-                <tr>
-                  <td colSpan={columns.length}>
-                    {hasFiltersApplied ? (
-                      <FilterEmptyState
-                        activeFilterCount={activeFilterCount}
-                        onResetFilters={resetFilters}
-                      />
-                    ) : (
-                      <EmptyState
-                        type="no-data"
-                        title="No properties yet"
-                        description="Start by running a scrape job or importing data to populate your property database."
-                        actionLabel="Go to Scrape Jobs"
-                        onAction={() => window.location.href = '/scrape-jobs'}
-                      />
-                    )}
-                  </td>
-                </tr>
-              ) : (
-                // Data rows
-                table.getRowModel().rows.map(row => (
+              {(() => {
+                const rows = table.getRowModel().rows
+                const hasRows = rows.length > 0
+                // Only show skeleton when loading AND no existing rows to display
+                const showSkeleton = loading && !hasRows
+                const showEmpty = !loading && !hasRows
+
+                if (showSkeleton) {
+                  return (
+                    <tr>
+                      <td colSpan={columns.length}>
+                        <TableSkeleton rows={pagination.pageSize} columns={columns.length} showHeader={false} />
+                      </td>
+                    </tr>
+                  )
+                }
+
+                if (showEmpty) {
+                  return (
+                    <tr>
+                      <td colSpan={columns.length}>
+                        {hasFiltersApplied ? (
+                          <FilterEmptyState
+                            activeFilterCount={activeFilterCount}
+                            onResetFilters={resetFilters}
+                          />
+                        ) : (
+                          <EmptyState
+                            type="no-data"
+                            title="No properties yet"
+                            description="Start by running a scrape job or importing data to populate your property database."
+                            actionLabel="Go to Scrape Jobs"
+                            onAction={() => window.location.href = '/scrape-jobs'}
+                          />
+                        )}
+                      </td>
+                    </tr>
+                  )
+                }
+
+                // Always render rows if we have them (prevents flash on refetch)
+                return rows.map(row => (
                   <tr
                     key={row.id}
                     className="border-b border-neutral-1 hover:bg-surface transition-colors"
                   >
                     {row.getVisibleCells().map(cell => (
-                      <td key={cell.id} className="px-4 py-3">
+                      <td key={cell.id} className="px-4 py-3 text-text-primary">
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext()
@@ -872,7 +921,7 @@ export function PropertiesTable({ onRowSelect, globalFilters, searchQuery }: Pro
                     ))}
                   </tr>
                 ))
-              )}
+              })()}
             </tbody>
           </table>
         </div>

@@ -27,7 +27,8 @@ from .database.connection import database, connect_db, disconnect_db
 from .auth import add_security_headers, require_sync_access
 
 # Import caching middleware
-from .middleware.caching import CachingMiddleware, CacheControlMiddleware
+# Note: CachingMiddleware temporarily disabled due to Content-Length bug
+from .middleware.caching import CacheControlMiddleware  # CachingMiddleware disabled
 
 # Configure logging
 logging.basicConfig(
@@ -83,8 +84,12 @@ app.add_middleware(
 )
 
 # Add caching middleware
+# NOTE: CachingMiddleware is temporarily disabled due to Content-Length mismatch bug
+# when serving cached responses. The bug occurs because the middleware's _send_cached_response
+# bypasses normal response handling. See issue: h11._util.LocalProtocolError
+# TODO: Fix caching middleware to properly handle response streaming
 app.add_middleware(CacheControlMiddleware)
-app.add_middleware(CachingMiddleware)
+# app.add_middleware(CachingMiddleware)  # DISABLED - causes Content-Length errors
 
 # Request timing middleware
 @app.middleware("http")

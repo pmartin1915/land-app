@@ -108,7 +108,12 @@
       "Bash(npm --prefix frontend run lint)",
       "Bash(npm ls:*)",
       "Bash(npm install:*)",
-      "Bash(git grep:*)"
+      "Bash(git grep:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZXZpY2U6dGVzdC1kZXZpY2UtMTIzIiwiZGV2aWNlX2lkIjoidGVzdC1kZXZpY2UtMTIzIiwiYXBwX3ZlcnNpb24iOiIxLjAuMCIsInNjb3BlcyI6WyJwcm9wZXJ0eTpyZWFkIiwicHJvcGVydHk6d3JpdGUiLCJzeW5jOmFsbCJdLCJleHAiOjE3NjgzNzEzNzMsInR5cGUiOiJhY2Nlc3MifQ.sUM4EWQFeJLQ4qzURA6px6-zmk4qij4Hk5yYIyOjJsA\")",
+      "Bash(powershell -Command \"Stop-Process -Id 93968 -Force\")",
+      "Bash(powershell -Command:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZXZpY2U6dGVzdC1maXgtdmVyaWZ5IiwiZGV2aWNlX2lkIjoidGVzdC1maXgtdmVyaWZ5IiwiYXBwX3ZlcnNpb24iOiIxLjAuMCIsInNjb3BlcyI6WyJwcm9wZXJ0eTpyZWFkIiwicHJvcGVydHk6d3JpdGUiLCJzeW5jOmFsbCJdLCJleHAiOjE3Njg0MjEyMDksInR5cGUiOiJhY2Nlc3MifQ.iedY9YlTY6XVMZ9ziv3csfQugDC5_ZtuBVMbZsdavbw\")",
+      "Bash(npx eslint:*)"
     ],
     "deny": [],
     "ask": []

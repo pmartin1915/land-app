@@ -38,8 +38,19 @@ html.light {
   color-scheme: light;
 }
 
-/* Dark mode explicit */
+/* Dark mode explicit - duplicate variables for specificity when html.dark class is applied */
 html.dark {
+  --color-bg: #0B0F13;
+  --color-surface: #0F1418;
+  --color-card: #13171B;
+  --color-text-primary: #E6EEF3;
+  --color-text-muted: #A8B3BD;
+  --color-accent-primary: #6C8EF5;
+  --color-accent-alt: #08A6A6;
+  --color-success: #16A34A;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --color-neutral-1: #0C1114;
   color-scheme: dark;
 }
 

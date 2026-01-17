@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AppProvider } from './lib/context'
 import { ThemeProvider } from './lib/theme-provider'
+import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { Layout } from './components/Layout'
 import { Dashboard } from './pages/Dashboard'
 import { Parcels } from './pages/Parcels'
@@ -17,7 +18,8 @@ import { Toaster } from './components/ui/Toast'
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="dark">
+    <ErrorBoundary>
+      <ThemeProvider defaultTheme="dark">
       <AppProvider>
         <Router>
           <div className="app min-h-screen bg-bg text-text-primary font-inter antialiased">
@@ -40,7 +42,8 @@ function App() {
           </div>
         </Router>
       </AppProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   )
 }
 

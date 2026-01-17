@@ -20,7 +20,7 @@ import {
   Scale,
   TrendingUp,
   AlertTriangle,
-  ExternalLink,
+  ExternalLink as ExternalLinkIcon,
   Sparkles,
   Clock,
   MapPin,
@@ -50,7 +50,7 @@ function ExternalLinksSection({ links }: { links: ExternalLink[] }) {
   return (
     <div className="mt-4 p-3 bg-surface rounded-lg border border-neutral-1">
       <p className="text-sm font-medium text-text-primary flex items-center gap-2 mb-3">
-        <ExternalLink className="w-4 h-4 text-accent-primary" />
+        <ExternalLinkIcon className="w-4 h-4 text-accent-primary" />
         Helpful Resources
       </p>
       <div className="flex flex-wrap gap-2">
@@ -64,7 +64,7 @@ function ExternalLinksSection({ links }: { links: ExternalLink[] }) {
             title={link.description}
           >
             {link.label}
-            <ExternalLink className="w-3 h-3" />
+            <ExternalLinkIcon className="w-3 h-3" />
           </a>
         ))}
       </div>
@@ -572,7 +572,7 @@ export function MyFirstDeal() {
                           className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-opacity-90 transition-colors"
                         >
                           <span>Browse Arkansas Properties</span>
-                          <ExternalLink className="w-4 h-4" />
+                          <ExternalLinkIcon className="w-4 h-4" />
                         </button>
                       )}
                     </div>

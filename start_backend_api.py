@@ -8,11 +8,92 @@ import asyncio
 import sys
 import os
 import logging
+import socket
+import subprocess
+import time
 from pathlib import Path
 
 # Add backend_api to Python path
-backend_path = Path(__file__).parent / "backend_api"
-sys.path.insert(0, str(backend_path))
+# backend_path = Path(__file__).parent / "backend_api"
+# sys.path.insert(0, str(backend_path))
+
+
+# Port management functions
+def is_port_in_use(port: int, host: str = 'localhost') -> bool:
+    """Check if a port is already in use."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(1)
+        return sock.connect_ex((host, port)) == 0
+
+
+def get_pid_on_port_windows(port: int) -> int | None:
+    """Get PID of process using the specified port (Windows only)."""
+    try:
+        result = subprocess.run(
+            ['netstat', '-ano'],
+            capture_output=True, text=True, timeout=10
+        )
+        for line in result.stdout.split('\n'):
+            if f':{port}' in line and 'LISTENING' in line:
+                parts = line.split()
+                if parts:
+                    return int(parts[-1])
+    except Exception:
+        pass
+    return None
+
+
+def kill_process_windows(pid: int) -> bool:
+    """Kill process by PID (Windows only)."""
+    try:
+        subprocess.run(['taskkill', '/F', '/PID', str(pid)],
+                      capture_output=True, timeout=10)
+        return True
+    except Exception:
+        return False
+
+
+def wait_for_port_release(port: int, timeout: int = 10) -> bool:
+    """Wait for port to become available."""
+    start = time.time()
+    while time.time() - start < timeout:
+        if not is_port_in_use(port):
+            return True
+        time.sleep(0.5)
+    return False
+
+
+def resolve_port_conflict(port: int) -> bool:
+    """Detect and resolve port conflict. Returns True if port is available."""
+    if not is_port_in_use(port):
+        return True
+
+    print(f"[WARNING] Port {port} is already in use")
+
+    # Get the PID (Windows-specific)
+    if sys.platform == 'win32':
+        pid = get_pid_on_port_windows(port)
+        if pid:
+            print(f"[INFO] Port {port} is held by process PID {pid}")
+            response = input(f"Kill process {pid}? (y/N): ").strip().lower()
+            if response == 'y':
+                if kill_process_windows(pid):
+                    print(f"[INFO] Killed process {pid}, waiting for port release...")
+                    if wait_for_port_release(port):
+                        print(f"[SUCCESS] Port {port} is now available")
+                        return True
+                    else:
+                        print(f"[ERROR] Port {port} still in use after kill")
+                else:
+                    print(f"[ERROR] Failed to kill process {pid}")
+            else:
+                print("[INFO] User declined to kill process")
+        else:
+            print(f"[WARNING] Could not identify process holding port {port}")
+    else:
+        print(f"[INFO] Run: lsof -i :{port} to find the process")
+
+    return False
 
 async def initialize_database():
     """Initialize database and create tables."""
@@ -80,17 +161,24 @@ def check_dependencies():
 
 def start_server():
     """Start the FastAPI development server."""
+    PORT = 8001
+
+    # Resolve port conflicts before starting
+    if not resolve_port_conflict(PORT):
+        print(f"[ERROR] Cannot start server - port {PORT} unavailable")
+        print(f"[INFO] Manual fix: netstat -ano | findstr :{PORT}")
+        return False
+
     try:
         print("[INFO] Starting FastAPI development server...")
 
         import uvicorn
-        from backend_api.main import app
 
-        # Start server
+        # Use string import path so uvicorn manages its own event loop
         uvicorn.run(
-            app,
+            "backend_api.main:app",
             host="0.0.0.0",
-            port=8001,
+            port=PORT,
             reload=False,
             log_level="info",
             access_log=True
@@ -135,7 +223,19 @@ async def validate_python_scripts():
         print(f"[ERROR] Algorithm validation failed: {str(e)}")
         return False
 
-async def main():
+async def async_init():
+    """Run async initialization tasks."""
+    # Validate Python algorithms
+    if not await validate_python_scripts():
+        return False
+
+    # Initialize database
+    if not await initialize_database():
+        return False
+
+    return True
+
+def main():
     """Main startup routine."""
     print("Alabama Auction Watcher Backend API Startup")
     print("=" * 50)
@@ -149,12 +249,8 @@ async def main():
     if not check_dependencies():
         return False
 
-    # Validate Python algorithms
-    if not await validate_python_scripts():
-        return False
-
-    # Initialize database
-    if not await initialize_database():
+    # Run async initialization in a separate event loop
+    if not asyncio.run(async_init()):
         return False
 
     print("\n[SUCCESS] Initialization complete!")
@@ -163,7 +259,7 @@ async def main():
     print("[INFO] Health check: http://localhost:8001/health")
     print("\n[INFO] Press Ctrl+C to stop the server\n")
 
-    # Start server (this will block until interrupted)
+    # Start server (uvicorn creates its own event loop)
     start_server()
 
     return True
@@ -176,8 +272,8 @@ if __name__ == "__main__":
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
 
-        # Run main function
-        success = asyncio.run(main())
+        # Run main function (synchronous)
+        success = main()
         sys.exit(0 if success else 1)
 
     except KeyboardInterrupt:

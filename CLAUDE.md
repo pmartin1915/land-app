@@ -31,6 +31,22 @@ Subprocess scrapers communicate via exit codes (see `core/scrapers/EXIT_CODES.md
 - 2026-01-09: Fixed PropertiesTable scroll - Added flex container and overflow-auto for vertical scrolling with sticky header
 - 2026-01-10: Added MyFirstDeal enhancements - Deal pipeline tracking, property comparison, external resource links
 - 2026-01-10: Added Portfolio Analytics Dashboard - Visualizes backend Portfolio API with summary cards, charts, and risk analysis
+- 2026-01-17: Fixed Parcels page infinite loop - Competing URL state management between Parcels.tsx and useUrlState caused re-render loop. Root cause: `setSearchParams({...})` overwrites ALL params. Fix: use functional form `setSearchParams(prev => ...)` to preserve existing params, and useUrlState now preserves unmanaged params.
+
+### URL State Management Guidelines
+When using `useSearchParams` alongside `useUrlState`, follow these rules to prevent infinite loops:
+
+1. **Never use object literal form** - `setSearchParams({ key: value })` replaces ALL params
+2. **Always use functional form** to preserve existing params:
+   ```typescript
+   setSearchParams(prev => {
+     const newParams = new URLSearchParams(prev)
+     newParams.set('key', value)
+     return newParams
+   }, { replace: true })
+   ```
+3. **useUrlState owns these params**: sort, order, page, per_page, q, state, county, minPrice, maxPrice, minAcreage, maxAcreage, minScore, minCountyScore, minGeoScore, waterOnly, excludeDelta, minYear, period
+4. **Other params** (like `selected` in Parcels) are safe to use without conflict
 
 ### Portfolio Analytics Dashboard
 The Portfolio page (`/portfolio`) displays aggregate analytics for watched properties:

@@ -155,9 +155,23 @@ function parseUrlParams(searchParams: URLSearchParams): UrlTableState {
   return state
 }
 
-// Convert state to URL params
-function stateToUrlParams(state: UrlTableState): URLSearchParams {
+// Convert state to URL params, preserving unmanaged params
+function stateToUrlParams(state: UrlTableState, existingParams?: URLSearchParams): URLSearchParams {
   const params = new URLSearchParams()
+
+  // Preserve unmanaged params (like 'selected' from Parcels page)
+  if (existingParams) {
+    const managedParams = new Set([
+      'sort', 'order', 'page', 'per_page', 'q', 'state', 'county',
+      'minPrice', 'maxPrice', 'minAcreage', 'maxAcreage', 'minScore',
+      'minCountyScore', 'minGeoScore', 'waterOnly', 'excludeDelta', 'minYear', 'period'
+    ])
+    existingParams.forEach((value, key) => {
+      if (!managedParams.has(key)) {
+        params.set(key, value)
+      }
+    })
+  }
 
   // Sorting
   if (state.sortBy) {
@@ -258,20 +272,33 @@ export function useUrlState(options: UseUrlStateOptions = {}) {
   // Ref to store debounce timer for cancellation on navigation
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Ref to store previous localState string for comparison
+  const prevLocalStateString = useRef<string>(JSON.stringify(initialState))
+
   // Debounced URL update
   useEffect(() => {
+    const currentLocalStateString = JSON.stringify(localState)
+
+    // Skip if localState hasn't actually changed (prevents unnecessary debounce scheduling)
+    if (currentLocalStateString === prevLocalStateString.current) {
+      return
+    }
+    prevLocalStateString.current = currentLocalStateString
+
     // Clear any existing timer
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current)
     }
 
     debounceTimerRef.current = setTimeout(() => {
-      const newParams = stateToUrlParams(localState)
-      const currentParams = searchParams.toString()
+      // Get fresh searchParams value to preserve unmanaged params
+      const currentUrl = new URL(window.location.href)
+      const newParams = stateToUrlParams(localState, currentUrl.searchParams)
       const newParamsString = newParams.toString()
+      const currentParamsString = currentUrl.searchParams.toString()
 
       // Only update if params actually changed
-      if (currentParams !== newParamsString) {
+      if (currentParamsString !== newParamsString) {
         isUpdatingUrl.current = true
         setSearchParams(newParams, { replace: true })
       }
@@ -282,7 +309,7 @@ export function useUrlState(options: UseUrlStateOptions = {}) {
         clearTimeout(debounceTimerRef.current)
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- searchParams read via ref pattern to avoid loops
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- searchParams read fresh from window.location
   }, [localState, debounceMs, setSearchParams])
 
   // Sync from URL changes (e.g., browser back/forward)
@@ -298,8 +325,15 @@ export function useUrlState(options: UseUrlStateOptions = {}) {
       debounceTimerRef.current = null
     }
     const urlState = parseUrlParams(searchParams)
+
+    // Only update if content actually differs - prevents infinite loop
+    // when URL sync triggers state update which triggers another URL sync
+    if (JSON.stringify(urlState) === JSON.stringify(localState)) {
+      return
+    }
+
     setLocalState(urlState)
-  // searchParams is the only intentional trigger for browser navigation sync
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- localState read for comparison only, not a dependency
   }, [searchParams])
 
   // Update functions
@@ -373,7 +407,7 @@ export function useUrlState(options: UseUrlStateOptions = {}) {
     })
   }, [defaultPerPage])
 
-  // Generate shareable URL
+  // Generate shareable URL (excludes unmanaged params like 'selected')
   const getShareableUrl = useCallback(() => {
     const params = stateToUrlParams(localState)
     const baseUrl = window.location.origin + location.pathname

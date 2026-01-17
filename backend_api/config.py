@@ -69,6 +69,7 @@ class Settings(BaseSettings):
         return [
             "http://localhost:3000",      # React dev
             "http://localhost:5173",      # Vite dev
+            "http://localhost:5174",      # Vite dev (alternate port)
             "http://localhost:8501",      # Streamlit
             "tauri://localhost",          # Tauri desktop
             "https://tauri.localhost",    # Tauri HTTPS
