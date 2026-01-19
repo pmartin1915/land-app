@@ -1,98 +1,70 @@
-# Handoff Report: CachingMiddleware Content-Length Bug Fix
+# Handoff Report: CSV Import Feature Implementation
 
 ## Session Summary
-Fixed the CachingMiddleware that was disabled due to `h11._util.LocalProtocolError` caused by Content-Length mismatch when serving cached responses. The middleware is now re-enabled and working correctly.
+Implemented CSV bulk property import feature allowing users to import properties from CSV files via the TopBar Actions menu.
 
-## Root Causes Identified
+## What Was Built
 
-### 1. Body Bytes Corrupted During JSON Serialization
-The cache manager uses `json.dumps(data, default=str)` which converts bytes to their string representation `"b'...'"` instead of preserving the actual binary data.
+### Backend (`/api/v1/import`)
+- `POST /import/csv/preview` - Upload CSV, returns headers, sample rows, auto-detected column mapping, duplicate count
+- `POST /import/csv` - Import properties with column mapping via query params, returns imported/skipped/error counts
+- `GET /import/columns` - Returns importable fields and their header aliases
 
-**Fix:** Base64-encode the response body before caching, decode on retrieval.
+### Frontend
+- **CSVImportModal.tsx** - Full modal component with:
+  - Drag-and-drop file upload
+  - Column mapping UI with dropdowns
+  - Data preview table (first 5 rows)
+  - Import options (skip duplicates, default state)
+  - Progress indicator
+  - Results summary with error details
 
-### 2. ASGI Body Chunks Not Accumulated
-ASGI responses can be sent in multiple body chunks. The original code only captured the last chunk:
-```python
-response_data["body"] = message.get("body", b"")  # Overwrites previous chunks!
-```
+- **TopBar.tsx** - Wired Import CSV button to open modal
 
-**Fix:** Accumulate all body chunks, combine when `more_body=False`:
-```python
-response_data["body_chunks"].append(body_chunk)
-if not more_body:
-    response_data["body"] = b"".join(response_data["body_chunks"])
-```
+### Features
+- **Auto-detection** - Common header variations mapped automatically (e.g., "parcel", "parcel_number", "pid" -> parcel_id)
+- **Duplicate handling** - Checks both within CSV and against existing database records
+- **Validation** - Uses existing PropertyValidator for security sanitization
+- **Metrics calculation** - Imported properties get investment scores calculated via PropertyService
 
-### 3. Content-Length Header Mismatch
-The cached headers included the original Content-Length, but after JSON round-trip the body size could differ.
+## Files Created/Modified
 
-**Fix:** Strip Content-Length from cached headers, recalculate from actual body bytes on retrieval.
+### Created
+- `backend_api/routers/imports.py` - New router with preview/import endpoints
+- `frontend/src/components/CSVImportModal.tsx` - Import modal component
 
-## Files Modified
+### Modified
+- `backend_api/routers/__init__.py` - Added imports to exports
+- `backend_api/main.py` - Registered /import router
+- `frontend/src/lib/api.ts` - Updated importApi to match backend
+- `frontend/src/types/api.ts` - Updated CSV import types
+- `frontend/src/components/TopBar.tsx` - Added modal state and trigger
+- `CLAUDE.md` - Added feature documentation
 
-### backend_api/middleware/caching.py
-1. **Added `base64` import** (line 12)
-
-2. **Fixed `capture_send`** (lines 94-134):
-   - Initialize `body_chunks: []` to accumulate chunks
-   - Check `more_body` flag to know when response is complete
-   - Combine chunks: `b"".join(response_data["body_chunks"])`
-
-3. **Fixed `_cache_response`** (lines 159-207):
-   - Strip Content-Length and X-Cache from cached headers
-   - Base64-encode body: `base64.b64encode(body_bytes).decode('ascii')`
-   - Store as `body_b64` field
-
-4. **Simplified `_generate_cache_key`** (lines 209-239):
-   - Removed `accept-encoding` and `user-agent` from cache key
-   - Only vary on non-JSON Accept headers
-
-5. **Fixed `_send_cached_response`** (lines 241-287):
-   - Base64-decode body: `base64.b64decode(cached_data["body_b64"])`
-   - Recalculate Content-Length from actual body length
-   - Add `X-Cache: HIT` and `X-Cache-Age` headers
-
-### backend_api/main.py
-- Re-enabled CachingMiddleware import (line 30)
-- Re-enabled middleware registration (line 89)
-
-## Verification Results
-
-```
-Request 1: X-Cache: MISS, Size: 140621, Time: 0.27s
-Request 2: X-Cache: HIT,  Size: 140621, Time: 0.003s (90x faster)
-Request 3: X-Cache: HIT,  Size: 140621, Time: 0.002s
-```
-
-- Cache hits return identical response body
-- No `h11._util.LocalProtocolError` errors
-- Content-Length matches actual body size
+## Verification
+1. Frontend build passes: `npm run build` - Success
+2. Backend import loads: `python -c "from backend_api.routers.imports import router"` - OK
 
 ## Testing Checklist
 1. Start backend: `python -m uvicorn backend_api.main:app --port 8001`
-2. Make GET request to `/api/v1/properties/` - expect `X-Cache: MISS`
-3. Repeat same request - expect `X-Cache: HIT` with `X-Cache-Age` header
-4. Verify response body is identical on cache hit
-5. Check `/cache/stats` endpoint for hit/miss counts
-6. No errors in server logs
+2. Start frontend: `npm run dev`
+3. Click Actions > Import CSV in TopBar
+4. Drop or select a CSV file
+5. Verify preview shows headers and sample rows
+6. Adjust column mapping if needed
+7. Click Import
+8. Verify success toast and result counts
+9. Check Properties list for new records
 
-## Cache Behavior
-
-### Cacheable Endpoints (with TTL)
-- `/api/v1/properties/` - 5 minutes
-- `/api/v1/properties/search` - 3 minutes
-- `/api/v1/properties/county/` - 30 minutes
-- `/api/v1/analytics/` - 2 hours
-- `/api/v1/analytics/investment-insights` - 1 hour
-
-### Cache Invalidation
-POST/PUT/DELETE requests automatically invalidate related caches.
-
-### Headers Added
-- `X-Cache: HIT` or `X-Cache: MISS` - indicates cache status
-- `X-Cache-Age: <seconds>` - age of cached response (HIT only)
+## Sample CSV Format
+```csv
+parcel_id,amount,acreage,county,state,description
+12-34-56-789,5000,2.5,Mobile,AL,Lot in subdivision
+98-76-54-321,3500,1.0,Baldwin,AL,Waterfront lot
+```
 
 ## Related Files
-- [backend_api/middleware/caching.py](backend_api/middleware/caching.py) - CachingMiddleware
-- [backend_api/main.py](backend_api/main.py) - Middleware registration
-- [config/caching.py](config/caching.py) - Cache manager with JSON serialization
+- [backend_api/routers/imports.py](backend_api/routers/imports.py) - Import endpoints
+- [frontend/src/components/CSVImportModal.tsx](frontend/src/components/CSVImportModal.tsx) - Modal UI
+- [frontend/src/components/TopBar.tsx](frontend/src/components/TopBar.tsx) - Actions menu
+- [frontend/src/lib/api.ts](frontend/src/lib/api.ts) - API client

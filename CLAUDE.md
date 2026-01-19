@@ -33,6 +33,7 @@ Subprocess scrapers communicate via exit codes (see `core/scrapers/EXIT_CODES.md
 - 2026-01-10: Added Portfolio Analytics Dashboard - Visualizes backend Portfolio API with summary cards, charts, and risk analysis
 - 2026-01-17: Fixed Parcels page infinite loop - Competing URL state management between Parcels.tsx and useUrlState caused re-render loop. Root cause: `setSearchParams({...})` overwrites ALL params. Fix: use functional form `setSearchParams(prev => ...)` to preserve existing params, and useUrlState now preserves unmanaged params.
 - 2026-01-19: Fixed CachingMiddleware Content-Length bug - Re-enabled server-side response caching. Root causes: (1) body bytes corrupted by JSON serialization, (2) ASGI body chunks not accumulated. Fix: base64-encode body for storage, accumulate all body chunks before caching, recalculate Content-Length on retrieval. Adds `X-Cache: HIT/MISS` headers.
+- 2026-01-19: Added CSV Import Feature - Bulk property import via TopBar Actions menu. Backend endpoints at `/api/v1/import/csv/preview` and `/api/v1/import/csv`. Frontend modal with drag-and-drop, column mapping, preview, and import progress. Auto-detects common CSV header variations.
 
 ### URL State Management Guidelines
 When using `useSearchParams` alongside `useUrlState`, follow these rules to prevent infinite loops:
@@ -84,6 +85,23 @@ Backend endpoints added:
 - `DELETE /watchlist/first-deal` - Remove first deal assignment
 
 Database migration needed: PropertyInteraction model has new columns (`is_first_deal`, `first_deal_stage`, `first_deal_assigned_at`, `first_deal_updated_at`).
+
+### CSV Import Feature
+The CSV Import feature (`Actions > Import CSV` in TopBar) allows bulk property import:
+
+**Backend Endpoints:**
+- `POST /api/v1/import/csv/preview` - Upload CSV, get headers, sample rows, suggested mapping, duplicate count
+- `POST /api/v1/import/csv` - Import properties with column mapping via query params
+- `GET /api/v1/import/columns` - Get importable fields and their aliases
+
+**Frontend Components:**
+- `frontend/src/components/CSVImportModal.tsx` - Modal with drag-and-drop, column mapping, preview
+- `frontend/src/lib/api.ts` - importApi with previewCSV, importCSV, getColumns
+
+**Required CSV Fields:** `parcel_id`, `amount`
+**Optional Fields:** `acreage`, `county`, `state`, `description`, `owner_name`, `year_sold`, `assessed_value`, `sale_type`, `redemption_period_days`, `auction_date`, `auction_platform`, `data_source`, `estimated_market_value`
+
+**Column Auto-Detection:** Common header variations are auto-mapped (e.g., "parcel", "parcel_number", "pid" all map to `parcel_id`)
 
 ### Known Data Quality Issues
 - Harris County listings: Empty during non-auction periods (next sale date shown on page). Not a bug.

@@ -83,17 +83,22 @@ export interface CSVPreviewResponse {
   headers: string[]
   rows: string[][]
   total_rows: number
-  mapping?: CSVImportMapping
+  suggested_mapping: Record<string, string | null>
+  unmapped_headers: string[]
+  potential_duplicates: number
 }
 
-export interface ImportHistoryItem {
-  id: string
-  filename: string
-  created_at: string
-  status: 'pending' | 'processing' | 'completed' | 'failed'
+export interface CSVImportRowError {
+  row: number
+  field?: string
+  error: string
+}
+
+export interface CSVImportResult {
   imported: number
-  duplicates: number
+  skipped_duplicates: number
   errors: number
+  failed_rows: CSVImportRowError[]
 }
 
 export interface WatchlistStatsResponse {
@@ -844,12 +849,9 @@ export const aiApi = {
 // CSV Import API
 export const importApi = {
   // Upload and preview CSV
-  previewCSV: async (file: File, mapping?: CSVImportMapping): Promise<CSVPreviewResponse> => {
+  previewCSV: async (file: File): Promise<CSVPreviewResponse> => {
     const formData = new FormData()
     formData.append('file', file)
-    if (mapping) {
-      formData.append('mapping', JSON.stringify(mapping))
-    }
 
     const response = await apiClient.post('/import/csv/preview', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
@@ -858,20 +860,45 @@ export const importApi = {
   },
 
   // Import CSV with mapping
-  importCSV: async (file: File, mapping: CSVImportMapping): Promise<CSVImportResult> => {
+  importCSV: async (
+    file: File,
+    options: {
+      skipDuplicates?: boolean
+      defaultState?: string
+      mapping?: Record<string, string>
+    } = {}
+  ): Promise<CSVImportResult> => {
     const formData = new FormData()
     formData.append('file', file)
-    formData.append('mapping', JSON.stringify(mapping))
 
-    const response = await apiClient.post('/import/csv/import', formData, {
+    // Build query params for column mapping
+    const params = new URLSearchParams()
+    if (options.skipDuplicates !== undefined) {
+      params.append('skip_duplicates', String(options.skipDuplicates))
+    }
+    if (options.defaultState) {
+      params.append('default_state', options.defaultState)
+    }
+    if (options.mapping) {
+      for (const [field, col] of Object.entries(options.mapping)) {
+        if (col) params.append(`${field}_col`, col)
+      }
+    }
+
+    const url = params.toString() ? `/import/csv?${params}` : '/import/csv'
+    const response = await apiClient.post(url, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
     return handleResponse(response)
   },
 
-  // Get import history
-  getImportHistory: async (): Promise<ImportHistoryItem[]> => {
-    const response = await apiClient.get('/import/history')
+  // Get importable columns info
+  getColumns: async (): Promise<{
+    required_fields: string[]
+    importable_fields: string[]
+    column_aliases: Record<string, string[]>
+  }> => {
+    const response = await apiClient.get('/import/columns')
     return handleResponse(response)
   },
 }

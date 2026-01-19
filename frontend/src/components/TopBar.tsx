@@ -6,6 +6,7 @@ import { PropertyFilters } from '../types'
 import { Search, Filter, Download, Upload, Settings, Calendar, ChevronDown, X } from 'lucide-react'
 import { SearchEmptyState } from './ui/EmptyState'
 import { showToast } from './ui/Toast'
+import { CSVImportModal } from './CSVImportModal'
 
 interface TopBarProps {
   title: string
@@ -305,6 +306,7 @@ export function TopBar({ title, onFiltersChange, onSearchChange }: TopBarProps) 
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [showQuickActions, setShowQuickActions] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
   const [filters, setFilters] = useState<PropertyFilters>({})
   const [selectedPeriod, setSelectedPeriod] = useState('all-time')
 
@@ -511,7 +513,7 @@ export function TopBar({ title, onFiltersChange, onSearchChange }: TopBarProps) 
               </button>
               <button
                 onClick={() => {
-                  // TODO: Implement CSV import
+                  setShowImportModal(true)
                   setShowQuickActions(false)
                 }}
                 className="w-full px-4 py-2 text-left hover:bg-surface transition-colors flex items-center space-x-2 text-text-primary"
@@ -560,6 +562,17 @@ export function TopBar({ title, onFiltersChange, onSearchChange }: TopBarProps) 
           <option value="all-time">All Time</option>
         </select>
       </div>
+
+      {/* CSV Import Modal */}
+      <CSVImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImportComplete={(result) => {
+          if (result.imported > 0) {
+            showToast.success(`Successfully imported ${result.imported} properties`)
+          }
+        }}
+      />
     </div>
   )
 }

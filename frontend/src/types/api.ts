@@ -319,28 +319,43 @@ export interface SearchParams {
 
 // CSV Import Types
 export interface CSVImportMapping {
-  date?: string
-  description?: string
-  amount?: string
   parcel_id?: string
-  owner?: string
-  category?: string
-  account?: string
+  amount?: string
+  acreage?: string
+  county?: string
+  state?: string
+  description?: string
+  owner_name?: string
+  year_sold?: string
+  assessed_value?: string
+  sale_type?: string
+  redemption_period_days?: string
+  auction_date?: string
+  auction_platform?: string
+  data_source?: string
+  estimated_market_value?: string
 }
 
 export interface CSVImportPreview {
   headers: string[]
   rows: string[][]
-  mapping: CSVImportMapping
-  duplicates: number[]
-  errors: { row: number; field: string; message: string }[]
+  total_rows: number
+  suggested_mapping: Record<string, string | null>
+  unmapped_headers: string[]
+  potential_duplicates: number
+}
+
+export interface CSVImportRowError {
+  row: number
+  field?: string
+  error: string
 }
 
 export interface CSVImportResult {
   imported: number
-  duplicates: number
+  skipped_duplicates: number
   errors: number
-  failed_rows: { row: number; error: string }[]
+  failed_rows: CSVImportRowError[]
 }
 
 // Map and Geocoding Types
