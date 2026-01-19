@@ -309,7 +309,6 @@ export function useUrlState(options: UseUrlStateOptions = {}) {
         clearTimeout(debounceTimerRef.current)
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- searchParams read fresh from window.location
   }, [localState, debounceMs, setSearchParams])
 
   // Sync from URL changes (e.g., browser back/forward)

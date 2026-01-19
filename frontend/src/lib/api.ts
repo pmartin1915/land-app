@@ -21,7 +21,6 @@ import {
   PaginatedResponse,
   APIError,
   SearchParams,
-  CSVImportMapping,
   CSVImportResult,
   PropertyFilters,
   ExportJob,
