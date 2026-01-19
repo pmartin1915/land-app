@@ -9,6 +9,7 @@ import time
 import json
 import hashlib
 import logging
+import base64
 from typing import Callable, Dict, Any, Optional
 from fastapi import Request, Response
 
@@ -91,7 +92,7 @@ class CachingMiddleware:
                 return
 
         # Process request normally and potentially cache response
-        response_data = {}
+        response_data = {"body_chunks": []}
         status_code = 200
 
         async def capture_send(message):
@@ -100,20 +101,35 @@ class CachingMiddleware:
 
             if message["type"] == "http.response.start":
                 status_code = message["status"]
-                response_data["headers"] = message.get("headers", [])
+                headers = list(message.get("headers", []))
+
+                # Add X-Cache: MISS header for non-cached responses
+                headers.append([b"x-cache", b"MISS"])
+
+                response_data["headers"] = headers
+                message = {**message, "headers": headers}
 
             elif message["type"] == "http.response.body":
-                response_data["body"] = message.get("body", b"")
+                # Accumulate body chunks (ASGI may send body in multiple parts)
+                body_chunk = message.get("body", b"")
+                if body_chunk:
+                    response_data["body_chunks"].append(body_chunk)
 
-                # Cache successful responses
-                if (cache_config and
-                    request.method in self.safe_methods and
-                    200 <= status_code < 300):
-                    await self._cache_response(request, cache_config, response_data, status_code)
+                # Check if this is the final body chunk
+                more_body = message.get("more_body", False)
+                if not more_body:
+                    # Combine all chunks into final body
+                    response_data["body"] = b"".join(response_data["body_chunks"])
 
-                # Handle cache invalidation for non-safe methods
-                if request.method not in self.safe_methods:
-                    await self._handle_cache_invalidation(request)
+                    # Cache successful responses
+                    if (cache_config and
+                        request.method in self.safe_methods and
+                        200 <= status_code < 300):
+                        await self._cache_response(request, cache_config, response_data, status_code)
+
+                    # Handle cache invalidation for non-safe methods
+                    if request.method not in self.safe_methods:
+                        await self._handle_cache_invalidation(request)
 
             await send(message)
 
@@ -155,21 +171,35 @@ class CachingMiddleware:
         try:
             cache_key = self._generate_cache_key(request, cache_config)
 
-            # Copy headers to avoid mutating the original response headers
-            # (mutating would cause Content-Length mismatch errors)
-            cached_headers = list(response_data["headers"])
+            # Convert headers to JSON-serializable format, stripping Content-Length
+            # Headers come as list of [bytes, bytes] tuples from ASGI
+            serializable_headers = []
+            for header in response_data["headers"]:
+                header_name = header[0] if isinstance(header[0], str) else header[0].decode('latin-1')
+                # Skip Content-Length - will be recalculated on retrieval
+                if header_name.lower() == 'content-length':
+                    continue
+                # Skip X-Cache header if present (we add our own)
+                if header_name.lower() == 'x-cache':
+                    continue
+                header_value = header[1] if isinstance(header[1], str) else header[1].decode('latin-1')
+                serializable_headers.append([header_name, header_value])
+
+            # Encode body to base64 for safe JSON serialization
+            body_bytes = response_data["body"]
+            if isinstance(body_bytes, bytes):
+                body_b64 = base64.b64encode(body_bytes).decode('ascii')
+            else:
+                body_b64 = base64.b64encode(body_bytes.encode('utf-8')).decode('ascii')
 
             # Prepare response for caching
             cache_data = {
                 "status_code": status_code,
-                "headers": cached_headers,
-                "body": response_data["body"],
+                "headers": serializable_headers,
+                "body_b64": body_b64,
                 "cached_at": time.time(),
                 "cache_ttl": cache_config["ttl"]
             }
-
-            # Note: Don't add x-cache headers to cached data - they're added on retrieval
-            # This keeps cached data clean and consistent with original response
 
             self.cache_manager.set(cache_key, cache_data, cache_config["ttl"])
             logger.debug(f"Cached response for key: {cache_key}")
@@ -193,29 +223,68 @@ class CachingMiddleware:
                 sorted_params = json.dumps(query_params, sort_keys=True)
                 key_components.append(hashlib.md5(sorted_params.encode()).hexdigest()[:8])
 
-        # Include relevant headers (like accept-encoding for compression)
-        relevant_headers = {}
-        for header_name in ["accept-encoding", "accept", "user-agent"]:
-            if header_name in request.headers:
-                relevant_headers[header_name] = request.headers[header_name]
+        # Note: We intentionally exclude accept-encoding from cache key.
+        # The response body is stored as-is (compressed or not), so clients
+        # may receive compressed responses even if they didn't request it.
+        # For JSON APIs this is generally acceptable.
 
-        if relevant_headers:
-            headers_hash = hashlib.md5(json.dumps(relevant_headers, sort_keys=True).encode()).hexdigest()[:8]
+        # Include accept header for content negotiation (json vs other formats)
+        accept_header = request.headers.get("accept", "")
+        if accept_header and "application/json" not in accept_header:
+            headers_hash = hashlib.md5(accept_header.encode()).hexdigest()[:8]
             key_components.append(headers_hash)
 
         return self.cache_manager._get_cache_key(*key_components)
 
     async def _send_cached_response(self, send: Callable, cached_data: Dict[str, Any]):
-        """Send cached response."""
+        """Send cached response with correct Content-Length."""
+        # Handle both new format (body_b64) and legacy format (body)
+        if "body_b64" in cached_data:
+            body = base64.b64decode(cached_data["body_b64"])
+        elif "body" in cached_data:
+            # Legacy format fallback
+            body = cached_data["body"]
+            if isinstance(body, str):
+                body = body.encode('utf-8')
+            elif not isinstance(body, bytes):
+                body = str(body).encode('utf-8')
+        else:
+            logger.warning("No body found in cached data")
+            body = b""
+
+        # Rebuild headers with correct Content-Length
+        headers = []
+        for header in cached_data["headers"]:
+            # Convert string headers back to bytes (ASGI requires bytes)
+            header_name = header[0].encode('latin-1') if isinstance(header[0], str) else header[0]
+            header_value = header[1].encode('latin-1') if isinstance(header[1], str) else header[1]
+
+            # Skip any existing content-length (shouldn't be there, but be defensive)
+            if header_name.lower() == b'content-length':
+                continue
+            headers.append([header_name, header_value])
+
+        # Add correct Content-Length based on actual body size
+        headers.append([b"content-length", str(len(body)).encode('ascii')])
+
+        # Add X-Cache: HIT header for debugging
+        headers.append([b"x-cache", b"HIT"])
+
+        # Add X-Cache-Age header showing how old the cached response is
+        cached_at = cached_data.get("cached_at", 0)
+        if cached_at:
+            cache_age = int(time.time() - cached_at)
+            headers.append([b"x-cache-age", str(cache_age).encode('ascii')])
+
         await send({
             "type": "http.response.start",
             "status": cached_data["status_code"],
-            "headers": cached_data["headers"],
+            "headers": headers,
         })
 
         await send({
             "type": "http.response.body",
-            "body": cached_data["body"],
+            "body": body,
         })
 
     async def _handle_cache_invalidation(self, request: Request):

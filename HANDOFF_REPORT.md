@@ -1,111 +1,98 @@
-# Handoff Report: Parcels Page Infinite Loop Fix - Second Fix Applied
+# Handoff Report: CachingMiddleware Content-Length Bug Fix
 
 ## Session Summary
-Fixed a persisting infinite re-render loop on the Parcels page. The previous fix addressed URL state management but another loop remained caused by the `toggleWatch` callback recreating and triggering column re-initialization.
+Fixed the CachingMiddleware that was disabled due to `h11._util.LocalProtocolError` caused by Content-Length mismatch when serving cached responses. The middleware is now re-enabled and working correctly.
 
-## Root Cause Identified (This Session)
+## Root Causes Identified
 
-### toggleWatch Callback Dependency Chain
-The `toggleWatch` callback in PropertiesTable.tsx had `togglingWatch` and `watchlistStatus` in its dependency array. Since `toggleWatch` was also a dependency of the `columns` useMemo, any watchlist state change caused:
+### 1. Body Bytes Corrupted During JSON Serialization
+The cache manager uses `json.dumps(data, default=str)` which converts bytes to their string representation `"b'...'"` instead of preserving the actual binary data.
 
-1. `toggleWatch` callback to be recreated (new reference)
-2. `columns` useMemo to recreate the entire column definition array
-3. TanStack Table to re-initialize with new columns
-4. This triggered more renders in a cascade
+**Fix:** Base64-encode the response body before caching, decode on retrieval.
 
-**The chain:**
-```
-watchlist click -> setTogglingWatch() -> toggleWatch recreates ->
-columns recreates -> table re-initializes -> more renders
+### 2. ASGI Body Chunks Not Accumulated
+ASGI responses can be sent in multiple body chunks. The original code only captured the last chunk:
+```python
+response_data["body"] = message.get("body", b"")  # Overwrites previous chunks!
 ```
 
-## Files Modified (This Session)
-
-### frontend/src/components/PropertiesTable.tsx
-Three changes to break the dependency chain:
-
-**1. Added `togglingWatchRef` (lines 197-200):**
-```typescript
-const togglingWatchRef = useRef(togglingWatch)
-useEffect(() => {
-  togglingWatchRef.current = togglingWatch
-}, [togglingWatch])
+**Fix:** Accumulate all body chunks, combine when `more_body=False`:
+```python
+response_data["body_chunks"].append(body_chunk)
+if not more_body:
+    response_data["body"] = b"".join(response_data["body_chunks"])
 ```
 
-**2. Updated `toggleWatch` to use refs (lines 241-282):**
-```typescript
-const toggleWatch = useCallback(async (propertyId: string, e: React.MouseEvent) => {
-  e.stopPropagation()
+### 3. Content-Length Header Mismatch
+The cached headers included the original Content-Length, but after JSON round-trip the body size could differ.
 
-  // Use ref to avoid stale closure and keep callback stable
-  if (togglingWatchRef.current.has(propertyId)) return
+**Fix:** Strip Content-Length from cached headers, recalculate from actual body bytes on retrieval.
 
-  // Use ref for current watched status
-  const wasWatched = watchlistStatusRef.current[propertyId] || false
+## Files Modified
 
-  // ... rest of function unchanged
-}, [])  // Empty deps - all state accessed via refs for stability
+### backend_api/middleware/caching.py
+1. **Added `base64` import** (line 12)
+
+2. **Fixed `capture_send`** (lines 94-134):
+   - Initialize `body_chunks: []` to accumulate chunks
+   - Check `more_body` flag to know when response is complete
+   - Combine chunks: `b"".join(response_data["body_chunks"])`
+
+3. **Fixed `_cache_response`** (lines 159-207):
+   - Strip Content-Length and X-Cache from cached headers
+   - Base64-encode body: `base64.b64encode(body_bytes).decode('ascii')`
+   - Store as `body_b64` field
+
+4. **Simplified `_generate_cache_key`** (lines 209-239):
+   - Removed `accept-encoding` and `user-agent` from cache key
+   - Only vary on non-JSON Accept headers
+
+5. **Fixed `_send_cached_response`** (lines 241-287):
+   - Base64-decode body: `base64.b64decode(cached_data["body_b64"])`
+   - Recalculate Content-Length from actual body length
+   - Add `X-Cache: HIT` and `X-Cache-Age` headers
+
+### backend_api/main.py
+- Re-enabled CachingMiddleware import (line 30)
+- Re-enabled middleware registration (line 89)
+
+## Verification Results
+
+```
+Request 1: X-Cache: MISS, Size: 140621, Time: 0.27s
+Request 2: X-Cache: HIT,  Size: 140621, Time: 0.003s (90x faster)
+Request 3: X-Cache: HIT,  Size: 140621, Time: 0.002s
 ```
 
-**3. Removed `toggleWatch` from columns dependency array (line 573):**
-```typescript
-// Before:
-], [onRowSelect, toggleWatch, isInCompare, isAtLimit, toggleCompare])
-
-// After:
-], [onRowSelect, isInCompare, isAtLimit, toggleCompare])
-```
-
-## Why This Works
-
-By using refs instead of state in the callback:
-- `toggleWatch` callback reference never changes (empty dependency array)
-- The callback still accesses current state values via `.current`
-- Column definitions don't recreate when watchlist state changes
-- Table stays stable, preventing cascade re-renders
-
-## Verification
-- Frontend builds successfully (`npm run build` passes)
-- ESLint passes on PropertiesTable.tsx
-- No functional changes to watchlist behavior (refs provide same values)
-
-## Previous Fix (Still Relevant)
-The URL state fix from the previous session is still in place:
-- `setSearchParams` uses functional form to preserve unmanaged params
-- `useUrlState` preserves params outside its managed set
-- See CLAUDE.md for URL State Management Guidelines
+- Cache hits return identical response body
+- No `h11._util.LocalProtocolError` errors
+- Content-Length matches actual body size
 
 ## Testing Checklist
-1. Navigate to `/parcels` - page should load without freezing
-2. Click a row to open slide-over - no freeze
-3. Toggle watchlist star on multiple rows - no freeze, optimistic update works
-4. Expand/minimize view - no freeze
-5. Apply filters - no freeze
-6. Change pagination - no freeze
-7. No console errors about maximum update depth
+1. Start backend: `python -m uvicorn backend_api.main:app --port 8001`
+2. Make GET request to `/api/v1/properties/` - expect `X-Cache: MISS`
+3. Repeat same request - expect `X-Cache: HIT` with `X-Cache-Age` header
+4. Verify response body is identical on cache hit
+5. Check `/cache/stats` endpoint for hit/miss counts
+6. No errors in server logs
+
+## Cache Behavior
+
+### Cacheable Endpoints (with TTL)
+- `/api/v1/properties/` - 5 minutes
+- `/api/v1/properties/search` - 3 minutes
+- `/api/v1/properties/county/` - 30 minutes
+- `/api/v1/analytics/` - 2 hours
+- `/api/v1/analytics/investment-insights` - 1 hour
+
+### Cache Invalidation
+POST/PUT/DELETE requests automatically invalidate related caches.
+
+### Headers Added
+- `X-Cache: HIT` or `X-Cache: MISS` - indicates cache status
+- `X-Cache-Age: <seconds>` - age of cached response (HIT only)
 
 ## Related Files
-- [frontend/src/components/PropertiesTable.tsx](frontend/src/components/PropertiesTable.tsx) - Main fix location
-- [frontend/src/pages/Parcels.tsx](frontend/src/pages/Parcels.tsx) - Page component
-- [frontend/src/lib/useUrlState.ts](frontend/src/lib/useUrlState.ts) - URL state hook
-
-## Pattern for Future Reference
-
-### Making Callbacks Stable
-When a callback is used as a dependency in expensive memoizations (like column definitions), but needs access to frequently-changing state:
-
-```typescript
-// Step 1: Create ref to track state
-const stateRef = useRef(state)
-useEffect(() => {
-  stateRef.current = state
-}, [state])
-
-// Step 2: Use ref in callback instead of state
-const stableCallback = useCallback(() => {
-  const currentValue = stateRef.current  // Always current, callback never recreates
-  // ... use currentValue
-}, [])  // Empty deps = stable reference
-```
-
-This keeps the callback reference stable while still accessing current state values.
+- [backend_api/middleware/caching.py](backend_api/middleware/caching.py) - CachingMiddleware
+- [backend_api/main.py](backend_api/main.py) - Middleware registration
+- [config/caching.py](config/caching.py) - Cache manager with JSON serialization

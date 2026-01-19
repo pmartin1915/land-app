@@ -32,6 +32,7 @@ Subprocess scrapers communicate via exit codes (see `core/scrapers/EXIT_CODES.md
 - 2026-01-10: Added MyFirstDeal enhancements - Deal pipeline tracking, property comparison, external resource links
 - 2026-01-10: Added Portfolio Analytics Dashboard - Visualizes backend Portfolio API with summary cards, charts, and risk analysis
 - 2026-01-17: Fixed Parcels page infinite loop - Competing URL state management between Parcels.tsx and useUrlState caused re-render loop. Root cause: `setSearchParams({...})` overwrites ALL params. Fix: use functional form `setSearchParams(prev => ...)` to preserve existing params, and useUrlState now preserves unmanaged params.
+- 2026-01-19: Fixed CachingMiddleware Content-Length bug - Re-enabled server-side response caching. Root causes: (1) body bytes corrupted by JSON serialization, (2) ASGI body chunks not accumulated. Fix: base64-encode body for storage, accumulate all body chunks before caching, recalculate Content-Length on retrieval. Adds `X-Cache: HIT/MISS` headers.
 
 ### URL State Management Guidelines
 When using `useSearchParams` alongside `useUrlState`, follow these rules to prevent infinite loops:
