@@ -1,4 +1,10 @@
 {
+  "scripts": {
+    "dev": "powershell -ExecutionPolicy Bypass -File scripts/start-dev.ps1",
+    "dev:kill": "powershell -ExecutionPolicy Bypass -File scripts/start-dev.ps1 -KillOnly",
+    "dev:backend": "powershell -ExecutionPolicy Bypass -File scripts/start-dev.ps1 -BackendOnly",
+    "dev:frontend": "powershell -ExecutionPolicy Bypass -File scripts/start-dev.ps1 -FrontendOnly"
+  },
   "devDependencies": {
     "@executeautomation/playwright-mcp-server": "^1.0.12",
     "@playwright/test": "^1.57.0"
