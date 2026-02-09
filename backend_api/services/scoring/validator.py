@@ -1,6 +1,6 @@
 """
-Algorithm Validator for iOS-Backend Compatibility.
-Ensures mathematical consistency across platforms.
+Algorithm Validator for scoring consistency.
+Ensures mathematical consistency across calculation methods.
 """
 
 import logging
@@ -23,8 +23,8 @@ class ValidationResult:
 
 class AlgorithmValidator:
     """
-    Validates algorithm compatibility between iOS and backend.
-    CRITICAL: Ensures mathematical consistency across platforms.
+    Validates algorithm compatibility across versions.
+    Ensures mathematical consistency across calculation methods.
     """
 
     def __init__(
@@ -57,8 +57,8 @@ class AlgorithmValidator:
         Validate algorithm compatibility.
 
         Args:
-            algorithm_version: iOS algorithm version string
-            app_version: iOS app version string
+            algorithm_version: Algorithm version string
+            app_version: Client app version string
 
         Returns:
             ValidationResult with compatibility status and message
@@ -149,8 +149,8 @@ def validate_algorithm_compatibility(
     Convenience function for algorithm validation.
 
     Args:
-        algorithm_version: iOS algorithm version string
-        app_version: iOS app version string
+        algorithm_version: Algorithm version string
+        app_version: Client app version string
 
     Returns:
         Tuple of (is_compatible, message)

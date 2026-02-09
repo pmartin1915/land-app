@@ -14,7 +14,7 @@ import math
 
 from ..database.connection import get_db
 from ..database.models import ScrapeJob, Property
-from ..auth import get_current_user_or_api_key
+from ..auth import get_current_user_auth
 from ..config import limiter
 
 # Import state configs
@@ -90,7 +90,7 @@ def list_scrape_jobs(
     page_size: int = Query(20, ge=1, le=100),
     state: Optional[str] = Query(None, description="Filter by state"),
     status: Optional[str] = Query(None, description="Filter by status"),
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -143,7 +143,7 @@ def list_scrape_jobs(
 def get_scrape_job(
     request: Request,
     job_id: str,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -174,7 +174,7 @@ def trigger_scrape(
     request: Request,
     scrape_request: TriggerScrapeRequest,
     background_tasks: BackgroundTasks,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -429,7 +429,7 @@ def _calculate_scores(prop: Property, engine) -> None:
 @limiter.limit("30/minute")
 def get_data_freshness(
     request: Request,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -498,7 +498,7 @@ def get_state_freshness(
     request: Request,
     state: str,
     county: Optional[str] = None,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -565,7 +565,7 @@ def get_state_freshness(
 def cancel_scrape_job(
     request: Request,
     job_id: str,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """

@@ -98,7 +98,7 @@ class Settings(BaseSettings):
             return False
         return self.sql_echo
 
-    # Algorithm validation (for iOS compatibility)
+    # Algorithm validation thresholds
     expected_investment_score: float = 52.8
     expected_water_score: float = 3.0
     score_tolerance: float = 0.1

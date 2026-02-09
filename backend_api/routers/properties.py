@@ -1,6 +1,5 @@
 """
-Property CRUD endpoints using exact Python algorithms
-All endpoints maintain mathematical precision with iOS Swift implementation
+Property CRUD endpoints with scoring and investment calculations.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
@@ -215,12 +214,12 @@ def create_property(
     request: Request,
     property_data: PropertyCreate,
     auth_data: dict = Depends(require_property_write),
-    device_id: Optional[str] = Query(None, description="iOS device identifier"),
+    device_id: Optional[str] = Query(None, description="Device identifier"),
     property_service: PropertyService = Depends(get_property_service)
 ):
     """
     Create new property with calculated metrics using exact Python algorithms.
-    CRITICAL: Calculations must match iOS Swift implementation exactly.
+    Metrics are calculated using the scoring algorithms.
     """
     try:
         property_obj = property_service.create_property(property_data, device_id)
@@ -239,7 +238,7 @@ def update_property(
     property_id: str,
     property_data: PropertyUpdate,
     auth_data: dict = Depends(require_property_write),
-    device_id: Optional[str] = Query(None, description="iOS device identifier"),
+    device_id: Optional[str] = Query(None, description="Device identifier"),
     property_service: PropertyService = Depends(get_property_service)
 ):
     """
@@ -265,7 +264,7 @@ def delete_property(
     request: Request,
     property_id: str,
     auth_data: dict = Depends(require_property_write),
-    device_id: Optional[str] = Query(None, description="iOS device identifier"),
+    device_id: Optional[str] = Query(None, description="Device identifier"),
     property_service: PropertyService = Depends(get_property_service)
 ):
     """
@@ -471,7 +470,7 @@ def search_suggestions(
 ):
     """
     Get search suggestions for property descriptions and owner names.
-    Useful for autocomplete functionality in iOS app.
+    Useful for autocomplete functionality.
     """
     try:
         # This is a simple implementation - could be enhanced with full-text search

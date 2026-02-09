@@ -149,7 +149,7 @@ async def lookup_county(
 ):
     """
     Lookup counties by code, name, or partial name.
-    Supports autocomplete functionality for iOS app.
+    Supports autocomplete functionality.
     """
     try:
         matches = []
@@ -289,7 +289,7 @@ async def county_autocomplete(
 ):
     """
     Autocomplete suggestions for county names.
-    Used by iOS app for improved user experience.
+    Provides autocomplete suggestions for county search.
     """
     try:
         search_results = search_counties(query)
@@ -318,7 +318,7 @@ async def county_autocomplete(
 async def get_ador_mapping(request: Request):
     """
     Get complete ADOR county code mapping.
-    Used for iOS app initialization and validation.
+    Used for client initialization and validation.
     """
     try:
         return {

@@ -14,7 +14,7 @@ from datetime import datetime
 
 from ..database.connection import get_db
 from ..database.models import Property
-from ..auth import get_current_user_or_api_key
+from ..auth import get_current_user_auth
 from ..config import limiter
 from ..services.property_service import PropertyService
 from ..models.property import PropertyCreate
@@ -172,7 +172,7 @@ def get_property_service(db: Session = Depends(get_db)) -> PropertyService:
 async def preview_csv(
     request: Request,
     file: UploadFile = File(...),
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -263,7 +263,7 @@ async def import_csv(
     owner_name_col: Optional[str] = None,
     year_sold_col: Optional[str] = None,
     assessed_value_col: Optional[str] = None,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """

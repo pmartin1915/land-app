@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 from .config import settings, limiter
 
 # Import routers
-from .routers import properties, counties, sync, auth, predictions, testing, applications, ai
+from .routers import properties, counties, sync, auth, predictions, applications, ai
 from .routers import settings as settings_router, watchlist, exports, scrape, portfolio, imports
 from .database.connection import database, connect_db, disconnect_db
 from .auth import add_security_headers, require_sync_access
@@ -240,13 +240,6 @@ app.include_router(
 )
 
 app.include_router(
-    testing.router,
-    prefix=f"{API_V1_PREFIX}/testing",
-    tags=["AI Testing & Validation"],
-    dependencies=[]  # Auth applied per endpoint for granular control
-)
-
-app.include_router(
     applications.router,
     prefix=f"{API_V1_PREFIX}/applications",
     tags=["Application Assistant"],
@@ -310,8 +303,6 @@ async def root():
     return {
         "service": "Auction Watcher API",
         "version": "1.0.0",
-        "phase": "Phase 2A Week 3-4",
-        "compatibility": "iOS Swift + Python Backend",
         "docs": "/api/docs",
         "health": "/health",
         "api_base": "/api/v1"

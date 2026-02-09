@@ -7,7 +7,7 @@ to ensure timezone-aware datetimes and prevent drift between client/server times
 Why this matters:
 - datetime.utcnow() returns naive datetime (no timezone info) - DEPRECATED in Python 3.12
 - func.now() uses database server time which may drift from application server
-- iOS clients send timezone-aware UTC timestamps
+- Clients send timezone-aware UTC timestamps
 - Comparing naive vs aware datetimes raises TypeError in Python 3.x
 
 Usage:

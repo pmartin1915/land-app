@@ -16,7 +16,7 @@ from fastapi import FastAPI
 
 from backend_api.routers.watchlist import router
 from backend_api.database.connection import get_db
-from backend_api.auth import get_current_user_or_api_key
+from backend_api.auth import get_current_user_auth
 from tests.api.auth_helpers import generate_test_api_key
 
 
@@ -172,7 +172,7 @@ def client(mock_db, mock_auth):
 
     # Override dependencies
     app.dependency_overrides[get_db] = lambda: mock_db
-    app.dependency_overrides[get_current_user_or_api_key] = lambda: mock_auth
+    app.dependency_overrides[get_current_user_auth] = lambda: mock_auth
 
     return TestClient(app)
 

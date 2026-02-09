@@ -12,7 +12,7 @@ import json
 
 from ..database.connection import get_db
 from ..database.models import UserPreference
-from ..auth import get_current_user_or_api_key
+from ..auth import get_current_user_auth
 from ..config import limiter
 
 # Import state configs for budget recommendations
@@ -78,7 +78,7 @@ def get_device_id_from_auth(auth_data: dict) -> str:
 @limiter.limit("60/minute")
 def get_settings(
     request: Request,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -121,7 +121,7 @@ def get_settings(
 def update_settings(
     request: Request,
     updates: UserPreferenceUpdate,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -180,7 +180,7 @@ def update_settings(
 def get_budget_recommendations(
     request: Request,
     budget: Optional[float] = None,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -270,7 +270,7 @@ def get_budget_recommendations(
 @limiter.limit("10/minute")
 def reset_settings(
     request: Request,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """

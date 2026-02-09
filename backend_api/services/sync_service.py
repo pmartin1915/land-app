@@ -1,5 +1,5 @@
 """
-Synchronization service layer for iOS-backend communication.
+Synchronization service layer.
 Implements delta sync protocol with conflict resolution (last-write-wins).
 
 NOTE: This module now delegates to the decomposed sync package internally.
@@ -55,11 +55,11 @@ class SyncService:
         app_version: str
     ) -> Tuple[bool, str]:
         """
-        Validate algorithm compatibility between iOS and backend.
+        Validate algorithm compatibility.
 
         Args:
-            algorithm_version: iOS algorithm version string
-            app_version: iOS app version string
+            algorithm_version: Algorithm version string
+            app_version: Client app version string
 
         Returns:
             Tuple of (is_compatible, message)

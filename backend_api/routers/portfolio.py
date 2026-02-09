@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 import logging
 
 from ..database.connection import get_db
-from ..auth import get_current_user_or_api_key
+from ..auth import get_current_user_auth
 from ..config import limiter
 from ..services.portfolio_service import PortfolioService
 from ..models.portfolio import (
@@ -31,7 +31,7 @@ def get_device_id_from_auth(auth_data: dict) -> str:
 
 
 def get_portfolio_service(
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ) -> PortfolioService:
     """Dependency to get PortfolioService instance scoped to user."""

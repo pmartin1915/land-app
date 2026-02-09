@@ -15,7 +15,7 @@ import math
 
 from ..database.connection import get_db
 from ..database.models import PropertyInteraction, Property
-from ..auth import get_current_user_or_api_key
+from ..auth import get_current_user_auth
 from ..config import limiter
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ def get_watchlist(
     page_size: int = Query(50, ge=1, le=200, description="Items per page"),
     include_dismissed: bool = Query(False, description="Include dismissed properties"),
     min_rating: Optional[int] = Query(None, ge=1, le=5, description="Minimum star rating"),
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -135,7 +135,7 @@ def get_watchlist(
 def get_property_interaction(
     request: Request,
     property_id: str,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -167,7 +167,7 @@ def get_property_interaction(
 def toggle_watch(
     request: Request,
     property_id: str,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -225,7 +225,7 @@ def update_property_interaction(
     request: Request,
     property_id: str,
     updates: PropertyInteractionUpdate,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -283,7 +283,7 @@ def update_property_interaction(
 def delete_property_interaction(
     request: Request,
     property_id: str,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -319,7 +319,7 @@ def delete_property_interaction(
 @limiter.limit("60/minute")
 def get_watchlist_stats(
     request: Request,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -372,7 +372,7 @@ def get_watchlist_stats(
 def get_bulk_watch_status(
     request: Request,
     property_ids: str = Query(..., description="Comma-separated property IDs"),
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -448,7 +448,7 @@ class FirstDealResponse(BaseModel):
 @limiter.limit("60/minute")
 def get_first_deal(
     request: Request,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -493,7 +493,7 @@ def get_first_deal(
 def set_first_deal(
     request: Request,
     property_id: str,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -572,7 +572,7 @@ def set_first_deal(
 def update_first_deal_stage(
     request: Request,
     update: FirstDealStageUpdate,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -626,7 +626,7 @@ def update_first_deal_stage(
 @limiter.limit("30/minute")
 def remove_first_deal(
     request: Request,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """

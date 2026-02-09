@@ -1,6 +1,5 @@
 """
-Property service layer using exact Python algorithms from scripts/utils.py
-CRITICAL: Maintains mathematical precision with iOS Swift implementation
+Property service layer for scoring and investment calculations.
 """
 
 import logging
@@ -34,7 +33,6 @@ logger = logging.getLogger(__name__)
 class PropertyService:
     """
     Property service using exact Python algorithms.
-    Ensures mathematical consistency with iOS Swift implementation.
     """
 
     def __init__(self, db: Session):
@@ -43,7 +41,6 @@ class PropertyService:
     def calculate_property_metrics(self, property_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Calculate all property metrics using exact Python algorithms.
-        CRITICAL: This function MUST produce identical results to iOS calculations.
         Enhanced in Phase 1 with advanced description intelligence.
         """
         try:
@@ -485,7 +482,7 @@ class PropertyService:
                 investment_score=calculated_metrics['investment_score'],
                 estimated_all_in_cost=calculated_metrics['estimated_all_in_cost'],
                 assessed_value_ratio=calculated_metrics['assessed_value_ratio'],
-                algorithm_version="1.0.0",  # Match iOS version
+                algorithm_version="1.0.0",
                 calculation_timestamp=utc_now()
             )
 

@@ -18,7 +18,7 @@ from fastapi import FastAPI
 
 from backend_api.routers.portfolio import router
 from backend_api.database.connection import get_db
-from backend_api.auth import get_current_user_or_api_key
+from backend_api.auth import get_current_user_auth
 
 
 # -----------------------------------------------------------------------------
@@ -220,7 +220,7 @@ def client(mock_db, mock_auth):
 
     # Override dependencies
     app.dependency_overrides[get_db] = lambda: mock_db
-    app.dependency_overrides[get_current_user_or_api_key] = lambda: mock_auth
+    app.dependency_overrides[get_current_user_auth] = lambda: mock_auth
 
     return TestClient(app)
 
@@ -553,7 +553,7 @@ class TestDeviceIsolation:
         ))
 
         app.dependency_overrides[get_db] = lambda: mock_db
-        app.dependency_overrides[get_current_user_or_api_key] = lambda: device2_auth
+        app.dependency_overrides[get_current_user_auth] = lambda: device2_auth
 
         client = TestClient(app)
         response = client.get("/portfolio/summary")

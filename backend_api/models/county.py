@@ -108,7 +108,7 @@ class CountyStatisticsResponse(BaseModel):
     generated_at: datetime = Field(..., description="When statistics were generated")
     total_properties_analyzed: int = Field(..., description="Total number of properties included in analysis")
 
-# ADOR County Code Mapping (CRITICAL: Must match iOS exactly)
+# ADOR County Code Mapping
 ADOR_COUNTY_MAPPING = {
     "01": "Autauga", "02": "Mobile", "03": "Baldwin", "04": "Barbour", "05": "Bibb",
     "06": "Blount", "07": "Bullock", "08": "Butler", "09": "Calhoun", "10": "Chambers",

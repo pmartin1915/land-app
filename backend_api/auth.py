@@ -124,7 +124,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         logger.error(f"Failed to get current user: {str(e)}")
         raise HTTPException(status_code=401, detail="Could not validate credentials")
 
-async def get_current_user_or_api_key(
+async def get_current_user_auth(
     request: Request
 ) -> Dict[str, Any]:
     """
@@ -153,7 +153,7 @@ async def get_current_user_or_api_key(
 
 def require_scope(required_scope: str):
     """Dependency to require specific scope."""
-    async def scope_checker(auth_data: Dict[str, Any] = Depends(get_current_user_or_api_key)):
+    async def scope_checker(auth_data: Dict[str, Any] = Depends(get_current_user_auth)):
         scopes = auth_data.get("scopes", [])
         if required_scope not in scopes and "admin" not in scopes:
             raise HTTPException(

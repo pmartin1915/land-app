@@ -16,7 +16,7 @@ from datetime import datetime
 
 from ..database.connection import get_db
 from ..database.models import Property
-from ..auth import get_current_user_or_api_key
+from ..auth import get_current_user_auth
 from ..config import limiter
 from ..services.property_service import PropertyService
 from ..models.property import PropertyFilters
@@ -100,7 +100,7 @@ async def get_export_columns(request: Request):
 def export_csv(
     request: Request,
     export_request: ExportRequest,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -189,7 +189,7 @@ def export_csv(
 def export_json(
     request: Request,
     export_request: ExportRequest,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """
@@ -289,7 +289,7 @@ def preview_export(
     min_investment_score: Optional[float] = None,
     exclude_delta_region: bool = False,
     exclude_market_rejects: bool = False,
-    auth_data: dict = Depends(get_current_user_or_api_key),
+    auth_data: dict = Depends(get_current_user_auth),
     db: Session = Depends(get_db)
 ):
     """

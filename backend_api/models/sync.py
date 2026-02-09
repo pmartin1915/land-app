@@ -1,6 +1,6 @@
 """
-Pydantic models for synchronization operations between iOS and backend
-Implements delta sync protocol with conflict resolution (last-write-wins)
+Pydantic models for synchronization operations.
+Implements delta sync protocol with conflict resolution (last-write-wins).
 """
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -69,12 +69,12 @@ class SyncConflict(BaseModel):
     resolution: Optional[ConflictResolution] = Field(None, description="How to resolve conflict")
 
 class DeltaSyncRequest(BaseModel):
-    """Model for delta synchronization requests from iOS."""
-    device_id: str = Field(..., description="Unique iOS device identifier")
+    """Model for delta synchronization requests."""
+    device_id: str = Field(..., description="Unique device identifier")
     last_sync_timestamp: datetime = Field(..., description="Last successful sync timestamp")
     changes: List[PropertyChange] = Field(default=[], description="Local changes to upload")
-    algorithm_version: str = Field(..., description="iOS algorithm version for compatibility check")
-    app_version: str = Field(..., description="iOS app version")
+    algorithm_version: str = Field(..., description="Algorithm version for compatibility check")
+    app_version: str = Field(..., description="Client app version")
 
     @field_validator('device_id')
     @classmethod
@@ -85,7 +85,7 @@ class DeltaSyncRequest(BaseModel):
         return v.strip()
 
 class DeltaSyncResponse(BaseModel):
-    """Model for delta synchronization responses to iOS."""
+    """Model for delta synchronization responses."""
     server_changes: List[PropertyChange] = Field(..., description="Changes from server since last sync")
     conflicts: List[SyncConflict] = Field(default=[], description="Conflicts requiring resolution")
     new_sync_timestamp: datetime = Field(..., description="New sync timestamp for client")
@@ -104,11 +104,11 @@ class DeltaSyncResponse(BaseModel):
 
 class FullSyncRequest(BaseModel):
     """Model for full synchronization requests (initial sync or after conflicts)."""
-    device_id: str = Field(..., description="Unique iOS device identifier")
+    device_id: str = Field(..., description="Unique device identifier")
     force_sync: bool = Field(False, description="Force full sync even if recent")
     include_deleted: bool = Field(False, description="Include soft-deleted records")
-    algorithm_version: str = Field(..., description="iOS algorithm version")
-    app_version: str = Field(..., description="iOS app version")
+    algorithm_version: str = Field(..., description="Algorithm version")
+    app_version: str = Field(..., description="Client app version")
 
 class FullSyncResponse(BaseModel):
     """Model for full synchronization responses."""

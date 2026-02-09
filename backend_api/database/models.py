@@ -64,7 +64,7 @@ class Property(Base):
     created_at = Column(DateTime, default=func.now(), index=True, comment="Record creation timestamp")
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), comment="Last update timestamp")
 
-    # Sync metadata for cross-platform compatibility
+    # Sync metadata
     device_id = Column(String, nullable=True, comment="Device that last modified this record")
     sync_timestamp = Column(DateTime, default=func.now(), comment="Last sync timestamp")
     is_deleted = Column(Boolean, default=False, index=True, comment="Soft delete flag for sync")

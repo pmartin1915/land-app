@@ -1,5 +1,5 @@
 """
-Synchronization endpoints for iOS-backend communication
+Synchronization endpoints for client-server data sync.
 Implements delta sync protocol with conflict resolution (last-write-wins)
 
 This router is a thin HTTP layer that delegates all business logic to SyncService.
@@ -37,7 +37,7 @@ def delta_sync(
     sync_service: SyncService = Depends(get_sync_service_dep)
 ):
     """
-    Perform delta synchronization between iOS and backend.
+    Perform delta synchronization between client and server.
     Returns only changes since last sync timestamp.
     """
     try:
