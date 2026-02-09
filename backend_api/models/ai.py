@@ -5,7 +5,7 @@ Pydantic models for the /api/v1/ai/triage endpoint.
 
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 
@@ -44,7 +44,7 @@ class AISuggestionResponse(BaseModel):
         description="Source property IDs (self-referential for investment triage)"
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         description="Timestamp when suggestion was generated"
     )
     applied_by: Optional[str] = Field(
@@ -85,7 +85,7 @@ class TriageQueueResponse(BaseModel):
         description="Count of suggestions by tier"
     )
     generated_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         description="Timestamp when queue was generated"
     )
     processing_time_seconds: float = Field(

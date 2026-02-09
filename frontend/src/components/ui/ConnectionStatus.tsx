@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Wifi, WifiOff, RefreshCw } from 'lucide-react'
 import { subscribeToConnectionStatus, getConnectionStatus, checkApiConnection } from '../../lib/api'
 
@@ -13,19 +13,47 @@ export function ConnectionStatus({ className = '', showWhenOnline = false }: Con
   const [showBanner, setShowBanner] = useState(false)
   const [initialCheckDone, setInitialCheckDone] = useState(false)
 
+  // Refs for cleanup of timeouts to prevent memory leaks
+  const bannerTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isMountedRef = useRef(true)
+
+  // Cleanup function for timeouts
+  const clearTimeouts = useCallback(() => {
+    if (bannerTimeoutRef.current) {
+      clearTimeout(bannerTimeoutRef.current)
+      bannerTimeoutRef.current = null
+    }
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current)
+      retryTimeoutRef.current = null
+    }
+  }, [])
+
+  // Track mount state for async operations
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+      clearTimeouts()
+    }
+  }, [clearTimeouts])
+
   // Run initial API connection check on mount to prevent false offline banner
   useEffect(() => {
     const checkInitialConnection = async () => {
       try {
         const connected = await checkApiConnection()
-        if (connected) {
+        if (isMountedRef.current && connected) {
           setIsOnline(true)
           setShowBanner(false)
         }
       } catch {
         // Ignore errors, let the regular connection monitoring handle it
       } finally {
-        setInitialCheckDone(true)
+        if (isMountedRef.current) {
+          setInitialCheckDone(true)
+        }
       }
     }
     checkInitialConnection()
@@ -33,12 +61,22 @@ export function ConnectionStatus({ className = '', showWhenOnline = false }: Con
 
   useEffect(() => {
     const unsubscribe = subscribeToConnectionStatus((online) => {
+      if (!isMountedRef.current) return
+
       setIsOnline(online)
       // Show banner when going offline, hide after 3 seconds when coming back online
       if (!online) {
         setShowBanner(true)
       } else {
-        setTimeout(() => setShowBanner(false), 3000)
+        // Clear any existing timeout before setting new one
+        if (bannerTimeoutRef.current) {
+          clearTimeout(bannerTimeoutRef.current)
+        }
+        bannerTimeoutRef.current = setTimeout(() => {
+          if (isMountedRef.current) {
+            setShowBanner(false)
+          }
+        }, 3000)
       }
     })
 
@@ -49,12 +87,22 @@ export function ConnectionStatus({ className = '', showWhenOnline = false }: Con
     setIsRetrying(true)
     try {
       const connected = await checkApiConnection()
-      if (connected) {
+      if (isMountedRef.current && connected) {
         setIsOnline(true)
-        setTimeout(() => setShowBanner(false), 1000)
+        // Clear any existing timeout before setting new one
+        if (retryTimeoutRef.current) {
+          clearTimeout(retryTimeoutRef.current)
+        }
+        retryTimeoutRef.current = setTimeout(() => {
+          if (isMountedRef.current) {
+            setShowBanner(false)
+          }
+        }, 1000)
       }
     } finally {
-      setIsRetrying(false)
+      if (isMountedRef.current) {
+        setIsRetrying(false)
+      }
     }
   }
 

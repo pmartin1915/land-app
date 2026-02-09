@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from typing import List, Optional
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..models.prediction import (
     PropertyAppreciationRequest, PropertyAppreciationResponse,
@@ -70,7 +70,7 @@ async def prediction_engine_health(request: Request):
         return PredictionHealthResponse(
             engine_status="healthy",
             algorithm_version="1.0.0",
-            last_model_update=datetime.utcnow(),
+            last_model_update=datetime.now(timezone.utc),
             available_counties=available_counties,
             performance_metrics=performance_metrics,
             uptime_seconds=uptime
@@ -319,7 +319,7 @@ async def get_counties_timing_overview(
     """
     Get market timing overview for multiple counties.
 
-    Provides a consolidated view of market conditions across Alabama counties.
+    Provides a consolidated view of market conditions across counties.
     """
     try:
         start_time = time.time()
@@ -362,7 +362,7 @@ async def get_counties_timing_overview(
             "counties_analyzed": len(counties),
             "successful_analyses": len([c for c in timing_overview.values() if "error" not in c]),
             "timing_data": timing_overview,
-            "analysis_timestamp": datetime.utcnow().isoformat(),
+            "analysis_timestamp": datetime.now(timezone.utc).isoformat(),
             "processing_time_seconds": processing_time
         }
 

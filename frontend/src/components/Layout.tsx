@@ -30,7 +30,7 @@ export function Layout({ children }: LayoutProps) {
       '/reports': 'Reports / Exports',
       '/settings': 'Settings',
     }
-    return routes[pathname] || 'Alabama Auction Watcher'
+    return routes[pathname] || 'Auction Watcher'
   }
 
   const handleFiltersChange = (filters: PropertyFilters) => {

@@ -1,4 +1,4 @@
-// API client for Alabama Auction Watcher FastAPI backend
+// API client for Auction Watcher FastAPI backend
 // Configuration loaded from environment variables
 
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios'
@@ -21,13 +21,11 @@ import {
   PaginatedResponse,
   APIError,
   SearchParams,
-  CSVImportResult,
   PropertyFilters,
   ExportJob,
   SyncLog,
 } from '../types'
 import { config } from '../config'
-import { globalCache } from './cache'
 
 // API Response Types for endpoints without specific types
 export interface PropertyListResponse {
@@ -48,8 +46,15 @@ export interface PropertyStatsResponse {
   by_status: Record<string, number>
   price_distribution?: { ranges: string[]; counts: number[] }
   score_distribution?: Record<string, number>
-  top_counties?: { name: string; avg_investment_score: number }[]
+  top_counties?: { name: string; count: number; avg_investment_score: number }[]
   activity_timeline?: { dates: string[]; new_properties: number[] }
+  // Dashboard KPI fields
+  new_items_7d?: number
+  new_items_trend?: string
+  water_access_percentage?: number
+  avg_price_per_acre?: number
+  state_distribution?: { state: string; count: number; avg_investment_score: number }[]
+  recent_activity?: { type: string; description: string; timestamp: string }[]
 }
 
 export interface HealthResponse {
@@ -100,6 +105,19 @@ export interface CSVImportResult {
   failed_rows: CSVImportRowError[]
 }
 
+export interface WatchlistPropertyItem {
+  interaction: Record<string, unknown>
+  property: Property
+}
+
+export interface WatchlistPaginatedResponse {
+  items: WatchlistPropertyItem[]
+  total_count: number
+  page: number
+  page_size: number
+  total_pages: number
+}
+
 export interface WatchlistStatsResponse {
   watched: number
   rated: number
@@ -115,7 +133,6 @@ export interface FirstDealResponse {
   property: Property | null
   interaction: {
     id: string
-    device_id: string
     property_id: string
     is_watched: boolean
     star_rating?: number
@@ -261,17 +278,6 @@ class AuthManager {
   private static readonly REFRESH_TOKEN_KEY = config.auth.refreshTokenKey
   private static readonly TOKEN_EXPIRES_KEY = config.auth.tokenExpiresKey
 
-  // Generate unique device ID for this browser/app instance
-  private static getDeviceId(): string {
-    let deviceId = localStorage.getItem(config.auth.deviceIdKey)
-    if (!deviceId) {
-      // Use crypto.randomUUID() for privacy-preserving unique ID
-      deviceId = crypto.randomUUID()
-      localStorage.setItem(config.auth.deviceIdKey, deviceId)
-    }
-    return deviceId
-  }
-
   // Check if current token is expired
   private static isTokenExpired(): boolean {
     const expires = localStorage.getItem(this.TOKEN_EXPIRES_KEY)
@@ -282,48 +288,6 @@ class AuthManager {
     const bufferTime = 60 // Refresh 1 minute before expiration
 
     return currentTime >= (expirationTime - bufferTime)
-  }
-
-  // Request new device token from backend
-  private static async requestDeviceToken(): Promise<string> {
-    try {
-      console.log('Requesting new device token...')
-
-      const deviceId = this.getDeviceId()
-      const response = await axios.post(`${API_BASE_URL}/auth/device/token`, {
-        device_id: deviceId,
-        app_version: '1.0.0',
-        device_name: 'Web Client',
-      })
-
-      const tokenData = response.data
-
-      // Store token and expiration
-      const token = tokenData.access_token
-      const refreshToken = tokenData.refresh_token
-      const expiresIn = tokenData.expires_in || 3600 // Default 1 hour
-      const expirationTime = Math.floor(Date.now() / 1000) + expiresIn
-
-      localStorage.setItem(this.TOKEN_KEY, token)
-      localStorage.setItem(this.REFRESH_TOKEN_KEY, refreshToken)
-      localStorage.setItem(this.TOKEN_EXPIRES_KEY, expirationTime.toString())
-
-      console.log('Device token obtained successfully')
-      return token
-
-    } catch (error: unknown) {
-      console.error('Failed to request device token:', error)
-
-      // Log detailed error information for debugging
-      const axiosError = error as AxiosError
-      if (axiosError.response) {
-        console.error('Response status:', axiosError.response.status)
-        console.error('Response data:', axiosError.response.data)
-      }
-
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      throw new Error(`Authentication failed: ${message}`)
-    }
   }
 
   // Refresh token using refresh token
@@ -355,9 +319,8 @@ class AuthManager {
 
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error'
-      console.warn('Token refresh failed, requesting new token:', message)
-      // If refresh fails, request a new token
-      return await this.requestDeviceToken()
+      console.warn('Token refresh failed:', message)
+      throw new Error(`Token refresh failed: ${message}`)
     }
   }
 
@@ -365,20 +328,18 @@ class AuthManager {
   public static async ensureValidToken(): Promise<string> {
     const currentToken = localStorage.getItem(this.TOKEN_KEY)
 
-    // If no token or token is expired, get a new one
-    if (!currentToken || this.isTokenExpired()) {
-      try {
-        // Try to refresh first if we have a refresh token
-        const refreshToken = localStorage.getItem(this.REFRESH_TOKEN_KEY)
-        if (refreshToken && currentToken) {
-          return await this.refreshToken()
-        } else {
-          return await this.requestDeviceToken()
-        }
-      } catch (error) {
-        // If all else fails, request a new token
-        return await this.requestDeviceToken()
+    // If no token, there is nothing to do -- auth will be added when user logs in
+    if (!currentToken) {
+      throw new Error('No authentication token available. Please log in.')
+    }
+
+    // If token is expired, try to refresh
+    if (this.isTokenExpired()) {
+      const refreshToken = localStorage.getItem(this.REFRESH_TOKEN_KEY)
+      if (refreshToken) {
+        return await this.refreshToken()
       }
+      throw new Error('Authentication token expired. Please log in again.')
     }
 
     return currentToken
@@ -392,16 +353,14 @@ class AuthManager {
   }
 
   // Get current token status for debugging
-  public static getAuthStatus(): { hasToken: boolean; isExpired: boolean; expiresAt: string | null; deviceId: string } {
+  public static getAuthStatus(): { hasToken: boolean; isExpired: boolean; expiresAt: string | null } {
     const token = localStorage.getItem(this.TOKEN_KEY)
     const expires = localStorage.getItem(this.TOKEN_EXPIRES_KEY)
-    const deviceId = this.getDeviceId()
 
     return {
       hasToken: !!token,
       isExpired: this.isTokenExpired(),
       expiresAt: expires ? new Date(parseInt(expires) * 1000).toLocaleString() : null,
-      deviceId
     }
   }
 }
@@ -472,7 +431,7 @@ const createApiClient = (): AxiosInstance => {
 
       // Log performance metrics if in development
       if (process.env.NODE_ENV === 'development') {
-        const duration = Date.now() - response.config.metadata?.startTime
+        const duration = Date.now() - (response.config.metadata?.startTime ?? Date.now())
         console.log(`API ${response.config.method?.toUpperCase()} ${response.config.url}: ${duration}ms`)
       }
 
@@ -772,7 +731,6 @@ export const propertiesApi = {
     const response = await apiClient.patch(`/properties/${id}/status`, {
       status,
       triage_notes: notes,
-      device_id: localStorage.getItem('device_id') || 'web-client'
     })
     return handleResponse(response)
   },
@@ -990,21 +948,10 @@ export const applicationApi = {
   },
 }
 
-// Helper to invalidate portfolio caches when watchlist changes
-const invalidatePortfolioCaches = async () => {
-  await Promise.all([
-    globalCache.remove('portfolio-summary'),
-    globalCache.remove('portfolio-geographic'),
-    globalCache.remove('portfolio-scores'),
-    globalCache.remove('portfolio-risk'),
-    globalCache.remove('portfolio-performance'),
-  ])
-}
-
 // Watchlist API
 export const watchlistApi = {
   // Get watchlist with pagination
-  getWatchlist: async (page: number = 1, pageSize: number = 20): Promise<PaginatedResponse<Property>> => {
+  getWatchlist: async (page: number = 1, pageSize: number = 20): Promise<WatchlistPaginatedResponse> => {
     const response = await apiClient.get('/watchlist', {
       params: { page, page_size: pageSize }
     })
@@ -1029,7 +976,6 @@ export const watchlistApi = {
   toggleWatch: async (propertyId: string): Promise<{ is_watched: boolean }> => {
     const response = await apiClient.post(`/watchlist/property/${propertyId}/watch`)
     const result = handleResponse(response)
-    await invalidatePortfolioCaches()
     return result
   },
 
@@ -1037,7 +983,6 @@ export const watchlistApi = {
   updateInteraction: async (propertyId: string, data: { star_rating?: number; user_notes?: string }): Promise<{ id: string; star_rating?: number; user_notes?: string }> => {
     const response = await apiClient.put(`/watchlist/property/${propertyId}`, data)
     const result = handleResponse(response)
-    await invalidatePortfolioCaches()
     return result
   },
 
@@ -1052,7 +997,6 @@ export const watchlistApi = {
   setFirstDeal: async (propertyId: string): Promise<{ property_id: string; is_first_deal: boolean; stage: string }> => {
     const response = await apiClient.post(`/watchlist/property/${propertyId}/set-first-deal`)
     const result = handleResponse(response)
-    await invalidatePortfolioCaches()
     return result
   },
 
@@ -1060,7 +1004,6 @@ export const watchlistApi = {
   updateFirstDealStage: async (stage: FirstDealStage): Promise<{ property_id: string; stage: string; updated_at: string }> => {
     const response = await apiClient.put('/watchlist/first-deal/stage', { stage })
     const result = handleResponse(response)
-    await invalidatePortfolioCaches()
     return result
   },
 
@@ -1068,7 +1011,6 @@ export const watchlistApi = {
   removeFirstDeal: async (): Promise<{ property_id: string; message: string }> => {
     const response = await apiClient.delete('/watchlist/first-deal')
     const result = handleResponse(response)
-    await invalidatePortfolioCaches()
     return result
   },
 }
@@ -1239,7 +1181,6 @@ export interface AuthStatusInfo {
   hasToken: boolean
   isExpired: boolean
   expiresAt: string | null
-  deviceId: string
 }
 
 // Authentication utility functions

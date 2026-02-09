@@ -1,5 +1,5 @@
 """
-Scoring services for Alabama Auction Watcher.
+Scoring services for Auction Watcher.
 Handles algorithm validation and score calculations.
 """
 

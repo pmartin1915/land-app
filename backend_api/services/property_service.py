@@ -626,11 +626,11 @@ class PropertyService:
         Get aggregated statistics for the frontend dashboard.
         Uses efficient SQL aggregations to minimize database roundtrips.
         """
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         from sqlalchemy import case
 
         try:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             seven_days_ago = now - timedelta(days=7)
             fourteen_days_ago = now - timedelta(days=14)
 

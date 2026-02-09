@@ -1,5 +1,5 @@
 """
-Input validation middleware for Alabama Auction Watcher API
+Input validation middleware for Auction Watcher API
 
 This middleware provides comprehensive input validation and sanitization
 for all API endpoints, protecting against injection attacks and malformed data.

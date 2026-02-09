@@ -2,7 +2,6 @@
  * Web Authentication Adapter
  *
  * Uses localStorage for token storage in browser environments.
- * Fallback adapter when Tauri is not available.
  */
 
 import { AuthAdapter, AuthTokens, AuthAdapterConfig } from './AuthAdapter'
@@ -12,7 +11,6 @@ const DEFAULT_CONFIG: Required<AuthAdapterConfig> = {
   tokenKey: config.auth.tokenKey,
   refreshTokenKey: config.auth.refreshTokenKey,
   expiresKey: config.auth.tokenExpiresKey,
-  deviceIdKey: config.auth.deviceIdKey,
 }
 
 export class WebAuthAdapter implements AuthAdapter {
@@ -88,15 +86,4 @@ export class WebAuthAdapter implements AuthAdapter {
     }
   }
 
-  getDeviceId(): string {
-    let deviceId = localStorage.getItem(this.config.deviceIdKey)
-
-    if (!deviceId) {
-      // Use crypto.randomUUID() for privacy-preserving unique ID
-      deviceId = crypto.randomUUID()
-      localStorage.setItem(this.config.deviceIdKey, deviceId)
-    }
-
-    return deviceId
-  }
 }

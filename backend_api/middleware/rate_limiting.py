@@ -1,5 +1,5 @@
 """
-Enhanced Rate Limiting Middleware for Alabama Auction Watcher API
+Enhanced Rate Limiting Middleware for Auction Watcher API
 
 This middleware integrates the sophisticated rate limiting system with FastAPI,
 providing comprehensive protection against various types of abuse and attacks.
@@ -124,16 +124,10 @@ class RateLimitingMiddleware:
         """Extract authentication data from request."""
         auth_data = {}
 
-        # Check for API key in headers
-        api_key = request.headers.get("X-API-Key")
-        if api_key:
-            # Basic tier detection based on API key pattern
-            if api_key.startswith("AW_admin_"):
-                auth_data["is_admin"] = True
-            elif api_key.startswith("AW_premium_"):
-                auth_data["is_premium"] = True
-            elif api_key.startswith("AW_"):
-                auth_data["is_authenticated"] = True
+        # Check for JWT bearer token
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            auth_data["is_authenticated"] = True
 
         # Check for user data in request state (set by auth middleware)
         if hasattr(request.state, 'user_data'):

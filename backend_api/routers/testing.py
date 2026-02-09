@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Query, Backgroun
 from typing import List, Optional, Dict, Any
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel, Field
 
 from ..auth import require_property_read, require_admin
@@ -119,7 +119,7 @@ async def testing_system_health(request: Request):
             "status": "healthy",
             "system": "AI Testing & Validation",
             "version": "1.0.0",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "database_connected": True,  # Simplified check
             "validator_initialized": validator is not None
         }
@@ -442,7 +442,7 @@ async def get_performance_metrics(
             },
             "top_counties": dict(sorted(county_averages.items(), key=lambda x: x[1], reverse=True)[:10]),
             "performance_alerts": _generate_performance_alerts(validation_history),
-            "last_updated": datetime.utcnow().isoformat()
+            "last_updated": datetime.now(timezone.utc).isoformat()
         }
 
         logger.info(f"Generated performance metrics for {days} days: {len(validation_history)} validations")
@@ -565,7 +565,7 @@ async def get_analytics_summary(
         }
 
         return {
-            "summary_generated": datetime.utcnow().isoformat(),
+            "summary_generated": datetime.now(timezone.utc).isoformat(),
             "system_statistics": system_stats,
             "performance_trends": performance_trends,
             "operational_health": operational_health,

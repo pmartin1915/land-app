@@ -51,7 +51,7 @@ interface TriageCardProps {
 }
 
 function TriageCard({ suggestion, isSelected, onSelect, index }: TriageCardProps) {
-  const tier = getTierLabel(suggestion.proposed_value || '')
+  const tier = getTierLabel(String(suggestion.proposed_value ?? ''))
 
   return (
     <div
@@ -121,7 +121,7 @@ function PropertyDetailPanel({
     )
   }
 
-  const tier = getTierLabel(suggestion.proposed_value || '')
+  const tier = getTierLabel(String(suggestion.proposed_value ?? ''))
 
   return (
     <div className="h-full flex flex-col bg-card rounded-lg border border-neutral-1 overflow-hidden">

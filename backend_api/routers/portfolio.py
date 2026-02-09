@@ -26,12 +26,8 @@ router = APIRouter()
 
 
 def get_device_id_from_auth(auth_data: dict) -> str:
-    """Extract device_id from auth data."""
-    if auth_data.get("type") == "api_key":
-        return auth_data.get("device_id", "unknown")
-    elif auth_data.get("type") == "jwt":
-        return auth_data.get("user_id", "unknown")
-    return "unknown"
+    """Extract user identifier from auth data for DB queries."""
+    return auth_data.get("user_id", "unknown")
 
 
 def get_portfolio_service(
@@ -45,7 +41,7 @@ def get_portfolio_service(
 
 @router.get("/summary", response_model=PortfolioSummaryResponse)
 @limiter.limit("60/minute")
-async def get_portfolio_summary(
+def get_portfolio_summary(
     request: Request,
     portfolio_service: PortfolioService = Depends(get_portfolio_service)
 ):
@@ -67,7 +63,7 @@ async def get_portfolio_summary(
 
 @router.get("/geographic", response_model=GeographicBreakdownResponse)
 @limiter.limit("60/minute")
-async def get_geographic_breakdown(
+def get_geographic_breakdown(
     request: Request,
     portfolio_service: PortfolioService = Depends(get_portfolio_service)
 ):
@@ -88,7 +84,7 @@ async def get_geographic_breakdown(
 
 @router.get("/scores", response_model=ScoreDistributionResponse)
 @limiter.limit("60/minute")
-async def get_score_distribution(
+def get_score_distribution(
     request: Request,
     portfolio_service: PortfolioService = Depends(get_portfolio_service)
 ):
@@ -110,7 +106,7 @@ async def get_score_distribution(
 
 @router.get("/risk", response_model=RiskAnalysisResponse)
 @limiter.limit("30/minute")
-async def get_risk_analysis(
+def get_risk_analysis(
     request: Request,
     portfolio_service: PortfolioService = Depends(get_portfolio_service)
 ):
@@ -133,7 +129,7 @@ async def get_risk_analysis(
 
 @router.get("/performance", response_model=PerformanceTrackingResponse)
 @limiter.limit("60/minute")
-async def get_performance_tracking(
+def get_performance_tracking(
     request: Request,
     portfolio_service: PortfolioService = Depends(get_portfolio_service)
 ):
@@ -155,7 +151,7 @@ async def get_performance_tracking(
 
 @router.get("/export", response_model=PortfolioAnalyticsExport)
 @limiter.limit("10/minute")
-async def export_portfolio_analytics(
+def export_portfolio_analytics(
     request: Request,
     portfolio_service: PortfolioService = Depends(get_portfolio_service)
 ):

@@ -1,17 +1,14 @@
 """
-Centralized configuration for Alabama Auction Watcher API.
+Centralized configuration for Auction Watcher API.
 All environment-based settings consolidated in one place.
 Uses pydantic-settings for type-safe configuration with validation.
 """
 
-import os
-import secrets
 from pathlib import Path
 from typing import List, Optional
 from functools import lru_cache
 
 from fastapi import Request
-from pydantic import field_validator
 from pydantic_settings import BaseSettings
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -54,7 +51,7 @@ class Settings(BaseSettings):
         if self.database_url:
             return self.database_url
         # Default: SQLite in project_root/data/
-        db_path = get_project_root() / "data" / "alabama_auction_watcher.db"
+        db_path = get_project_root() / "data" / "auction_watcher.db"
         return f"sqlite:///{db_path}"
 
     # CORS
@@ -67,14 +64,9 @@ class Settings(BaseSettings):
             return [origin.strip() for origin in self.cors_origins.split(",")]
         # Development defaults
         return [
-            "http://localhost:3000",      # React dev
-            "http://localhost:5173",      # Vite dev
-            "http://localhost:5174",      # Vite dev (alternate port)
-            "http://localhost:8501",      # Streamlit
-            "tauri://localhost",          # Tauri desktop
-            "https://tauri.localhost",    # Tauri HTTPS
-            "capacitor://localhost",      # iOS Capacitor
-            "ionic://localhost",          # Ionic
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://localhost:5174",
         ]
 
     # JWT Authentication
@@ -85,24 +77,12 @@ class Settings(BaseSettings):
 
     @property
     def resolved_jwt_secret_key(self) -> str:
-        """Get JWT secret, generating one if not set (dev only)."""
+        """Get JWT secret key. Uses a stable fallback in development."""
         if self.jwt_secret_key:
             return self.jwt_secret_key
         if self.is_development:
-            return secrets.token_urlsafe(32)
+            return "dev-only-secret-do-not-use-in-production"
         raise ValueError("JWT_SECRET_KEY must be set in production")
-
-    # API Key (for iOS device auth)
-    api_key_secret: str = ""
-
-    @property
-    def resolved_api_key_secret(self) -> str:
-        """Get API key secret, generating one if not set (dev only)."""
-        if self.api_key_secret:
-            return self.api_key_secret
-        if self.is_development:
-            return secrets.token_urlsafe(32)
-        raise ValueError("API_KEY_SECRET must be set in production")
 
     # Admin credentials (for initial setup)
     admin_password_hash: Optional[str] = None
@@ -130,13 +110,17 @@ class Settings(BaseSettings):
         return [v.strip() for v in self.compatible_algorithm_versions.split(",")]
 
     # Rate limiting
+    # SECURITY: Rate limiting is now enabled by default in ALL environments
+    # Set RATE_LIMIT_ENABLED=false explicitly to disable for local testing
     rate_limit_enabled: bool = True
 
     @property
     def resolved_rate_limit_enabled(self) -> bool:
-        """Disable rate limiting in development."""
-        if self.is_development:
-            return False
+        """
+        Rate limiting is enabled by default in all environments.
+        This ensures protection even if app accidentally runs in wrong mode.
+        To disable for local testing, set RATE_LIMIT_ENABLED=false explicitly.
+        """
         return self.rate_limit_enabled
 
     class Config:
@@ -156,9 +140,9 @@ settings = get_settings()
 
 
 def _get_rate_limit_key(request: Request) -> str:
-    """Return key for rate limiting, or empty string to bypass in development."""
-    if settings.is_development:
-        return ""  # Empty key bypasses rate limiting
+    """Return key for rate limiting based on client IP address."""
+    # SECURITY: Always use real IP for rate limiting key
+    # Rate limiting is controlled by rate_limit_enabled setting, not by key function
     return get_remote_address(request)
 
 

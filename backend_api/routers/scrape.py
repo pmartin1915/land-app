@@ -9,7 +9,7 @@ from sqlalchemy import func, desc
 from typing import Optional, List
 from pydantic import BaseModel, Field
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import math
 
 from ..database.connection import get_db
@@ -78,17 +78,13 @@ class StateFreshnessResponse(BaseModel):
 
 
 def get_device_id_from_auth(auth_data: dict) -> str:
-    """Extract device_id from auth data."""
-    if auth_data.get("type") == "api_key":
-        return auth_data.get("device_id", "unknown")
-    elif auth_data.get("type") == "jwt":
-        return auth_data.get("user_id", "unknown")
-    return "unknown"
+    """Extract user identifier from auth data for DB queries."""
+    return auth_data.get("user_id", "unknown")
 
 
 @router.get("/jobs", response_model=ScrapeJobsListResponse)
 @limiter.limit("60/minute")
-async def list_scrape_jobs(
+def list_scrape_jobs(
     request: Request,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -144,7 +140,7 @@ async def list_scrape_jobs(
 
 @router.get("/jobs/{job_id}", response_model=ScrapeJobResponse)
 @limiter.limit("120/minute")
-async def get_scrape_job(
+def get_scrape_job(
     request: Request,
     job_id: str,
     auth_data: dict = Depends(get_current_user_or_api_key),
@@ -174,7 +170,7 @@ async def get_scrape_job(
 
 @router.post("/trigger", response_model=ScrapeJobResponse)
 @limiter.limit("5/minute")
-async def trigger_scrape(
+def trigger_scrape(
     request: Request,
     scrape_request: TriggerScrapeRequest,
     background_tasks: BackgroundTasks,
@@ -262,7 +258,7 @@ async def run_scrape_job(job_id: str, state: str, county: Optional[str]):
             return
 
         job.status = 'running'
-        job.started_at = datetime.utcnow()
+        job.started_at = datetime.now(timezone.utc)
         db.commit()
 
         logger.info(f"Running scrape for {state}" + (f" - {county}" if county else ""))
@@ -275,7 +271,7 @@ async def run_scrape_job(job_id: str, state: str, county: Optional[str]):
         if result.error_message:
             job.status = 'failed'
             job.error_message = result.error_message
-            job.completed_at = datetime.utcnow()
+            job.completed_at = datetime.now(timezone.utc)
             db.commit()
             logger.error(f"Scrape job {job_id} failed: {result.error_message}")
             return
@@ -335,7 +331,7 @@ async def run_scrape_job(job_id: str, state: str, county: Optional[str]):
 
         # Final commit
         job.status = 'completed'
-        job.completed_at = datetime.utcnow()
+        job.completed_at = datetime.now(timezone.utc)
         job.items_added = items_added
         job.items_updated = items_updated
         db.commit()
@@ -347,7 +343,7 @@ async def run_scrape_job(job_id: str, state: str, county: Optional[str]):
         if job:
             job.status = 'failed'
             job.error_message = str(e)
-            job.completed_at = datetime.utcnow()
+            job.completed_at = datetime.now(timezone.utc)
             db.commit()
     finally:
         db.close()
@@ -431,7 +427,7 @@ def _calculate_scores(prop: Property, engine) -> None:
 
 @router.get("/freshness", response_model=StateFreshnessResponse)
 @limiter.limit("30/minute")
-async def get_data_freshness(
+def get_data_freshness(
     request: Request,
     auth_data: dict = Depends(get_current_user_or_api_key),
     db: Session = Depends(get_db)
@@ -465,7 +461,7 @@ async def get_data_freshness(
             # Based on: days since last scrape, property count
             freshness = 0.0
             if last_job and last_job.completed_at:
-                days_old = (datetime.utcnow() - last_job.completed_at).days
+                days_old = (datetime.now(timezone.utc) - last_job.completed_at).days
                 if days_old <= 1:
                     freshness = 100.0
                 elif days_old <= 7:
@@ -498,7 +494,7 @@ async def get_data_freshness(
 
 @router.get("/freshness/{state}", response_model=DataFreshnessResponse)
 @limiter.limit("60/minute")
-async def get_state_freshness(
+def get_state_freshness(
     request: Request,
     state: str,
     county: Optional[str] = None,
@@ -536,7 +532,7 @@ async def get_state_freshness(
         # Calculate freshness
         freshness = 0.0
         if last_job and last_job.completed_at:
-            days_old = (datetime.utcnow() - last_job.completed_at).days
+            days_old = (datetime.now(timezone.utc) - last_job.completed_at).days
             if days_old <= 1:
                 freshness = 100.0
             elif days_old <= 7:
@@ -566,7 +562,7 @@ async def get_state_freshness(
 
 @router.delete("/jobs/{job_id}")
 @limiter.limit("10/minute")
-async def cancel_scrape_job(
+def cancel_scrape_job(
     request: Request,
     job_id: str,
     auth_data: dict = Depends(get_current_user_or_api_key),
@@ -588,7 +584,7 @@ async def cancel_scrape_job(
             )
 
         job.status = 'cancelled'
-        job.completed_at = datetime.utcnow()
+        job.completed_at = datetime.now(timezone.utc)
         db.commit()
 
         logger.info(f"Cancelled scrape job {job_id}")

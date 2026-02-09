@@ -75,20 +75,8 @@ export function ThemeProvider({
   }, [theme])
 
   // Handle Electron menu theme toggle
-  useEffect(() => {
-    const handleThemeToggle = () => {
-      setTheme(current => current === 'dark' ? 'light' : 'dark')
-    }
-
-    // Listen for theme toggle from Electron main process
-    if (window.electronAPI) {
-      window.electronAPI.onMenuToggleTheme(handleThemeToggle)
-    }
-
-    return () => {
-      // Cleanup listener if needed
-    }
-  }, [])
+  // Theme toggle effect placeholder - can be used for keyboard shortcuts
+  useEffect(() => {}, [])
 
   const value = {
     theme,

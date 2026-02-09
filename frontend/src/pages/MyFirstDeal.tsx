@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Property } from '../types'
 import { api, FirstDealStage } from '../lib/api'
@@ -6,6 +6,7 @@ import { PropertyDetailSlideOver } from '../components/PropertyDetailSlideOver'
 import { InvestmentGradeBadge } from '../components/ui/InvestmentGradeBadge'
 import { usePropertyCompare } from '../components/PropertyCompareContext'
 import { DealPipelineVisual } from '../components/DealPipelineVisual'
+import { toast } from '../components/ui/Toast'
 import {
   getDueDiligenceLinks,
   getAttorneyLinks,
@@ -344,7 +345,7 @@ export function MyFirstDeal() {
         const response = await api.properties.getProperties({
           filters: {
             state: 'AR',
-            minBuyHoldScore: 30
+            min_buy_hold_score: 30
           },
           sort_by: 'buy_hold_score',
           sort_order: 'desc',
@@ -379,8 +380,10 @@ export function MyFirstDeal() {
       const response = await api.watchlist.setFirstDeal(property.id)
       setFirstDealProperty(property)
       setFirstDealStage(response.stage as FirstDealStage)
+      toast.success('Property set as your first deal')
     } catch (err) {
       console.error('Failed to set first deal:', err)
+      toast.error('Failed to set first deal. Please try again.')
     } finally {
       setIsSettingFirstDeal(null)
     }
@@ -393,8 +396,10 @@ export function MyFirstDeal() {
       await api.watchlist.removeFirstDeal()
       setFirstDealProperty(null)
       setFirstDealStage(null)
+      toast.success('First deal removed')
     } catch (err) {
       console.error('Failed to remove first deal:', err)
+      toast.error('Failed to remove first deal. Please try again.')
     } finally {
       setIsRemovingFirstDeal(false)
     }
@@ -408,6 +413,7 @@ export function MyFirstDeal() {
       setFirstDealStage(stage)
     } catch (err) {
       console.error('Failed to update stage:', err)
+      toast.error('Failed to update deal stage. Please try again.')
     }
   }, [firstDealProperty])
 

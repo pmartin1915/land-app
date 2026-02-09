@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from typing import Optional, List
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 import math
 
@@ -61,17 +61,13 @@ class WatchlistResponse(BaseModel):
 
 
 def get_device_id_from_auth(auth_data: dict) -> str:
-    """Extract device_id from auth data."""
-    if auth_data.get("type") == "api_key":
-        return auth_data.get("device_id", "unknown")
-    elif auth_data.get("type") == "jwt":
-        return auth_data.get("user_id", "unknown")
-    return "unknown"
+    """Extract user identifier from auth data for DB queries."""
+    return auth_data.get("user_id", "unknown")
 
 
 @router.get("/", response_model=WatchlistResponse)
 @limiter.limit("60/minute")
-async def get_watchlist(
+def get_watchlist(
     request: Request,
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=200, description="Items per page"),
@@ -136,7 +132,7 @@ async def get_watchlist(
 
 @router.get("/property/{property_id}", response_model=PropertyInteractionResponse)
 @limiter.limit("120/minute")
-async def get_property_interaction(
+def get_property_interaction(
     request: Request,
     property_id: str,
     auth_data: dict = Depends(get_current_user_or_api_key),
@@ -168,7 +164,7 @@ async def get_property_interaction(
 
 @router.post("/property/{property_id}/watch")
 @limiter.limit("60/minute")
-async def toggle_watch(
+def toggle_watch(
     request: Request,
     property_id: str,
     auth_data: dict = Depends(get_current_user_or_api_key),
@@ -225,7 +221,7 @@ async def toggle_watch(
 
 @router.put("/property/{property_id}", response_model=PropertyInteractionResponse)
 @limiter.limit("60/minute")
-async def update_property_interaction(
+def update_property_interaction(
     request: Request,
     property_id: str,
     updates: PropertyInteractionUpdate,
@@ -284,7 +280,7 @@ async def update_property_interaction(
 
 @router.delete("/property/{property_id}")
 @limiter.limit("30/minute")
-async def delete_property_interaction(
+def delete_property_interaction(
     request: Request,
     property_id: str,
     auth_data: dict = Depends(get_current_user_or_api_key),
@@ -321,7 +317,7 @@ async def delete_property_interaction(
 
 @router.get("/stats")
 @limiter.limit("60/minute")
-async def get_watchlist_stats(
+def get_watchlist_stats(
     request: Request,
     auth_data: dict = Depends(get_current_user_or_api_key),
     db: Session = Depends(get_db)
@@ -373,7 +369,7 @@ async def get_watchlist_stats(
 
 @router.get("/bulk-status")
 @limiter.limit("30/minute")
-async def get_bulk_watch_status(
+def get_bulk_watch_status(
     request: Request,
     property_ids: str = Query(..., description="Comma-separated property IDs"),
     auth_data: dict = Depends(get_current_user_or_api_key),
@@ -450,7 +446,7 @@ class FirstDealResponse(BaseModel):
 
 @router.get("/first-deal", response_model=FirstDealResponse)
 @limiter.limit("60/minute")
-async def get_first_deal(
+def get_first_deal(
     request: Request,
     auth_data: dict = Depends(get_current_user_or_api_key),
     db: Session = Depends(get_db)
@@ -494,7 +490,7 @@ async def get_first_deal(
 
 @router.post("/property/{property_id}/set-first-deal")
 @limiter.limit("30/minute")
-async def set_first_deal(
+def set_first_deal(
     request: Request,
     property_id: str,
     auth_data: dict = Depends(get_current_user_or_api_key),
@@ -530,7 +526,7 @@ async def set_first_deal(
             PropertyInteraction.property_id == property_id
         ).first()
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         if interaction:
             interaction.is_first_deal = True
@@ -573,7 +569,7 @@ async def set_first_deal(
 
 @router.put("/first-deal/stage")
 @limiter.limit("60/minute")
-async def update_first_deal_stage(
+def update_first_deal_stage(
     request: Request,
     update: FirstDealStageUpdate,
     auth_data: dict = Depends(get_current_user_or_api_key),
@@ -604,7 +600,7 @@ async def update_first_deal_stage(
 
         # Update stage
         interaction.first_deal_stage = update.stage
-        interaction.first_deal_updated_at = datetime.utcnow()
+        interaction.first_deal_updated_at = datetime.now(timezone.utc)
 
         db.commit()
         db.refresh(interaction)
@@ -628,7 +624,7 @@ async def update_first_deal_stage(
 
 @router.delete("/first-deal")
 @limiter.limit("30/minute")
-async def remove_first_deal(
+def remove_first_deal(
     request: Request,
     auth_data: dict = Depends(get_current_user_or_api_key),
     db: Session = Depends(get_db)

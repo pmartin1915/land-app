@@ -1,5 +1,5 @@
 """
-Application Assistant API endpoints for Alabama Auction Watcher
+Application Assistant API endpoints for Auction Watcher
 Provides data organization and workflow assistance for manual government form submission
 
 LEGAL COMPLIANCE NOTE:
@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any
 import logging
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from ..database.connection import get_db
 from ..config import limiter
@@ -37,7 +37,7 @@ router = APIRouter()
 # User Profile Management
 @router.post("/profiles", response_model=Dict[str, Any])
 @limiter.limit("10/minute")
-async def create_user_profile(
+def create_user_profile(
     request: Request,
     profile: UserProfileModel,
     auth_data: dict = Depends(require_property_write),
@@ -86,7 +86,7 @@ async def create_user_profile(
 
 @router.get("/profiles", response_model=List[Dict[str, Any]])
 @limiter.limit("30/minute")
-async def get_user_profiles(
+def get_user_profiles(
     request: Request,
     auth_data: dict = Depends(require_property_read),
     db: Session = Depends(get_db)
@@ -101,7 +101,8 @@ async def get_user_profiles(
             if profile.preferred_counties:
                 try:
                     preferred_counties = json.loads(profile.preferred_counties)
-                except:
+                except (json.JSONDecodeError, TypeError) as e:
+                    logger.warning(f"Failed to parse preferred_counties for profile {profile.id}: {e}")
                     preferred_counties = []
 
             result.append({
@@ -131,7 +132,7 @@ async def get_user_profiles(
 # Property Application Tracking
 @router.post("/properties/{property_id}/application", response_model=ApplicationWorkflowResponse)
 @limiter.limit("20/minute")
-async def create_property_application(
+def create_property_application(
     request: Request,
     property_id: str,
     user_profile_id: str = Query(..., description="User profile ID"),
@@ -224,7 +225,7 @@ async def create_property_application(
 
 @router.get("/profiles/{profile_id}/applications", response_model=List[Dict[str, Any]])
 @limiter.limit("30/minute")
-async def get_user_applications(
+def get_user_applications(
     request: Request,
     profile_id: str,
     status: Optional[str] = Query(None, description="Filter by application status"),
@@ -276,7 +277,7 @@ async def get_user_applications(
 # Form Data Generation
 @router.get("/applications/{application_id}/form-data", response_model=ApplicationFormData)
 @limiter.limit("50/minute")
-async def generate_form_data(
+def generate_form_data(
     request: Request,
     application_id: str,
     auth_data: dict = Depends(require_property_read),
@@ -332,7 +333,7 @@ async def generate_form_data(
 # ROI Calculator
 @router.get("/properties/{property_id}/roi", response_model=ROICalculation)
 @limiter.limit("100/minute")
-async def calculate_property_roi(
+def calculate_property_roi(
     request: Request,
     property_id: str,
     auth_data: dict = Depends(require_property_read),
@@ -378,8 +379,8 @@ async def calculate_property_roi(
                 sale_year = int(property_obj.year_sold)
                 redemption_period_ends = datetime(sale_year + 3, 12, 31)
                 estimated_possession_date = redemption_period_ends + timedelta(days=30)
-            except:
-                pass
+            except (ValueError, TypeError) as e:
+                logger.debug(f"Could not parse year_sold '{property_obj.year_sold}' for property {property_id}: {e}")
 
         roi_calc = ROICalculation(
             property_id=property_id,
@@ -407,7 +408,7 @@ async def calculate_property_roi(
 # Application Status Updates
 @router.put("/applications/{application_id}/status", response_model=ApplicationWorkflowResponse)
 @limiter.limit("30/minute")
-async def update_application_status(
+def update_application_status(
     request: Request,
     application_id: str,
     status: str = Query(..., description="New application status"),
@@ -428,7 +429,7 @@ async def update_application_status(
 
         # Update timestamps based on status changes
         if status == "price_received" and old_status != "price_received":
-            application.price_received_date = datetime.utcnow()
+            application.price_received_date = datetime.now(timezone.utc)
             if final_price:
                 application.final_price = final_price
 

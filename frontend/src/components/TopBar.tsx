@@ -171,7 +171,7 @@ function FilterPopover({ isOpen, onClose, filters, onFiltersChange }: FilterPopo
             className="w-full px-3 py-2 bg-surface border border-neutral-1 rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary"
           >
             <option value="">All Counties</option>
-            {counties.map((county) => (
+            {counties?.map((county) => (
               <option key={county.code} value={county.name}>
                 {county.name}
               </option>

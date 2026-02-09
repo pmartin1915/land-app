@@ -1,24 +1,21 @@
 """
-SQLAlchemy database models for Alabama Auction Watcher API
-Models exactly match iOS Core Data schema for perfect compatibility
+SQLAlchemy database models for Auction Watcher API.
 """
 
-from sqlalchemy import Column, String, Float, Integer, DateTime, Text, Boolean, Date
+from sqlalchemy import Column, String, Float, Integer, DateTime, Text, Boolean, Date, ForeignKey
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from .connection import Base
 import uuid
 
 class Property(Base):
-    """
-    Property model matching iOS Core Data Property entity exactly.
-    All field names and types must remain compatible with iOS Swift implementation.
-    """
+    """Core property model for auction listings across all states."""
     __tablename__ = "properties"
 
-    # Primary key - using UUID for cross-platform compatibility
+    # Primary key
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
 
-    # Core property data matching iOS Core Data schema
+    # Core property data
     parcel_id = Column(String, nullable=False, index=True, comment="Unique parcel identifier")
     amount = Column(Float, nullable=False, comment="Bid/sale amount in USD")
     acreage = Column(Float, nullable=True, comment="Property acreage")
@@ -29,9 +26,9 @@ class Property(Base):
     acreage_confidence = Column(String(10), nullable=True, comment="Confidence: high, medium, low")
     acreage_raw_text = Column(String(200), nullable=True, comment="Original text that was parsed for acreage")
 
-    # Calculated algorithm fields - MUST use exact Python algorithms
+    # Calculated algorithm fields
     water_score = Column(Float, default=0.0, comment="Water feature score (0.0-15.0+)")
-    investment_score = Column(Float, nullable=True, comment="Investment score (0.0-100.0)")
+    investment_score = Column(Float, nullable=True, index=True, comment="Investment score (0.0-100.0)")
     estimated_all_in_cost = Column(Float, nullable=True, comment="Total cost including fees")
 
     # Enhanced Description Intelligence Fields (Phase 1 Enhancement)
@@ -58,7 +55,7 @@ class Property(Base):
 
     # Property details
     description = Column(Text, nullable=True, comment="Legal property description")
-    county = Column(String, nullable=True, index=True, comment="Alabama county name")
+    county = Column(String, nullable=True, index=True, comment="County name")
     owner_name = Column(String, nullable=True, comment="Property owner name")
     year_sold = Column(String, nullable=True, index=True, comment="Sale year")
 
@@ -70,7 +67,7 @@ class Property(Base):
     # Sync metadata for cross-platform compatibility
     device_id = Column(String, nullable=True, comment="Device that last modified this record")
     sync_timestamp = Column(DateTime, default=func.now(), comment="Last sync timestamp")
-    is_deleted = Column(Boolean, default=False, comment="Soft delete flag for sync")
+    is_deleted = Column(Boolean, default=False, index=True, comment="Soft delete flag for sync")
 
     # Research workflow status
     status = Column(String, default="new", comment="Research status: new, reviewing, bid_ready, rejected, purchased")
@@ -104,82 +101,9 @@ class Property(Base):
     def __repr__(self):
         return f"<Property(id={self.id}, parcel_id={self.parcel_id}, amount={self.amount})>"
 
-    def to_dict(self):
-        """Convert to dictionary for API responses."""
-        return {
-            "id": self.id,
-            "parcel_id": self.parcel_id,
-            "amount": self.amount,
-            "acreage": self.acreage,
-            "price_per_acre": self.price_per_acre,
-            "acreage_source": self.acreage_source,
-            "acreage_confidence": self.acreage_confidence,
-            "acreage_raw_text": self.acreage_raw_text,
-            "water_score": self.water_score,
-            "investment_score": self.investment_score,
-            "estimated_all_in_cost": self.estimated_all_in_cost,
-            "assessed_value": self.assessed_value,
-            "assessed_value_ratio": self.assessed_value_ratio,
-
-            # Enhanced Description Intelligence Fields
-            "lot_dimensions_score": self.lot_dimensions_score,
-            "shape_efficiency_score": self.shape_efficiency_score,
-            "corner_lot_bonus": self.corner_lot_bonus,
-            "irregular_shape_penalty": self.irregular_shape_penalty,
-            "subdivision_quality_score": self.subdivision_quality_score,
-            "road_access_score": self.road_access_score,
-            "location_type_score": self.location_type_score,
-            "title_complexity_score": self.title_complexity_score,
-            "survey_requirement_score": self.survey_requirement_score,
-            "premium_water_access_score": self.premium_water_access_score,
-            "total_description_score": self.total_description_score,
-
-            # County Intelligence Fields
-            "county_market_score": self.county_market_score,
-            "geographic_score": self.geographic_score,
-            "market_timing_score": self.market_timing_score,
-
-            "description": self.description,
-            "county": self.county,
-            "owner_name": self.owner_name,
-            "year_sold": self.year_sold,
-            "rank": self.rank,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "device_id": self.device_id,
-            "sync_timestamp": self.sync_timestamp.isoformat() if self.sync_timestamp else None,
-            "is_deleted": self.is_deleted,
-            # Research workflow
-            "status": self.status or "new",
-            "triage_notes": self.triage_notes,
-            "triaged_at": self.triaged_at.isoformat() if self.triaged_at else None,
-            "triaged_by": self.triaged_by,
-            # Multi-state and wholesale fields
-            "state": self.state or "AL",
-            "sale_type": self.sale_type,
-            "redemption_period_days": self.redemption_period_days,
-            "time_to_ownership_days": self.time_to_ownership_days,
-            "estimated_market_value": self.estimated_market_value,
-            "wholesale_spread": self.wholesale_spread,
-            # Multi-state scoring fields
-            "buy_hold_score": self.buy_hold_score,
-            "wholesale_score": self.wholesale_score,
-            "effective_cost": self.effective_cost,
-            "time_penalty_factor": self.time_penalty_factor,
-            # Market reject and regional risk flags
-            "is_market_reject": self.is_market_reject,
-            "is_delta_region": self.is_delta_region,
-            "delta_penalty_factor": self.delta_penalty_factor,
-            "owner_type": self.owner_type,
-            "data_source": self.data_source,
-            "auction_date": self.auction_date.isoformat() if self.auction_date else None,
-            "auction_platform": self.auction_platform
-        }
-
 class County(Base):
     """
     Alabama County model with ADOR alphabetical mapping.
-    CRITICAL: Must use exact same mapping as iOS CountyValidator.swift
     """
     __tablename__ = "counties"
 
@@ -194,24 +118,12 @@ class County(Base):
     def __repr__(self):
         return f"<County(code={self.code}, name={self.name})>"
 
-    def to_dict(self):
-        """Convert to dictionary for API responses."""
-        return {
-            "code": self.code,
-            "name": self.name,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
-        }
-
 class SyncLog(Base):
-    """
-    Sync operation logging for debugging and monitoring.
-    Tracks synchronization between iOS devices and backend.
-    """
+    """Sync operation logging for debugging and monitoring."""
     __tablename__ = "sync_logs"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    device_id = Column(String, nullable=False, comment="iOS device identifier")
+    device_id = Column(String, nullable=False, comment="Device/user identifier")
     operation = Column(String, nullable=False, comment="Sync operation: delta, full, upload, download")
     status = Column(String, nullable=False, comment="Status: success, failed, partial")
 
@@ -229,7 +141,7 @@ class SyncLog(Base):
     error_message = Column(Text, nullable=True, comment="Error details if operation failed")
 
     # Algorithm validation
-    algorithm_validation_passed = Column(Boolean, default=True, comment="Algorithm compatibility check")
+    algorithm_validation_passed = Column(Boolean, default=True, comment="Algorithm validation check")
 
     def __repr__(self):
         return f"<SyncLog(id={self.id}, device_id={self.device_id}, operation={self.operation}, status={self.status})>"
@@ -283,7 +195,7 @@ class PropertyApplication(Base):
     cs_number = Column(String, nullable=True, comment="CS Number from state records")
     parcel_number = Column(String, nullable=False, comment="Official parcel number")
     sale_year = Column(String, nullable=False, comment="Tax sale year")
-    county = Column(String, nullable=False, comment="Alabama county name")
+    county = Column(String, nullable=False, comment="County name")
     description = Column(Text, nullable=False, comment="Legal property description")
     assessed_name = Column(String, nullable=True, comment="Name property was assessed in")
 
@@ -376,7 +288,6 @@ class ApplicationNotification(Base):
 
 # Alabama counties with ADOR (Dept of Revenue) official codes
 # Source: https://www.revenue.alabama.gov/property-tax/delinquent-search/
-# CRITICAL: This mapping MUST match iOS CountyValidator.swift AND core/scrapers/alabama_dor.py
 # Note: ADOR uses non-sequential codes. Jefferson County is split into Birmingham (01) and Bessemer (68).
 ALABAMA_COUNTIES = {
     "01": "Jefferson-Bham", "02": "Mobile", "03": "Montgomery",
@@ -456,26 +367,6 @@ class StateConfig(Base):
     def __repr__(self):
         return f"<StateConfig(state={self.state_code}, type={self.sale_type})>"
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "state_code": self.state_code,
-            "state_name": self.state_name,
-            "sale_type": self.sale_type,
-            "redemption_period_days": self.redemption_period_days,
-            "interest_rate": self.interest_rate,
-            "quiet_title_cost_estimate": self.quiet_title_cost_estimate,
-            "time_to_ownership_days": self.time_to_ownership_days,
-            "auction_platform": self.auction_platform,
-            "scraper_module": self.scraper_module,
-            "is_active": self.is_active,
-            "recommended_for_beginners": self.recommended_for_beginners,
-            "notes": self.notes,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
-        }
-
-
 class UserPreference(Base):
     """
     User preferences for investment settings, budget, and filter defaults.
@@ -505,19 +396,13 @@ class UserPreference(Base):
         return f"<UserPreference(device_id={self.device_id}, budget={self.investment_budget})>"
 
     def to_dict(self):
+        """Override: JSON-stored fields need parsing before serialization."""
         import json
-        return {
-            "id": self.id,
-            "device_id": self.device_id,
-            "investment_budget": self.investment_budget,
-            "excluded_states": json.loads(self.excluded_states) if self.excluded_states else [],
-            "default_filters": json.loads(self.default_filters) if self.default_filters else {},
-            "max_property_price": self.max_property_price,
-            "preferred_states": json.loads(self.preferred_states) if self.preferred_states else [],
-            "notifications_enabled": self.notifications_enabled,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
-        }
+        d = super().to_dict()
+        d["excluded_states"] = json.loads(d["excluded_states"]) if d.get("excluded_states") else []
+        d["default_filters"] = json.loads(d["default_filters"]) if d.get("default_filters") else {}
+        d["preferred_states"] = json.loads(d["preferred_states"]) if d.get("preferred_states") else []
+        return d
 
 
 class PropertyInteraction(Base):
@@ -530,9 +415,10 @@ class PropertyInteraction(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     device_id = Column(String, index=True, nullable=False,
                        comment="Device that created this interaction")
-    property_id = Column(String, index=True, nullable=False,
+    property_id = Column(String, ForeignKey("properties.id", ondelete="CASCADE"),
+                         index=True, nullable=False,
                          comment="FK to properties table")
-    is_watched = Column(Boolean, default=False,
+    is_watched = Column(Boolean, default=False, index=True,
                         comment="Whether property is on watchlist")
     star_rating = Column(Integer, nullable=True,
                          comment="User rating 1-5 stars")
@@ -542,7 +428,7 @@ class PropertyInteraction(Base):
                        comment="User dismissed/hidden this property")
 
     # First Deal Tracking (My First Deal feature)
-    is_first_deal = Column(Boolean, default=False,
+    is_first_deal = Column(Boolean, default=False, index=True,
                            comment="Whether this is the user's first deal property")
     first_deal_stage = Column(String(20), nullable=True,
                               comment="Pipeline stage: research, bid, won, quiet_title, sold, holding")
@@ -554,27 +440,11 @@ class PropertyInteraction(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
+    # Relationship to Property
+    property = relationship("Property", backref="interactions")
+
     def __repr__(self):
         return f"<PropertyInteraction(property_id={self.property_id}, watched={self.is_watched})>"
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "device_id": self.device_id,
-            "property_id": self.property_id,
-            "is_watched": self.is_watched,
-            "star_rating": self.star_rating,
-            "user_notes": self.user_notes,
-            "dismissed": self.dismissed,
-            # First Deal Tracking
-            "is_first_deal": self.is_first_deal,
-            "first_deal_stage": self.first_deal_stage,
-            "first_deal_assigned_at": self.first_deal_assigned_at.isoformat() if self.first_deal_assigned_at else None,
-            "first_deal_updated_at": self.first_deal_updated_at.isoformat() if self.first_deal_updated_at else None,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
-        }
-
 
 class ScrapeJob(Base):
     """
@@ -608,23 +478,6 @@ class ScrapeJob(Base):
     def __repr__(self):
         return f"<ScrapeJob(id={self.id}, state={self.state}, status={self.status})>"
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "state": self.state,
-            "county": self.county,
-            "status": self.status,
-            "items_found": self.items_found,
-            "items_added": self.items_added,
-            "items_updated": self.items_updated,
-            "started_at": self.started_at.isoformat() if self.started_at else None,
-            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
-            "error_message": self.error_message,
-            "triggered_by": self.triggered_by,
-            "created_at": self.created_at.isoformat() if self.created_at else None
-        }
-
-
 class WholesalePipeline(Base):
     """
     Wholesale deal pipeline tracking.
@@ -633,7 +486,11 @@ class WholesalePipeline(Base):
     __tablename__ = "wholesale_pipeline"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    property_id = Column(String, nullable=False, index=True, comment="FK to properties.id")
+    property_id = Column(String, ForeignKey("properties.id", ondelete="CASCADE"),
+                         nullable=False, index=True, comment="FK to properties.id")
+
+    # Relationship to Property
+    property = relationship("Property", backref="wholesale_pipeline")
     status = Column(String(20), nullable=False, default='identified',
                    comment="identified, contacted, under_contract, assigned, closed, dead")
 
@@ -663,22 +520,3 @@ class WholesalePipeline(Base):
     def __repr__(self):
         return f"<WholesalePipeline(id={self.id}, property_id={self.property_id}, status={self.status})>"
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "property_id": self.property_id,
-            "status": self.status,
-            "contract_price": self.contract_price,
-            "assignment_fee": self.assignment_fee,
-            "earnest_money": self.earnest_money,
-            "buyer_id": self.buyer_id,
-            "buyer_name": self.buyer_name,
-            "buyer_email": self.buyer_email,
-            "contract_date": self.contract_date.isoformat() if self.contract_date else None,
-            "closing_date": self.closing_date.isoformat() if self.closing_date else None,
-            "closed_at": self.closed_at.isoformat() if self.closed_at else None,
-            "marketing_notes": self.marketing_notes,
-            "notes": self.notes,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None
-        }

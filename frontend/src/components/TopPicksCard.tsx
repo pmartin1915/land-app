@@ -108,7 +108,7 @@ export const TopPicksCard = memo(function TopPicksCard({
         </div>
         <p className="text-danger text-sm mb-4">{error}</p>
         <button
-          onClick={refetch}
+          onClick={() => refetch()}
           className="px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-opacity-90 text-sm"
         >
           Retry

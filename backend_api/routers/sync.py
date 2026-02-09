@@ -31,7 +31,7 @@ def get_sync_service_dep(db: Session = Depends(get_db)) -> SyncService:
 
 @router.post("/delta", response_model=DeltaSyncResponse)
 @limiter.limit("20/minute")
-async def delta_sync(
+def delta_sync(
     request: Request,
     sync_request: DeltaSyncRequest,
     sync_service: SyncService = Depends(get_sync_service_dep)
@@ -51,7 +51,7 @@ async def delta_sync(
 
 @router.post("/full", response_model=FullSyncResponse)
 @limiter.limit("5/minute")
-async def full_sync(
+def full_sync(
     request: Request,
     sync_request: FullSyncRequest,
     sync_service: SyncService = Depends(get_sync_service_dep)
@@ -71,7 +71,7 @@ async def full_sync(
 
 @router.get("/status", response_model=SyncStatusResponse)
 @limiter.limit("100/minute")
-async def get_sync_status(
+def get_sync_status(
     request: Request,
     device_id: str,
     sync_service: SyncService = Depends(get_sync_service_dep)
@@ -85,7 +85,7 @@ async def get_sync_status(
 
 @router.post("/resolve-conflicts", response_model=ConflictResolutionResponse)
 @limiter.limit("10/minute")
-async def resolve_conflicts(
+def resolve_conflicts(
     request: Request,
     resolution_request: ConflictResolutionRequest,
     sync_service: SyncService = Depends(get_sync_service_dep)
@@ -99,7 +99,7 @@ async def resolve_conflicts(
 
 @router.post("/batch", response_model=BatchSyncResponse)
 @limiter.limit("10/minute")
-async def batch_sync(
+def batch_sync(
     request: Request,
     batch_request: BatchSyncRequest,
     sync_service: SyncService = Depends(get_sync_service_dep)
@@ -116,7 +116,7 @@ async def batch_sync(
 
 @router.get("/logs", response_model=SyncLogListResponse)
 @limiter.limit("20/minute")
-async def get_sync_logs(
+def get_sync_logs(
     request: Request,
     device_id: Optional[str] = None,
     page: int = 1,
@@ -132,7 +132,7 @@ async def get_sync_logs(
 
 @router.get("/metrics/{device_id}", response_model=SyncMetrics)
 @limiter.limit("20/minute")
-async def get_sync_metrics(
+def get_sync_metrics(
     request: Request,
     device_id: str,
     sync_service: SyncService = Depends(get_sync_service_dep)

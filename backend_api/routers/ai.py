@@ -9,7 +9,7 @@ import logging
 import time
 import uuid as uuid_module
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from ..models.ai import AISuggestionResponse
@@ -112,7 +112,7 @@ def calculate_confidence(prop: Property, tier: str) -> float:
 
 @router.get("/triage", response_model=List[AISuggestionResponse])
 @limiter.limit("50/minute")
-async def get_triage_queue(
+def get_triage_queue(
     request: Request,
     limit: int = Query(50, ge=1, le=100, description="Maximum suggestions to return"),
     db: Session = Depends(get_db)
@@ -165,7 +165,7 @@ async def get_triage_queue(
                     confidence=confidence,
                     reason=reason_text,
                     source_ids=[prop_uuid],
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc),
                     applied_by=None,
                     applied_at=None
                 )
@@ -199,7 +199,7 @@ async def get_triage_queue(
 
 @router.get("/triage/health")
 @limiter.limit("100/minute")
-async def triage_health(request: Request, db: Session = Depends(get_db)):
+def triage_health(request: Request, db: Session = Depends(get_db)):
     """Health check for AI triage service."""
     try:
         # Quick count of eligible properties
@@ -214,7 +214,7 @@ async def triage_health(request: Request, db: Session = Depends(get_db)):
             "status": "healthy",
             "eligible_properties": total_properties,
             "tiers": ["Tier 1: Elite", "Tier 2: Waterfront", "Tier 2: Deep Value"],
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     except Exception as e:

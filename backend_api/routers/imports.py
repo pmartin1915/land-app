@@ -341,7 +341,7 @@ async def import_csv(
 
         # Process rows
         property_service = PropertyService(db)
-        device_id = auth_data.get('device_id', 'csv-import')
+        device_id = auth_data.get('user_id', 'csv-import')
 
         imported = 0
         skipped_duplicates = 0

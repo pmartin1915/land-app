@@ -1,6 +1,5 @@
 """
-Pydantic models for Alabama County API operations
-CRITICAL: County codes and names must exactly match iOS CountyValidator.swift
+Pydantic models for County API operations.
 """
 
 from pydantic import BaseModel, Field, field_validator
@@ -10,7 +9,7 @@ from datetime import datetime
 class CountyResponse(BaseModel):
     """Model for county API responses."""
     code: str = Field(..., description="ADOR alphabetical county code (01-67)")
-    name: str = Field(..., description="Alabama county name")
+    name: str = Field(..., description="County name")
     created_at: Optional[datetime] = Field(None, description="Record creation timestamp")
     updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
 
@@ -19,8 +18,8 @@ class CountyResponse(BaseModel):
 
 class CountyListResponse(BaseModel):
     """Model for county list API responses."""
-    counties: List[CountyResponse] = Field(..., description="List of all 67 Alabama counties")
-    total_count: int = Field(67, description="Total number of Alabama counties")
+    counties: List[CountyResponse] = Field(..., description="List of counties")
+    total_count: int = Field(67, description="Total number of counties")
 
 class CountyValidationRequest(BaseModel):
     """Model for validating county codes or names."""
@@ -50,11 +49,11 @@ class CountyValidationRequest(BaseModel):
     @field_validator('name')
     @classmethod
     def validate_county_name(cls, v: Optional[str]) -> Optional[str]:
-        """Validate Alabama county name against official list."""
+        """Validate county name against official Alabama ADOR list."""
         if v is None:
             return v
 
-        # Valid Alabama counties (must match iOS CountyValidator.swift exactly)
+        # Valid Alabama counties
         valid_counties = {
             "Autauga", "Mobile", "Baldwin", "Barbour", "Bibb", "Blount", "Bullock", "Butler",
             "Calhoun", "Chambers", "Cherokee", "Chilton", "Choctaw", "Clarke", "Clay",
@@ -69,7 +68,7 @@ class CountyValidationRequest(BaseModel):
         }
 
         if v not in valid_counties:
-            raise ValueError(f"Invalid Alabama county name: {v}")
+            raise ValueError(f"Invalid county name: {v}")
 
         return v
 
@@ -135,7 +134,7 @@ def validate_county_code(code: str) -> bool:
     return code in ADOR_COUNTY_MAPPING
 
 def validate_county_name(name: str) -> bool:
-    """Validate Alabama county name."""
+    """Validate county name."""
     return name in COUNTY_NAME_TO_CODE
 
 def get_county_by_code(code: str) -> Optional[str]:
@@ -147,7 +146,7 @@ def get_county_by_name(name: str) -> Optional[str]:
     return COUNTY_NAME_TO_CODE.get(name)
 
 def get_all_counties() -> List[dict]:
-    """Get all Alabama counties as list of dictionaries."""
+    """Get all counties as list of dictionaries."""
     return [{"code": code, "name": name} for code, name in ADOR_COUNTY_MAPPING.items()]
 
 def search_counties(partial_name: str) -> List[dict]:

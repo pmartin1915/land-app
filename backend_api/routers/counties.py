@@ -1,6 +1,5 @@
 """
-Alabama Counties API endpoints
-CRITICAL: County codes and names must exactly match iOS CountyValidator.swift
+Counties API endpoints.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
@@ -23,13 +22,12 @@ router = APIRouter()
 
 @router.get("/", response_model=CountyListResponse)
 @limiter.limit("100/minute")
-async def list_counties(
+def list_counties(
     request: Request,
     db: Session = Depends(get_db)
 ):
     """
-    List all 67 Alabama counties with ADOR alphabetical codes.
-    CRITICAL: Must match iOS CountyValidator.swift exactly.
+    List all Alabama counties with ADOR alphabetical codes.
     """
     try:
         counties = db.query(County).order_by(County.code).all()
@@ -59,7 +57,7 @@ async def list_counties(
 
 @router.get("/{county_code}", response_model=CountyResponse)
 @limiter.limit("200/minute")
-async def get_county(
+def get_county(
     request: Request,
     county_code: str,
     db: Session = Depends(get_db)
@@ -101,8 +99,7 @@ async def validate_county(
     validation_request: CountyValidationRequest
 ):
     """
-    Validate Alabama county code or name.
-    Used by iOS app for input validation.
+    Validate county code or name.
     """
     try:
         if not validation_request.code and not validation_request.name:
@@ -211,7 +208,7 @@ async def lookup_county(
 
 @router.get("/analytics/statistics", response_model=CountyStatisticsResponse)
 @limiter.limit("10/minute")
-async def get_county_statistics(
+def get_county_statistics(
     request: Request,
     db: Session = Depends(get_db)
 ):
@@ -221,7 +218,7 @@ async def get_county_statistics(
     """
     try:
         from ..database.models import Property
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         # Get statistics for each county
         county_stats = []
@@ -275,7 +272,7 @@ async def get_county_statistics(
 
         return CountyStatisticsResponse(
             statistics=county_stats,
-            generated_at=datetime.utcnow(),
+            generated_at=datetime.now(timezone.utc),
             total_properties_analyzed=total_properties
         )
 

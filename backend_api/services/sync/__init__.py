@@ -1,6 +1,5 @@
 """
-Sync Services for Alabama Auction Watcher.
-Handles synchronization between iOS app and backend.
+Sync Services for Auction Watcher.
 """
 
 from .orchestrator import SyncOrchestrator, get_sync_orchestrator

@@ -1,5 +1,5 @@
 """
-Caching Middleware for Alabama Auction Watcher API
+Caching Middleware for Auction Watcher API
 
 This middleware integrates the enhanced caching system with FastAPI,
 providing automatic caching for API responses and cache invalidation.

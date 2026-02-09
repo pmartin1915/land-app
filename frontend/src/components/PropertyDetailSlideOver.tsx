@@ -22,6 +22,7 @@ import { Property, AISuggestion } from '../types'
 import { usePropertySuggestions, useAISuggestionMutations } from '../lib/hooks'
 import { ScoreTooltip, ScoreType } from './ui/ScoreTooltip'
 import { InvestmentGradeBadge } from './ui/InvestmentGradeBadge'
+import { useFocusTrap } from '../lib/useFocusTrap'
 
 interface PropertyDetailSlideOverProps {
   property: Property | null
@@ -171,6 +172,7 @@ function AISuggestionCard({ suggestion, onApply, onReject, isLoading }: AISugges
 
 export function PropertyDetailSlideOver({ property, isOpen, onClose }: PropertyDetailSlideOverProps) {
   const [activeTab, setActiveTab] = useState('overview')
+  const focusTrapRef = useFocusTrap<HTMLDivElement>(isOpen && !!property)
 
   // Fetch AI suggestions if property is selected
   const { data: suggestions, loading: suggestionsLoading, refetch: refetchSuggestions } = usePropertySuggestions(property?.id || '')
@@ -227,6 +229,10 @@ export function PropertyDetailSlideOver({ property, isOpen, onClose }: PropertyD
 
           {/* Slide Over Panel */}
           <motion.div
+            ref={focusTrapRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="property-detail-title"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
@@ -236,7 +242,7 @@ export function PropertyDetailSlideOver({ property, isOpen, onClose }: PropertyD
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-neutral-1 bg-surface">
               <div className="flex-1">
-                <h2 className="text-lg font-semibold text-text-primary">Property Details</h2>
+                <h2 id="property-detail-title" className="text-lg font-semibold text-text-primary">Property Details</h2>
                 <p className="text-sm text-text-muted font-mono">{property.parcel_id}</p>
               </div>
 

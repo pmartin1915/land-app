@@ -1,10 +1,8 @@
 /**
- * Centralized configuration for Alabama Auction Watcher Frontend.
+ * Centralized configuration for Auction Watcher Frontend.
  * Reads from Vite environment variables at build time.
  */
 
-// Detect environment
-const isTauri = '__TAURI__' in window
 const isDevelopment = import.meta.env.DEV
 const isProduction = import.meta.env.PROD
 
@@ -16,13 +14,12 @@ export const config = {
   // Environment
   isDevelopment,
   isProduction,
-  isTauri,
 
   // API
   api: {
     baseUrl: API_BASE_URL,
     fullUrl: `${API_BASE_URL}/api/${API_VERSION}`,
-    timeout: 30000, // 30 seconds
+    timeout: 30000,
   },
 
   // Auth
@@ -30,12 +27,10 @@ export const config = {
     tokenKey: 'auth_token',
     refreshTokenKey: 'refresh_token',
     tokenExpiresKey: 'token_expires',
-    deviceIdKey: 'device_id',
   },
 
   // Features
   features: {
-    // Enable/disable features based on environment
     enableDevTools: isDevelopment,
     enableMockData: import.meta.env.VITE_ENABLE_MOCKS === 'true',
     enableOfflineMode: import.meta.env.VITE_ENABLE_OFFLINE === 'true',
@@ -45,25 +40,22 @@ export const config = {
   map: {
     accessToken: import.meta.env.VITE_MAPBOX_TOKEN || '',
     style: 'mapbox://styles/mapbox/outdoors-v12',
-    defaultCenter: [-86.9023, 32.3182] as [number, number], // Alabama center
+    defaultCenter: [-86.9023, 32.3182] as [number, number],
     defaultZoom: 7,
   },
 
   // App
   app: {
-    name: 'Alabama Auction Watcher',
+    name: 'Auction Watcher',
     version: '1.0.0',
   },
 } as const
 
-// Type for config
 export type AppConfig = typeof config
 
-// Debug logging in development
 if (isDevelopment) {
   console.log('[Config] Loaded configuration:', {
-    environment: isDevelopment ? 'development' : 'production',
-    isTauri,
+    environment: 'development',
     apiUrl: config.api.fullUrl,
   })
 }

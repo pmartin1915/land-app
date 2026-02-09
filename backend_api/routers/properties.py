@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 import logging
 import math
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..database.connection import get_db
 from ..services.property_service import PropertyService
@@ -31,7 +31,7 @@ def get_property_service(db: Session = Depends(get_db)) -> PropertyService:
 
 @router.get("/", response_model=PropertyListResponse)
 @limiter.limit("100/minute")
-async def list_properties(
+def list_properties(
     request: Request,
     auth_data: dict = Depends(require_property_read),
     state: Optional[str] = Query(None, description="Filter by state code (AL, AR, TX, FL)"),
@@ -123,7 +123,7 @@ async def list_properties(
 
 @router.get("/workflow/stats")
 @limiter.limit("60/minute")
-async def get_workflow_stats(
+def get_workflow_stats(
     request: Request,
     auth_data: dict = Depends(require_property_read),
     db: Session = Depends(get_db)
@@ -169,7 +169,7 @@ async def get_workflow_stats(
 
 @router.get("/stats")
 @limiter.limit("60/minute")
-async def get_dashboard_stats(
+def get_dashboard_stats(
     request: Request,
     auth_data: dict = Depends(require_property_read),
     property_service: PropertyService = Depends(get_property_service)
@@ -189,7 +189,7 @@ async def get_dashboard_stats(
 
 @router.get("/{property_id}", response_model=PropertyResponse)
 @limiter.limit("200/minute")
-async def get_property(
+def get_property(
     request: Request,
     property_id: str,
     auth_data: dict = Depends(require_property_read),
@@ -211,7 +211,7 @@ async def get_property(
 
 @router.post("/", response_model=PropertyResponse, status_code=201)
 @limiter.limit("50/minute")
-async def create_property(
+def create_property(
     request: Request,
     property_data: PropertyCreate,
     auth_data: dict = Depends(require_property_write),
@@ -234,7 +234,7 @@ async def create_property(
 
 @router.put("/{property_id}", response_model=PropertyResponse)
 @limiter.limit("50/minute")
-async def update_property(
+def update_property(
     request: Request,
     property_id: str,
     property_data: PropertyUpdate,
@@ -261,7 +261,7 @@ async def update_property(
 
 @router.delete("/{property_id}", status_code=204)
 @limiter.limit("20/minute")
-async def delete_property(
+def delete_property(
     request: Request,
     property_id: str,
     auth_data: dict = Depends(require_property_write),
@@ -287,7 +287,7 @@ async def delete_property(
 
 @router.patch("/{property_id}/status", response_model=PropertyStatusResponse)
 @limiter.limit("100/minute")
-async def update_property_status(
+def update_property_status(
     request: Request,
     property_id: str,
     status_update: PropertyStatusUpdate,
@@ -310,7 +310,7 @@ async def update_property_status(
         property_obj.status = status_update.status
         if status_update.triage_notes:
             property_obj.triage_notes = status_update.triage_notes
-        property_obj.triaged_at = datetime.utcnow()
+        property_obj.triaged_at = datetime.now(timezone.utc)
         property_obj.triaged_by = status_update.device_id
 
         db.commit()
@@ -337,16 +337,13 @@ async def update_property_status(
 
 @router.post("/calculate", response_model=PropertyCalculationResponse)
 @limiter.limit("100/minute")
-async def calculate_metrics(
+def calculate_metrics(
     request: Request,
     calculation_request: PropertyCalculationRequest,
     auth_data: dict = Depends(require_property_read),
     property_service: PropertyService = Depends(get_property_service)
 ):
-    """
-    Calculate property metrics using exact Python algorithms.
-    Used for iOS algorithm validation and consistency checks.
-    """
+    """Calculate property metrics using exact Python algorithms."""
     try:
         result = property_service.calculate_metrics_for_request(calculation_request)
 
@@ -359,7 +356,7 @@ async def calculate_metrics(
 
 @router.get("/analytics/metrics", response_model=PropertyMetrics)
 @limiter.limit("10/minute")
-async def get_property_metrics(
+def get_property_metrics(
     request: Request,
     auth_data: dict = Depends(require_property_read),
     property_service: PropertyService = Depends(get_property_service)
@@ -375,7 +372,7 @@ async def get_property_metrics(
 
 @router.post("/analytics/recalculate-ranks", status_code=200)
 @limiter.limit("1/minute")
-async def recalculate_ranks(
+def recalculate_ranks(
     request: Request,
     auth_data: dict = Depends(require_property_write),
     property_service: PropertyService = Depends(get_property_service)
@@ -394,17 +391,13 @@ async def recalculate_ranks(
 
 @router.post("/bulk", response_model=PropertyBulkResponse)
 @limiter.limit("5/minute")
-async def bulk_operations(
+def bulk_operations(
     request: Request,
     bulk_request: PropertyBulkOperation,
     auth_data: dict = Depends(require_property_write),
-    device_id: Optional[str] = Query(None, description="iOS device identifier"),
     property_service: PropertyService = Depends(get_property_service)
 ):
-    """
-    Perform bulk property operations (create, update, delete).
-    Useful for large data imports and synchronization.
-    """
+    """Perform bulk property operations (create, update, delete)."""
     try:
         import time
         start_time = time.time()
@@ -469,7 +462,7 @@ async def bulk_operations(
 
 @router.get("/search/suggestions")
 @limiter.limit("50/minute")
-async def search_suggestions(
+def search_suggestions(
     request: Request,
     auth_data: dict = Depends(require_property_read),
     query: str = Query(..., description="Search query", min_length=2),

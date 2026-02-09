@@ -1,9 +1,7 @@
 """
-Alabama Auction Watcher FastAPI Backend
-Phase 2A Week 3-4: Data Synchronization & API Integration
+Auction Watcher FastAPI Backend
 
 FastAPI application entry point with authentication, rate limiting, and CORS configuration.
-Maintains exact algorithm compatibility with existing Python scripts and iOS Swift implementation.
 """
 
 from fastapi import FastAPI, Request, HTTPException, Depends
@@ -14,7 +12,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import time
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 
 # Import centralized configuration and shared limiter
@@ -41,19 +39,19 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan events for database connection management."""
     # Startup
-    logger.info("=� Starting Alabama Auction Watcher API...")
+    logger.info("=� Starting Auction Watcher API...")
     await connect_db()
     logger.info(" Database connected successfully")
     yield
     # Shutdown
-    logger.info("= Shutting down Alabama Auction Watcher API...")
+    logger.info("= Shutting down Auction Watcher API...")
     await disconnect_db()
     logger.info(" Database disconnected successfully")
 
 # FastAPI application instance
 app = FastAPI(
-    title="Alabama Auction Watcher API",
-    description="REST API for Alabama Auction Watcher mobile application with exact Python algorithm compatibility",
+    title="Auction Watcher API",
+    description="REST API for Auction Watcher land research application",
     version="1.0.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
@@ -77,7 +75,6 @@ app.add_middleware(
     allow_headers=[
         "Authorization",
         "Content-Type",
-        "X-API-Key",
         "Accept",
     ],
 )
@@ -118,7 +115,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={
             "error": "Internal server error",
             "message": "An unexpected error occurred",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "path": str(request.url.path),
             "ai_recovery_hint": "Check algorithm compatibility and data validation"
         }
@@ -131,9 +128,9 @@ async def health_check(request: Request):
     """Basic health check endpoint."""
     return {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "version": "1.0.0",
-        "service": "Alabama Auction Watcher API"
+        "service": "Auction Watcher API"
     }
 
 @app.get("/health/detailed")
@@ -157,9 +154,9 @@ async def detailed_health_check(request: Request):
 
         return {
             "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "version": "1.0.0",
-            "service": "Alabama Auction Watcher API",
+            "service": "Auction Watcher API",
             "components": {
                 "database": db_status,
                 "algorithms": algorithm_status,
@@ -180,7 +177,7 @@ async def cache_stats(request: Request):
         stats = get_cache_stats()
         return {
             "cache_stats": stats,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
     except Exception as e:
         logger.error(f"Failed to get cache stats: {e}")
@@ -196,7 +193,7 @@ async def warm_cache_endpoint(request: Request):
         return {
             "status": "success",
             "message": "Cache warming completed",
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
     except Exception as e:
         logger.error(f"Cache warming failed: {e}")
@@ -311,7 +308,7 @@ app.include_router(
 async def root():
     """API root endpoint with service information."""
     return {
-        "service": "Alabama Auction Watcher API",
+        "service": "Auction Watcher API",
         "version": "1.0.0",
         "phase": "Phase 2A Week 3-4",
         "compatibility": "iOS Swift + Python Backend",

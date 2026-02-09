@@ -203,6 +203,7 @@ test-results/
 
 # Database backups
 *.backup
+*.db.backup*
 
 # Scrape result files (generated data)
 *_scrape_results.json

@@ -1,5 +1,5 @@
 """
-Domain layer for Alabama Auction Watcher.
+Domain layer for Auction Watcher.
 Contains Value Objects, Entities, and Domain Services.
 """
 

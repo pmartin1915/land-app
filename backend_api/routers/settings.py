@@ -70,18 +70,13 @@ class BudgetRecommendationsResponse(BaseModel):
 
 
 def get_device_id_from_auth(auth_data: dict) -> str:
-    """Extract device_id from auth data."""
-    if auth_data.get("type") == "api_key":
-        return auth_data.get("device_id", "unknown")
-    elif auth_data.get("type") == "jwt":
-        # For JWT, use user_id as device_id
-        return auth_data.get("user_id", "unknown")
-    return "unknown"
+    """Extract user identifier from auth data for DB queries."""
+    return auth_data.get("user_id", "unknown")
 
 
 @router.get("/", response_model=UserPreferenceResponse)
 @limiter.limit("60/minute")
-async def get_settings(
+def get_settings(
     request: Request,
     auth_data: dict = Depends(get_current_user_or_api_key),
     db: Session = Depends(get_db)
@@ -123,7 +118,7 @@ async def get_settings(
 
 @router.put("/", response_model=UserPreferenceResponse)
 @limiter.limit("30/minute")
-async def update_settings(
+def update_settings(
     request: Request,
     updates: UserPreferenceUpdate,
     auth_data: dict = Depends(get_current_user_or_api_key),
@@ -182,7 +177,7 @@ async def update_settings(
 
 @router.get("/budget-recommendations", response_model=BudgetRecommendationsResponse)
 @limiter.limit("60/minute")
-async def get_budget_recommendations(
+def get_budget_recommendations(
     request: Request,
     budget: Optional[float] = None,
     auth_data: dict = Depends(get_current_user_or_api_key),
@@ -273,7 +268,7 @@ async def get_budget_recommendations(
 
 @router.delete("/")
 @limiter.limit("10/minute")
-async def reset_settings(
+def reset_settings(
     request: Request,
     auth_data: dict = Depends(get_current_user_or_api_key),
     db: Session = Depends(get_db)

@@ -1,5 +1,5 @@
 """
-Value Objects for Alabama Auction Watcher domain.
+Value Objects for Auction Watcher domain.
 
 Value Objects are immutable, identity-less objects that represent descriptive
 aspects of the domain. They are defined by their attributes rather than by
@@ -25,7 +25,7 @@ class InvestmentScore:
     Higher scores indicate better investment opportunities.
 
     This is the core metric used to rank and prioritize properties
-    in the Alabama Auction Watcher system.
+    in the Auction Watcher system.
     """
     value: float
 

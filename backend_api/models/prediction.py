@@ -5,7 +5,7 @@ Pydantic models for property appreciation forecasts, market timing, and opportun
 
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 
@@ -46,7 +46,7 @@ class MarketPhase(str, Enum):
 class PropertyAppreciationRequest(BaseModel):
     """Request model for property appreciation prediction."""
     property_data: Dict[str, Any] = Field(..., description="Property data for prediction")
-    county: str = Field(..., description="Alabama county name")
+    county: str = Field(..., description="County name")
     current_investment_score: float = Field(..., description="Current investment score", ge=0, le=100)
 
     class Config:
@@ -69,7 +69,7 @@ class PropertyAppreciationRequest(BaseModel):
 
 class MarketTimingRequest(BaseModel):
     """Request model for market timing analysis."""
-    county: str = Field(..., description="Alabama county name")
+    county: str = Field(..., description="County name")
 
     class Config:
         json_schema_extra = {
@@ -107,14 +107,14 @@ class OpportunityDetectionRequest(BaseModel):
 class PropertyAppreciationResponse(BaseModel):
     """Response model for property appreciation forecast."""
     property_id: str = Field(..., description="Property identifier")
-    county: str = Field(..., description="Alabama county")
+    county: str = Field(..., description="County")
     one_year_appreciation: float = Field(..., description="Predicted 1-year appreciation rate")
     three_year_appreciation: float = Field(..., description="Predicted 3-year appreciation rate")
     five_year_appreciation: float = Field(..., description="Predicted 5-year appreciation rate")
     market_trend: MarketTrend = Field(..., description="Predicted market trend")
     confidence_level: PredictionConfidence = Field(..., description="Prediction confidence")
     risk_score: float = Field(..., description="Risk assessment score", ge=0, le=1)
-    prediction_timestamp: datetime = Field(default_factory=datetime.utcnow, description="When prediction was generated")
+    prediction_timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When prediction was generated")
 
     class Config:
         json_schema_extra = {
@@ -134,14 +134,14 @@ class PropertyAppreciationResponse(BaseModel):
 
 class MarketTimingResponse(BaseModel):
     """Response model for market timing analysis."""
-    county: str = Field(..., description="Alabama county")
+    county: str = Field(..., description="County")
     current_market_phase: MarketPhase = Field(..., description="Current market phase")
     optimal_buy_window: List[int] = Field(..., description="Optimal buying window in months [start, end]")
     optimal_sell_window: List[int] = Field(..., description="Optimal selling window in months [start, end]")
     price_momentum: float = Field(..., description="Price momentum indicator", ge=-1, le=1)
     market_volatility: float = Field(..., description="Market volatility measure", ge=0, le=1)
     confidence_score: float = Field(..., description="Analysis confidence", ge=0, le=1)
-    prediction_timestamp: datetime = Field(default_factory=datetime.utcnow, description="When analysis was generated")
+    prediction_timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When analysis was generated")
 
     class Config:
         json_schema_extra = {
@@ -161,7 +161,7 @@ class MarketTimingResponse(BaseModel):
 class EmergingOpportunityResponse(BaseModel):
     """Response model for individual emerging opportunity."""
     property_id: str = Field(..., description="Property identifier")
-    county: str = Field(..., description="Alabama county")
+    county: str = Field(..., description="County")
     opportunity_type: OpportunityType = Field(..., description="Type of opportunity")
     opportunity_score: float = Field(..., description="Opportunity score out of 100", ge=0, le=100)
     potential_appreciation: float = Field(..., description="Potential appreciation rate")
@@ -170,7 +170,7 @@ class EmergingOpportunityResponse(BaseModel):
     confidence_level: PredictionConfidence = Field(..., description="Prediction confidence")
     primary_drivers: List[str] = Field(..., description="Key drivers for this opportunity")
     risk_factors: List[str] = Field(..., description="Major risk factors to consider")
-    prediction_timestamp: datetime = Field(default_factory=datetime.utcnow, description="When prediction was generated")
+    prediction_timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When prediction was generated")
 
     class Config:
         json_schema_extra = {
@@ -195,7 +195,7 @@ class OpportunityDetectionResponse(BaseModel):
     total_properties_analyzed: int = Field(..., description="Number of properties analyzed")
     opportunities_found: int = Field(..., description="Number of opportunities detected")
     opportunities: List[EmergingOpportunityResponse] = Field(..., description="List of detected opportunities")
-    analysis_timestamp: datetime = Field(default_factory=datetime.utcnow, description="When analysis was performed")
+    analysis_timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When analysis was performed")
 
     class Config:
         json_schema_extra = {
@@ -235,7 +235,7 @@ class BatchAppreciationResponse(BaseModel):
     predictions: List[PropertyAppreciationResponse] = Field(..., description="List of predictions")
     errors: List[Dict[str, Any]] = Field(default=[], description="List of errors for failed predictions")
     processing_time_seconds: float = Field(..., description="Total processing time")
-    batch_timestamp: datetime = Field(default_factory=datetime.utcnow, description="When batch was processed")
+    batch_timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When batch was processed")
 
 
 class PredictionHealthResponse(BaseModel):

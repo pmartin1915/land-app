@@ -5,7 +5,7 @@ Provides aggregate analysis of user's watched properties.
 
 import logging
 import statistics
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Tuple
 
 from sqlalchemy.orm import Session
@@ -106,7 +106,7 @@ class PortfolioService:
                 capital_remaining=round(capital_remaining, 2) if capital_remaining is not None else None,
                 properties_with_water=water_count,
                 water_access_percentage=round(water_pct, 1),
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
 
         except Exception as e:
@@ -131,7 +131,7 @@ class PortfolioService:
                     states=[],
                     top_state=None,
                     top_county=None,
-                    timestamp=datetime.utcnow()
+                    timestamp=datetime.now(timezone.utc)
                 )
 
             # State-level aggregation
@@ -220,7 +220,7 @@ class PortfolioService:
                 states=states,
                 top_state=top_state,
                 top_county=top_county_info[0] if top_county_info else None,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
 
         except Exception as e:
@@ -260,7 +260,7 @@ class PortfolioService:
                     underperformers=[],
                     median_investment_score=None,
                     score_std_deviation=None,
-                    timestamp=datetime.utcnow()
+                    timestamp=datetime.now(timezone.utc)
                 )
 
             # Build buckets
@@ -343,7 +343,7 @@ class PortfolioService:
                 underperformers=underperformers[:20],
                 median_investment_score=round(median, 1) if median else None,
                 score_std_deviation=round(std_dev, 2) if std_dev else None,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
 
         except Exception as e:
@@ -382,7 +382,7 @@ class PortfolioService:
                     top_3_properties_pct=0,
                     overall_risk_level="low",
                     risk_flags=[],
-                    timestamp=datetime.utcnow()
+                    timestamp=datetime.now(timezone.utc)
                 )
 
             # Concentration analysis
@@ -503,7 +503,7 @@ class PortfolioService:
                 top_3_properties_pct=round(top_3_pct, 1),
                 overall_risk_level=overall_risk,
                 risk_flags=risk_flags,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
 
         except Exception as e:
@@ -517,7 +517,7 @@ class PortfolioService:
     def get_performance_tracking(self) -> PerformanceTrackingResponse:
         """Get performance and activity tracking."""
         try:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             seven_days_ago = now - timedelta(days=7)
             thirty_days_ago = now - timedelta(days=30)
 
@@ -602,7 +602,7 @@ class PortfolioService:
                 first_deal_stage=first_deal.first_deal_stage if first_deal else None,
                 first_deal_property_id=first_deal.property_id if first_deal else None,
                 activity_by_week=activity_by_week,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
 
         except Exception as e:
@@ -621,5 +621,5 @@ class PortfolioService:
             scores=self.get_score_distribution(),
             risk=self.get_risk_analysis(),
             performance=self.get_performance_tracking(),
-            exported_at=datetime.utcnow()
+            exported_at=datetime.now(timezone.utc)
         )

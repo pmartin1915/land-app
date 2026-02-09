@@ -69,11 +69,6 @@ export type {
   ComponentVariant,
 } from './app'
 
-// Electron types
-export type {
-  ElectronAPI,
-} from './electron'
-
 // Portfolio Analytics types
 export type {
   PortfolioSummaryResponse,

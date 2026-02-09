@@ -1,6 +1,5 @@
 """
-Pydantic models for Property API operations
-Models match iOS Core Data schema and enable API request/response validation
+Pydantic models for Property API operations.
 """
 
 from pydantic import BaseModel, Field, field_validator
@@ -160,7 +159,7 @@ class PropertyUpdate(BaseModel):
     amount: Optional[float] = Field(None, description="Bid/sale amount in USD", gt=0)
     acreage: Optional[float] = Field(None, description="Property acreage", ge=0)
     description: Optional[str] = Field(None, description="Legal property description")
-    county: Optional[str] = Field(None, description="Alabama county name")
+    county: Optional[str] = Field(None, description="County name")
     owner_name: Optional[str] = Field(None, description="Property owner name")
     year_sold: Optional[str] = Field(None, description="Sale year")
     assessed_value: Optional[float] = Field(None, description="County assessed value", ge=0)
@@ -223,7 +222,7 @@ class PropertyResponse(BaseModel):
 
     # Property details
     description: Optional[str] = Field(None, description="Legal property description")
-    county: Optional[str] = Field(None, description="Alabama county name")
+    county: Optional[str] = Field(None, description="County name")
     owner_name: Optional[str] = Field(None, description="Property owner name")
     year_sold: Optional[str] = Field(None, description="Sale year")
     assessed_value: Optional[float] = Field(None, description="County assessed value")
@@ -293,7 +292,7 @@ class PropertyStatusResponse(BaseModel):
 
 class PropertyFilters(BaseModel):
     """Model for property filtering and search parameters."""
-    county: Optional[str] = Field(None, description="Filter by Alabama county")
+    county: Optional[str] = Field(None, description="Filter by county")
     min_price: Optional[float] = Field(None, description="Minimum bid amount", ge=0)
     max_price: Optional[float] = Field(None, description="Maximum bid amount", ge=0)
     min_acreage: Optional[float] = Field(None, description="Minimum acreage", ge=0)
@@ -373,7 +372,7 @@ class PropertyCalculationResponse(BaseModel):
     price_per_acre: Optional[float] = Field(None, description="Calculated: amount / acreage")
     water_score: float = Field(..., description="Water feature score calculated from description")
     investment_score: Optional[float] = Field(None, description="Overall investment score (0.0-100.0)")
-    estimated_all_in_cost: float = Field(..., description="Total cost including Alabama fees")
+    estimated_all_in_cost: float = Field(..., description="Total estimated cost including fees")
     assessed_value_ratio: Optional[float] = Field(None, description="Calculated: amount / assessed_value")
 
     # Algorithm validation

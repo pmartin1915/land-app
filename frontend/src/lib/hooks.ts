@@ -1,8 +1,8 @@
-// React hooks for API integration with caching and state management
+// React hooks for API integration using TanStack Query
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './api'
-import { propertyCache, globalCache, createCacheKey } from './cache'
 import {
   Property,
   County,
@@ -10,213 +10,134 @@ import {
   PropertyFilters,
   SearchParams,
   PaginatedResponse,
-  LoadingState,
 } from '../types'
 
-// Generic async data hook with stale-while-revalidate support
-export function useAsyncData<T>(
-  fetcher: () => Promise<T>,
-  dependencies: unknown[] = [],
-  options: {
-    cacheKey?: string
-    cacheTTL?: number
-    enabled?: boolean
-    staleWhileRevalidate?: boolean  // Return stale cache data on error
-  } = {}
-) {
-  const [data, setData] = useState<T | null>(null)
-  const [loading, setLoading] = useState<LoadingState>('idle')
-  const [error, setError] = useState<string | null>(null)
-  const [isStale, setIsStale] = useState(false)
-  const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null)
-  const [, setInitialFetchDone] = useState(false)
-
-  const { cacheKey, cacheTTL, enabled = true, staleWhileRevalidate = false } = options
-
-  const fetchData = useCallback(async (isRefetch = false) => {
-    if (!enabled) return
-
-    // Only show loading on initial fetch or explicit refetch, not on cache hits
-    if (isRefetch) {
-      setLoading('loading')
-    }
-    setError(null)
-    setIsStale(false)
-
-    try {
-      let result: T
-
-      if (cacheKey) {
-        // Try cache first (only on initial fetch, not refetch)
-        if (!isRefetch) {
-          const cached = await globalCache.get<T>(cacheKey)
-          if (cached) {
-            setData(cached)
-            setLoading('succeeded')
-            setLastFetchTime(new Date())
-            setInitialFetchDone(true)
-            return
-          }
-          // No cache hit, now show loading
-          setLoading('loading')
-        }
-
-        // Fetch and cache
-        result = await fetcher()
-        await globalCache.set(cacheKey, result, cacheTTL)
-      } else {
-        setLoading('loading')
-        result = await fetcher()
-      }
-
-      setData(result)
-      setLoading('succeeded')
-      setLastFetchTime(new Date())
-      setInitialFetchDone(true)
-    } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : 'An error occurred'
-      setError(errorMsg)
-
-      // Graceful degradation: try to use stale cache data on error
-      if (cacheKey && staleWhileRevalidate) {
-        const staleData = await globalCache.get<T>(cacheKey)
-        if (staleData !== null) {
-          setData(staleData)
-          setIsStale(true)
-          setLoading('succeeded')  // Show data, not error state
-          console.warn(`[useAsyncData] Using stale cache for ${cacheKey} due to error: ${errorMsg}`)
-          return
-        }
-      }
-
-      setLoading('failed')
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- spread dependencies are intentional for dynamic dependency list
-  }, [fetcher, cacheKey, cacheTTL, enabled, staleWhileRevalidate, ...dependencies])
-
-  useEffect(() => {
-    fetchData(false)
-  }, [fetchData])
-
-  const refetch = useCallback(() => {
-    if (cacheKey) {
-      globalCache.remove(cacheKey)
-    }
-    fetchData(true)
-  }, [fetchData, cacheKey])
-
-  return {
-    data,
-    loading,
-    error,
-    refetch,
-    isLoading: loading === 'loading',
-    isSuccess: loading === 'succeeded',
-    isError: loading === 'failed',
-    isStale,
-    lastFetchTime,
-  }
+// Query key factories for consistent cache key management
+const queryKeys = {
+  properties: {
+    all: ['properties'] as const,
+    list: (params?: SearchParams) => ['properties', 'list', params] as const,
+    detail: (id: string) => ['properties', 'detail', id] as const,
+    stats: (filters?: PropertyFilters) => ['properties', 'stats', filters] as const,
+    workflow: ['properties', 'workflow'] as const,
+    map: (filters?: PropertyFilters, minScore?: number) => ['properties', 'map', filters, minScore] as const,
+    search: (query: string, filters?: PropertyFilters) => ['properties', 'search', query, filters] as const,
+    topPicks: (params: Record<string, unknown>) => ['properties', 'top-picks', params] as const,
+  },
+  counties: {
+    all: ['counties'] as const,
+    list: ['counties', 'list'] as const,
+    stats: (code?: string) => ['counties', 'stats', code] as const,
+  },
+  ai: {
+    suggestions: (propertyId: string) => ['ai', 'suggestions', propertyId] as const,
+    triage: ['ai', 'triage'] as const,
+  },
+  portfolio: {
+    all: ['portfolio'] as const,
+    summary: ['portfolio', 'summary'] as const,
+    geographic: ['portfolio', 'geographic'] as const,
+    scores: ['portfolio', 'scores'] as const,
+    risk: ['portfolio', 'risk'] as const,
+    performance: ['portfolio', 'performance'] as const,
+  },
 }
 
 // Properties hooks
 export function useProperties(params?: SearchParams) {
-  // Stringify params for stable dependency - object reference changes on every render
-  const paramsString = JSON.stringify(params)
+  const paramsKey = useMemo(() => params, [JSON.stringify(params)])
 
-  const cacheKey = useMemo(() =>
-    createCacheKey('properties', params),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [paramsString]
-  )
+  const result = useQuery({
+    queryKey: queryKeys.properties.list(paramsKey),
+    queryFn: () => api.properties.getProperties(params),
+    staleTime: 5 * 60 * 1000,
+  })
 
-  // Memoize fetcher to prevent infinite re-render loop
-  // The fetcher must be stable - recreating it triggers useAsyncData's useEffect
-  const fetcher = useCallback(
-    () => api.properties.getProperties(params),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- params object reference changes, use stringified version
-    [paramsString]
-  )
-
-  return useAsyncData<PaginatedResponse<Property>>(
-    fetcher,
-    [],
-    {
-      cacheKey,
-      cacheTTL: 5 * 60 * 1000, // 5 minutes
-    }
-  )
+  return {
+    data: result.data ?? null,
+    loading: result.isLoading ? 'loading' : result.isSuccess ? 'succeeded' : result.isError ? 'failed' : 'idle',
+    error: result.error?.message ?? null,
+    refetch: result.refetch,
+    isLoading: result.isLoading,
+    isSuccess: result.isSuccess,
+    isError: result.isError,
+    isStale: result.isStale,
+    lastFetchTime: result.dataUpdatedAt ? new Date(result.dataUpdatedAt) : null,
+  }
 }
 
 export function useProperty(id: string) {
-  const cacheKey = useMemo(() =>
-    createCacheKey('property', { id }),
-    [id]
-  )
+  const result = useQuery({
+    queryKey: queryKeys.properties.detail(id),
+    queryFn: () => api.properties.getProperty(id),
+    staleTime: 10 * 60 * 1000,
+    enabled: !!id,
+  })
 
-  return useAsyncData<Property>(
-    () => api.properties.getProperty(id),
-    [id],
-    {
-      cacheKey,
-      cacheTTL: 10 * 60 * 1000, // 10 minutes
-      enabled: !!id,
-    }
-  )
+  return {
+    data: result.data ?? null,
+    loading: result.isLoading ? 'loading' : result.isSuccess ? 'succeeded' : result.isError ? 'failed' : 'idle',
+    error: result.error?.message ?? null,
+    refetch: result.refetch,
+    isLoading: result.isLoading,
+    isSuccess: result.isSuccess,
+    isError: result.isError,
+    isStale: result.isStale,
+    lastFetchTime: result.dataUpdatedAt ? new Date(result.dataUpdatedAt) : null,
+  }
 }
 
 export function usePropertyStats(filters?: PropertyFilters) {
-  const cacheKey = useMemo(() =>
-    createCacheKey('property-stats', filters),
-    [filters]
-  )
+  const filtersKey = useMemo(() => filters, [JSON.stringify(filters)])
 
-  // Memoize stringified filters to prevent unnecessary refetches
-  const stringifiedFilters = useMemo(() => JSON.stringify(filters), [filters])
+  const result = useQuery({
+    queryKey: queryKeys.properties.stats(filtersKey),
+    queryFn: () => api.properties.getPropertyStats(filters),
+    staleTime: 2 * 60 * 1000,
+  })
 
-  return useAsyncData(
-    () => api.properties.getPropertyStats(filters),
-    [stringifiedFilters],
-    {
-      cacheKey,
-      cacheTTL: 2 * 60 * 1000, // 2 minutes
-    }
-  )
+  return {
+    data: result.data ?? null,
+    loading: result.isLoading ? 'loading' : result.isSuccess ? 'succeeded' : result.isError ? 'failed' : 'idle',
+    error: result.error?.message ?? null,
+    refetch: result.refetch,
+    isLoading: result.isLoading,
+    isSuccess: result.isSuccess,
+    isError: result.isError,
+    isStale: result.isStale,
+    lastFetchTime: result.dataUpdatedAt ? new Date(result.dataUpdatedAt) : null,
+  }
 }
 
-// Hook for fetching workflow statistics (property counts by status)
 export function useWorkflowStats() {
-  const cacheKey = 'workflow-stats'
+  const result = useQuery({
+    queryKey: queryKeys.properties.workflow,
+    queryFn: () => api.properties.getWorkflowStats(),
+    staleTime: 1 * 60 * 1000,
+  })
 
-  return useAsyncData<{
-    new: number
-    reviewing: number
-    bid_ready: number
-    rejected: number
-    purchased: number
-    total: number
-  }>(
-    () => api.properties.getWorkflowStats(),
-    [],
-    {
-      cacheKey,
-      cacheTTL: 1 * 60 * 1000, // 1 minute (workflow changes frequently)
-    }
-  )
+  return {
+    data: result.data ?? null,
+    loading: result.isLoading ? 'loading' : result.isSuccess ? 'succeeded' : result.isError ? 'failed' : 'idle',
+    error: result.error?.message ?? null,
+    refetch: result.refetch,
+    isLoading: result.isLoading,
+    isSuccess: result.isSuccess,
+    isError: result.isError,
+    isStale: result.isStale,
+    lastFetchTime: result.dataUpdatedAt ? new Date(result.dataUpdatedAt) : null,
+  }
 }
 
-// Hook for fetching all properties for map view (up to 1000)
 export function useMapProperties(filters?: PropertyFilters, minScore?: number) {
-  const cacheKey = useMemo(() =>
-    createCacheKey('map-properties', { filters, minScore }),
-    [filters, minScore]
-  )
+  const filtersKey = useMemo(() => filters, [JSON.stringify(filters)])
 
-  return useAsyncData<Property[]>(
-    async () => {
-      // Fetch properties with high page_size for map view
+  const result = useQuery({
+    queryKey: queryKeys.properties.map(filtersKey, minScore),
+    queryFn: async () => {
       const params: SearchParams = {
         page: 1,
-        per_page: 1000, // Max allowed by API
+        per_page: 1000,
         sort_by: 'investment_score',
         sort_order: 'desc',
         filters: {
@@ -227,12 +148,20 @@ export function useMapProperties(filters?: PropertyFilters, minScore?: number) {
       const response = await api.properties.getProperties(params)
       return response.items
     },
-    [JSON.stringify(filters), minScore],
-    {
-      cacheKey,
-      cacheTTL: 5 * 60 * 1000, // 5 minutes
-    }
-  )
+    staleTime: 5 * 60 * 1000,
+  })
+
+  return {
+    data: result.data ?? null,
+    loading: result.isLoading ? 'loading' : result.isSuccess ? 'succeeded' : result.isError ? 'failed' : 'idle',
+    error: result.error?.message ?? null,
+    refetch: result.refetch,
+    isLoading: result.isLoading,
+    isSuccess: result.isSuccess,
+    isError: result.isError,
+    isStale: result.isStale,
+    lastFetchTime: result.dataUpdatedAt ? new Date(result.dataUpdatedAt) : null,
+  }
 }
 
 // Search hook with debouncing
@@ -240,249 +169,225 @@ export function usePropertySearch(query: string, filters?: PropertyFilters, debo
   const [debouncedQuery, setDebouncedQuery] = useState(query)
   const [isSearching, setIsSearching] = useState(false)
 
-  // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(query)
     }, debounceMs)
-
     return () => clearTimeout(timer)
   }, [query, debounceMs])
 
-  const cacheKey = useMemo(() =>
-    createCacheKey('property-search', { query: debouncedQuery, filters }),
-    [debouncedQuery, filters]
-  )
+  const filtersKey = useMemo(() => filters, [JSON.stringify(filters)])
 
-  const { data, loading, error, refetch } = useAsyncData<Property[]>(
-    () => api.properties.searchProperties(debouncedQuery, filters),
-    [debouncedQuery, JSON.stringify(filters)],
-    {
-      cacheKey,
-      cacheTTL: 3 * 60 * 1000, // 3 minutes
-      enabled: debouncedQuery.length > 2, // Only search if query is long enough
-    }
-  )
+  const result = useQuery({
+    queryKey: queryKeys.properties.search(debouncedQuery, filtersKey),
+    queryFn: () => api.properties.searchProperties(debouncedQuery, filters),
+    staleTime: 3 * 60 * 1000,
+    enabled: debouncedQuery.length > 2,
+  })
 
-  // Track searching state separately from loading
   useEffect(() => {
-    if (query !== debouncedQuery) {
-      setIsSearching(true)
-    } else {
-      setIsSearching(false)
-    }
+    setIsSearching(query !== debouncedQuery)
   }, [query, debouncedQuery])
 
   return {
-    data: data || [],
-    loading,
-    error,
-    refetch,
+    data: result.data ?? [],
+    loading: result.isLoading ? 'loading' : result.isSuccess ? 'succeeded' : result.isError ? 'failed' : 'idle',
+    error: result.error?.message ?? null,
+    refetch: result.refetch,
     isSearching,
     query: debouncedQuery,
   }
 }
 
-// Counties hook
+// Counties hooks
 export function useCounties() {
-  const cacheKey = 'counties'
+  const result = useQuery({
+    queryKey: queryKeys.counties.list,
+    queryFn: () => api.counties.getCounties(),
+    staleTime: 60 * 60 * 1000, // 1 hour
+  })
 
-  return useAsyncData<County[]>(
-    () => api.counties.getCounties(),
-    [],
-    {
-      cacheKey,
-      cacheTTL: 60 * 60 * 1000, // 1 hour (counties don't change often)
-    }
-  )
+  return {
+    data: result.data ?? null,
+    loading: result.isLoading ? 'loading' : result.isSuccess ? 'succeeded' : result.isError ? 'failed' : 'idle',
+    error: result.error?.message ?? null,
+    refetch: result.refetch,
+    isLoading: result.isLoading,
+    isSuccess: result.isSuccess,
+    isError: result.isError,
+    isStale: result.isStale,
+    lastFetchTime: result.dataUpdatedAt ? new Date(result.dataUpdatedAt) : null,
+  }
 }
 
 export function useCountyStats(code?: string) {
-  const cacheKey = useMemo(() =>
-    createCacheKey('county-stats', { code }),
-    [code]
-  )
+  const result = useQuery({
+    queryKey: queryKeys.counties.stats(code),
+    queryFn: () => api.counties.getCountyStats(code),
+    staleTime: 10 * 60 * 1000,
+  })
 
-  return useAsyncData(
-    () => api.counties.getCountyStats(code),
-    [code],
-    {
-      cacheKey,
-      cacheTTL: 10 * 60 * 1000, // 10 minutes
-    }
-  )
+  return {
+    data: result.data ?? null,
+    loading: result.isLoading ? 'loading' : result.isSuccess ? 'succeeded' : result.isError ? 'failed' : 'idle',
+    error: result.error?.message ?? null,
+    refetch: result.refetch,
+    isLoading: result.isLoading,
+    isSuccess: result.isSuccess,
+    isError: result.isError,
+    isStale: result.isStale,
+    lastFetchTime: result.dataUpdatedAt ? new Date(result.dataUpdatedAt) : null,
+  }
 }
 
 // AI Suggestions hooks
 export function usePropertySuggestions(propertyId: string) {
-  const cacheKey = useMemo(() =>
-    createCacheKey('property-suggestions', { propertyId }),
-    [propertyId]
-  )
+  const result = useQuery({
+    queryKey: queryKeys.ai.suggestions(propertyId),
+    queryFn: () => api.ai.getPropertySuggestions(propertyId),
+    staleTime: 2 * 60 * 1000,
+    enabled: !!propertyId,
+  })
 
-  return useAsyncData<AISuggestion[]>(
-    () => api.ai.getPropertySuggestions(propertyId),
-    [propertyId],
-    {
-      cacheKey,
-      cacheTTL: 2 * 60 * 1000, // 2 minutes
-      enabled: !!propertyId,
-    }
-  )
+  return {
+    data: result.data ?? null,
+    loading: result.isLoading ? 'loading' : result.isSuccess ? 'succeeded' : result.isError ? 'failed' : 'idle',
+    error: result.error?.message ?? null,
+    refetch: result.refetch,
+    isLoading: result.isLoading,
+    isSuccess: result.isSuccess,
+    isError: result.isError,
+    isStale: result.isStale,
+    lastFetchTime: result.dataUpdatedAt ? new Date(result.dataUpdatedAt) : null,
+  }
 }
 
 export function useTriageQueue() {
-  const cacheKey = 'triage-queue'
+  const result = useQuery({
+    queryKey: queryKeys.ai.triage,
+    queryFn: () => api.ai.getTriageQueue(),
+    staleTime: 1 * 60 * 1000,
+  })
 
-  return useAsyncData<AISuggestion[]>(
-    () => api.ai.getTriageQueue(),
-    [],
-    {
-      cacheKey,
-      cacheTTL: 1 * 60 * 1000, // 1 minute (triage changes frequently)
-    }
-  )
+  return {
+    data: result.data ?? null,
+    loading: result.isLoading ? 'loading' : result.isSuccess ? 'succeeded' : result.isError ? 'failed' : 'idle',
+    error: result.error?.message ?? null,
+    refetch: result.refetch,
+    isLoading: result.isLoading,
+    isSuccess: result.isSuccess,
+    isError: result.isError,
+    isStale: result.isStale,
+    lastFetchTime: result.dataUpdatedAt ? new Date(result.dataUpdatedAt) : null,
+  }
 }
 
-// Mutation hooks for data updates
+// Mutation hooks
 export function usePropertyMutations() {
-  const [loading, setLoading] = useState(false)
+  const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<Property> }) =>
+      api.properties.updateProperty(id, updates),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.properties.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.properties.detail(variables.id) })
+      setError(null)
+    },
+    onError: (err: Error) => setError(err.message),
+  })
+
+  const createMutation = useMutation({
+    mutationFn: (property: Partial<Property>) => api.properties.createProperty(property),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.properties.all })
+      setError(null)
+    },
+    onError: (err: Error) => setError(err.message),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.properties.deleteProperty(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.properties.all })
+      setError(null)
+    },
+    onError: (err: Error) => setError(err.message),
+  })
+
   const updateProperty = useCallback(async (id: string, updates: Partial<Property>) => {
-    setLoading(true)
-    setError(null)
-
-    try {
-      const updated = await api.properties.updateProperty(id, updates)
-
-      // Invalidate related cache entries
-      await propertyCache.invalidateByTags(['properties'])
-      await globalCache.remove(createCacheKey('property', { id }))
-
-      setLoading(false)
-      return updated
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-      setLoading(false)
-      throw err
-    }
-  }, [])
+    return updateMutation.mutateAsync({ id, updates })
+  }, [updateMutation])
 
   const createProperty = useCallback(async (property: Partial<Property>) => {
-    setLoading(true)
-    setError(null)
-
-    try {
-      const created = await api.properties.createProperty(property)
-
-      // Invalidate properties cache
-      await propertyCache.invalidateByTags(['properties'])
-
-      setLoading(false)
-      return created
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-      setLoading(false)
-      throw err
-    }
-  }, [])
+    return createMutation.mutateAsync(property)
+  }, [createMutation])
 
   const deleteProperty = useCallback(async (id: string) => {
-    setLoading(true)
-    setError(null)
-
-    try {
-      await api.properties.deleteProperty(id)
-
-      // Invalidate related cache entries
-      await propertyCache.invalidateByTags(['properties'])
-      await globalCache.remove(createCacheKey('property', { id }))
-
-      setLoading(false)
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-      setLoading(false)
-      throw err
-    }
-  }, [])
+    return deleteMutation.mutateAsync(id)
+  }, [deleteMutation])
 
   return {
     updateProperty,
     createProperty,
     deleteProperty,
-    loading,
+    loading: updateMutation.isPending || createMutation.isPending || deleteMutation.isPending,
     error,
   }
 }
 
 export function useAISuggestionMutations() {
-  const [loading, setLoading] = useState(false)
+  const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
 
+  const applyMutation = useMutation({
+    mutationFn: (suggestionId: string) => api.ai.applySuggestion(suggestionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.properties.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.ai.triage })
+      setError(null)
+    },
+    onError: (err: Error) => setError(err.message),
+  })
+
+  const rejectMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      api.ai.rejectSuggestion(id, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.ai.triage })
+      setError(null)
+    },
+    onError: (err: Error) => setError(err.message),
+  })
+
+  const bulkApplyMutation = useMutation({
+    mutationFn: (ids: string[]) => api.ai.bulkApplySuggestions(ids),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.properties.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.ai.triage })
+      setError(null)
+    },
+    onError: (err: Error) => setError(err.message),
+  })
+
   const applySuggestion = useCallback(async (suggestionId: string) => {
-    setLoading(true)
-    setError(null)
-
-    try {
-      const result = await api.ai.applySuggestion(suggestionId)
-
-      // Invalidate related caches
-      await propertyCache.invalidateByTags(['properties', 'suggestions'])
-      await globalCache.remove('triage-queue')
-
-      setLoading(false)
-      return result
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-      setLoading(false)
-      throw err
-    }
-  }, [])
+    return applyMutation.mutateAsync(suggestionId)
+  }, [applyMutation])
 
   const rejectSuggestion = useCallback(async (suggestionId: string, reason?: string) => {
-    setLoading(true)
-    setError(null)
-
-    try {
-      await api.ai.rejectSuggestion(suggestionId, reason)
-
-      // Invalidate triage queue
-      await globalCache.remove('triage-queue')
-
-      setLoading(false)
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-      setLoading(false)
-      throw err
-    }
-  }, [])
+    return rejectMutation.mutateAsync({ id: suggestionId, reason })
+  }, [rejectMutation])
 
   const bulkApplySuggestions = useCallback(async (suggestionIds: string[]) => {
-    setLoading(true)
-    setError(null)
-
-    try {
-      const results = await api.ai.bulkApplySuggestions(suggestionIds)
-
-      // Invalidate related caches
-      await propertyCache.invalidateByTags(['properties', 'suggestions'])
-      await globalCache.remove('triage-queue')
-
-      setLoading(false)
-      return results
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-      setLoading(false)
-      throw err
-    }
-  }, [])
+    return bulkApplyMutation.mutateAsync(suggestionIds)
+  }, [bulkApplyMutation])
 
   return {
     applySuggestion,
     rejectSuggestion,
     bulkApplySuggestions,
-    loading,
+    loading: applyMutation.isPending || rejectMutation.isPending || bulkApplyMutation.isPending,
     error,
   }
 }
@@ -497,25 +402,19 @@ export function useApiHealth() {
       await api.system.getHealth()
       setIsConnected(true)
       setLastCheck(new Date())
-    } catch (error) {
+    } catch {
       setIsConnected(false)
       setLastCheck(new Date())
     }
   }, [])
 
-  // Check health every 30 seconds
   useEffect(() => {
     checkHealth()
-
     const interval = setInterval(checkHealth, 30 * 1000)
     return () => clearInterval(interval)
   }, [checkHealth])
 
-  return {
-    isConnected,
-    lastCheck,
-    checkHealth,
-  }
+  return { isConnected, lastCheck, checkHealth }
 }
 
 // Top Picks hook for beginner-friendly properties
@@ -526,30 +425,31 @@ export function useTopPicks(params: {
 } = {}) {
   const { state = 'AR', maxEffectiveCost = 8000, limit = 5 } = params
 
-  const cacheKey = useMemo(() =>
-    createCacheKey('top-picks', { state, maxEffectiveCost, limit }),
-    [state, maxEffectiveCost, limit]
-  )
-
   const searchParams: SearchParams = useMemo(() => ({
-    filters: {
-      state,
-      maxEffectiveCost,
-    },
+    filters: { state, maxEffectiveCost },
     sort_by: 'buy_hold_score',
-    sort_order: 'desc',
+    sort_order: 'desc' as const,
     per_page: limit,
     page: 1,
   }), [state, maxEffectiveCost, limit])
 
-  return useAsyncData<PaginatedResponse<Property>>(
-    () => api.properties.getProperties(searchParams),
-    [JSON.stringify(searchParams)],
-    {
-      cacheKey,
-      cacheTTL: 5 * 60 * 1000, // 5 minutes
-    }
-  )
+  const result = useQuery({
+    queryKey: queryKeys.properties.topPicks({ state, maxEffectiveCost, limit }),
+    queryFn: () => api.properties.getProperties(searchParams),
+    staleTime: 5 * 60 * 1000,
+  })
+
+  return {
+    data: result.data ?? null,
+    loading: result.isLoading ? 'loading' : result.isSuccess ? 'succeeded' : result.isError ? 'failed' : 'idle',
+    error: result.error?.message ?? null,
+    refetch: result.refetch,
+    isLoading: result.isLoading,
+    isSuccess: result.isSuccess,
+    isError: result.isError,
+    isStale: result.isStale,
+    lastFetchTime: result.dataUpdatedAt ? new Date(result.dataUpdatedAt) : null,
+  }
 }
 
 // Local storage hook for user preferences
@@ -558,8 +458,7 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
     try {
       const item = localStorage.getItem(key)
       return item ? JSON.parse(item) : initialValue
-    } catch (error) {
-      console.warn(`Error reading localStorage key "${key}":`, error)
+    } catch {
       return initialValue
     }
   })
@@ -587,56 +486,104 @@ import {
 } from '../types/portfolio'
 
 export function usePortfolioSummary() {
-  return useAsyncData<PortfolioSummaryResponse>(
-    () => api.portfolio.getSummary(),
-    [],
-    {
-      cacheKey: 'portfolio-summary',
-      cacheTTL: 2 * 60 * 1000, // 2 minutes
-    }
-  )
+  const result = useQuery({
+    queryKey: queryKeys.portfolio.summary,
+    queryFn: () => api.portfolio.getSummary(),
+    staleTime: 2 * 60 * 1000,
+  })
+
+  return {
+    data: result.data ?? null,
+    loading: result.isLoading ? 'loading' : result.isSuccess ? 'succeeded' : result.isError ? 'failed' : 'idle',
+    error: result.error?.message ?? null,
+    refetch: result.refetch,
+    isLoading: result.isLoading,
+    isSuccess: result.isSuccess,
+    isError: result.isError,
+    isStale: result.isStale,
+    lastFetchTime: result.dataUpdatedAt ? new Date(result.dataUpdatedAt) : null,
+  }
 }
 
 export function usePortfolioGeographic() {
-  return useAsyncData<GeographicBreakdownResponse>(
-    () => api.portfolio.getGeographic(),
-    [],
-    {
-      cacheKey: 'portfolio-geographic',
-      cacheTTL: 2 * 60 * 1000,
-    }
-  )
+  const result = useQuery({
+    queryKey: queryKeys.portfolio.geographic,
+    queryFn: () => api.portfolio.getGeographic(),
+    staleTime: 2 * 60 * 1000,
+  })
+
+  return {
+    data: result.data ?? null,
+    loading: result.isLoading ? 'loading' : result.isSuccess ? 'succeeded' : result.isError ? 'failed' : 'idle',
+    error: result.error?.message ?? null,
+    refetch: result.refetch,
+    isLoading: result.isLoading,
+    isSuccess: result.isSuccess,
+    isError: result.isError,
+    isStale: result.isStale,
+    lastFetchTime: result.dataUpdatedAt ? new Date(result.dataUpdatedAt) : null,
+  }
 }
 
 export function usePortfolioScores() {
-  return useAsyncData<ScoreDistributionResponse>(
-    () => api.portfolio.getScores(),
-    [],
-    {
-      cacheKey: 'portfolio-scores',
-      cacheTTL: 2 * 60 * 1000,
-    }
-  )
+  const result = useQuery({
+    queryKey: queryKeys.portfolio.scores,
+    queryFn: () => api.portfolio.getScores(),
+    staleTime: 2 * 60 * 1000,
+  })
+
+  return {
+    data: result.data ?? null,
+    loading: result.isLoading ? 'loading' : result.isSuccess ? 'succeeded' : result.isError ? 'failed' : 'idle',
+    error: result.error?.message ?? null,
+    refetch: result.refetch,
+    isLoading: result.isLoading,
+    isSuccess: result.isSuccess,
+    isError: result.isError,
+    isStale: result.isStale,
+    lastFetchTime: result.dataUpdatedAt ? new Date(result.dataUpdatedAt) : null,
+  }
 }
 
 export function usePortfolioRisk() {
-  return useAsyncData<RiskAnalysisResponse>(
-    () => api.portfolio.getRisk(),
-    [],
-    {
-      cacheKey: 'portfolio-risk',
-      cacheTTL: 2 * 60 * 1000,
-    }
-  )
+  const result = useQuery({
+    queryKey: queryKeys.portfolio.risk,
+    queryFn: () => api.portfolio.getRisk(),
+    staleTime: 2 * 60 * 1000,
+  })
+
+  return {
+    data: result.data ?? null,
+    loading: result.isLoading ? 'loading' : result.isSuccess ? 'succeeded' : result.isError ? 'failed' : 'idle',
+    error: result.error?.message ?? null,
+    refetch: result.refetch,
+    isLoading: result.isLoading,
+    isSuccess: result.isSuccess,
+    isError: result.isError,
+    isStale: result.isStale,
+    lastFetchTime: result.dataUpdatedAt ? new Date(result.dataUpdatedAt) : null,
+  }
 }
 
 export function usePortfolioPerformance() {
-  return useAsyncData<PerformanceTrackingResponse>(
-    () => api.portfolio.getPerformance(),
-    [],
-    {
-      cacheKey: 'portfolio-performance',
-      cacheTTL: 2 * 60 * 1000,
-    }
-  )
+  const result = useQuery({
+    queryKey: queryKeys.portfolio.performance,
+    queryFn: () => api.portfolio.getPerformance(),
+    staleTime: 2 * 60 * 1000,
+  })
+
+  return {
+    data: result.data ?? null,
+    loading: result.isLoading ? 'loading' : result.isSuccess ? 'succeeded' : result.isError ? 'failed' : 'idle',
+    error: result.error?.message ?? null,
+    refetch: result.refetch,
+    isLoading: result.isLoading,
+    isSuccess: result.isSuccess,
+    isError: result.isError,
+    isStale: result.isStale,
+    lastFetchTime: result.dataUpdatedAt ? new Date(result.dataUpdatedAt) : null,
+  }
 }
+
+// Export query keys for use in cache invalidation from api.ts
+export { queryKeys }

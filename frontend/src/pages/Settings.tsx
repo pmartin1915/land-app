@@ -4,7 +4,6 @@ import { DollarSign, MapPin, AlertTriangle, Check, RefreshCw, Info } from 'lucid
 // Types for settings API
 interface UserPreferences {
   id: string
-  device_id: string
   investment_budget: number | null
   excluded_states: string[]
   preferred_states: string[]

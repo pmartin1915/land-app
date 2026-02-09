@@ -63,9 +63,6 @@ export interface Property {
   created_at: string
   updated_at?: string
 
-  // Sync metadata for cross-platform compatibility
-  device_id?: string
-  sync_timestamp?: string | null
   is_deleted: boolean
 }
 
@@ -127,7 +124,6 @@ export interface Transaction {
  */
 export interface SyncLog {
   id: UUID
-  device_id: string
   operation: string // 'delta', 'full', 'upload', 'download'
   status: string // 'success', 'failed', 'partial'
 
@@ -306,6 +302,8 @@ export interface PropertyFilters {
   min_market_timing_score?: number
   min_total_description_score?: number
   min_road_access_score?: number
+  min_buy_hold_score?: number
+  max_effective_cost?: number
 }
 
 export interface SearchParams {

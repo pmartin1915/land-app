@@ -5,7 +5,6 @@ import { api } from '../lib/api'
 // Types
 interface PropertyInteraction {
   id: string
-  device_id: string
   property_id: string
   is_watched: boolean
   star_rating: number | null
@@ -69,7 +68,7 @@ export function Watchlist() {
   const fetchWatchlist = useCallback(async () => {
     try {
       setIsLoading(true)
-      const data: WatchlistResponse = await api.watchlist.getWatchlist(page, pageSize)
+      const data = await api.watchlist.getWatchlist(page, pageSize) as unknown as WatchlistResponse
       setWatchlist(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load watchlist')

@@ -5,7 +5,7 @@ Legal compliance focused models for helping users organize data for manual gover
 
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import sys
 from pathlib import Path
@@ -41,7 +41,7 @@ class UserProfile(BaseModel):
 
     # Preferences
     max_investment_amount: Optional[float] = Field(None, description="Maximum willing to invest", ge=0)
-    preferred_counties: List[str] = Field(default=[], description="Preferred Alabama counties")
+    preferred_counties: List[str] = Field(default=[], description="Preferred counties")
     min_acreage: Optional[float] = Field(None, description="Minimum desired acreage", ge=0)
     max_acreage: Optional[float] = Field(None, description="Maximum desired acreage", ge=0)
 
@@ -61,9 +61,10 @@ class UserProfile(BaseModel):
     @field_validator('state')
     @classmethod
     def validate_state(cls, v: str) -> str:
-        """Ensure state is Alabama for state land applications."""
-        if v.upper() not in ['ALABAMA', 'AL']:
-            raise ValueError("Applications are only available for Alabama residents")
+        """Validate state is a supported state."""
+        supported = ['AL', 'AR', 'TX', 'FL', 'ALABAMA', 'ARKANSAS', 'TEXAS', 'FLORIDA']
+        if v.upper() not in supported:
+            raise ValueError(f"Unsupported state: {v}. Supported: AL, AR, TX, FL")
         return v.upper()
 
     @field_validator('zip_code')
@@ -81,7 +82,7 @@ class PropertyApplicationData(BaseModel):
     cs_number: Optional[str] = Field(None, description="CS Number from state records")
     parcel_number: str = Field(..., description="Official parcel number")
     sale_year: str = Field(..., description="Tax sale year")
-    county: str = Field(..., description="Alabama county name")
+    county: str = Field(..., description="County name")
 
     # Property details
     description: str = Field(..., description="Legal property description")
@@ -176,7 +177,7 @@ class ROICalculation(BaseModel):
     estimated_possession_date: Optional[datetime] = Field(None, description="Estimated possession date")
 
     # Analysis metadata
-    calculation_date: datetime = Field(default_factory=datetime.utcnow, description="When calculation was performed")
+    calculation_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When calculation was performed")
     confidence_level: Optional[str] = Field(None, description="Confidence level in estimates")
 
 
@@ -197,7 +198,7 @@ class ApplicationNotification(BaseModel):
     price_amount: Optional[float] = Field(None, description="Price from state notification", ge=0)
 
     # Timestamps
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="Notification creation time")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Notification creation time")
     read_at: Optional[datetime] = Field(None, description="When user read notification")
     action_required: bool = Field(default=False, description="User action required")
     action_deadline: Optional[datetime] = Field(None, description="Deadline for action")

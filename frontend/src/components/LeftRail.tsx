@@ -185,13 +185,13 @@ export function LeftRail({ className = '' }: LeftRailProps) {
           {!collapsed && (
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-accent-primary rounded-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold text-sm">AAW</span>
+                <span className="text-white font-bold text-sm">AW</span>
               </div>
               <div>
                 <h2 className="text-sm font-semibold text-text-primary leading-tight">
-                  Alabama Auction Watcher
+                  Auction Watcher
                 </h2>
-                <p className="text-xs text-text-muted">Desktop v1.0</p>
+                <p className="text-xs text-text-muted">v1.0</p>
               </div>
             </div>
           )}

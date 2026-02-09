@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
 import { importApi, CSVPreviewResponse, CSVImportResult } from '../lib/api'
+import { useFocusTrap } from '../lib/useFocusTrap'
 
 interface CSVImportModalProps {
   isOpen: boolean
@@ -40,6 +41,7 @@ export function CSVImportModal({ isOpen, onClose, onImportComplete }: CSVImportM
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const focusTrapRef = useFocusTrap<HTMLDivElement>(isOpen)
 
   const resetModal = useCallback(() => {
     setStep('upload')
@@ -143,6 +145,10 @@ export function CSVImportModal({ isOpen, onClose, onImportComplete }: CSVImportM
 
           {/* Modal */}
           <motion.div
+            ref={focusTrapRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="csv-import-modal-title"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
@@ -151,7 +157,7 @@ export function CSVImportModal({ isOpen, onClose, onImportComplete }: CSVImportM
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-neutral-1 bg-surface">
               <div>
-                <h2 className="text-lg font-semibold text-text-primary">Import CSV</h2>
+                <h2 id="csv-import-modal-title" className="text-lg font-semibold text-text-primary">Import CSV</h2>
                 <p className="text-sm text-text-muted">
                   {step === 'upload' && 'Upload a CSV file with property data'}
                   {step === 'preview' && 'Review and map columns'}

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { Property } from '../types'
 import { usePropertyCompare } from './PropertyCompareContext'
 import { InvestmentGradeBadge } from './ui/InvestmentGradeBadge'
+import { useFocusTrap } from '../lib/useFocusTrap'
 
 /** Get quiet title cost by state */
 function getQuietTitleCost(state: string | undefined): number {
@@ -31,8 +32,8 @@ function getRedemptionPeriod(state: string | undefined): string {
 /** Comparison row data */
 interface ComparisonRow {
   label: string
-  getValue: (property: Property) => string | number | null
-  format?: (value: string | number | null) => string
+  getValue: (property: Property) => string | number | undefined | null
+  format?: (value: number) => string
   highlightBest?: 'high' | 'low'
 }
 
@@ -110,6 +111,7 @@ export function PropertyCompareModal() {
     clearCompare,
     compareCount,
   } = usePropertyCompare()
+  const focusTrapRef = useFocusTrap<HTMLDivElement>(showCompareModal && compareCount > 0)
 
   if (!showCompareModal || compareCount === 0) return null
 
@@ -147,6 +149,10 @@ export function PropertyCompareModal() {
 
           {/* Modal */}
           <motion.div
+            ref={focusTrapRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="compare-modal-title"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
@@ -155,7 +161,7 @@ export function PropertyCompareModal() {
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-neutral-1 bg-surface">
               <div>
-                <h2 className="text-lg font-semibold text-text-primary">Compare Properties</h2>
+                <h2 id="compare-modal-title" className="text-lg font-semibold text-text-primary">Compare Properties</h2>
                 <p className="text-sm text-text-muted">{compareCount} of 3 properties selected</p>
               </div>
               <button
@@ -218,7 +224,7 @@ export function PropertyCompareModal() {
                         </td>
                         {compareList.map((property, colIndex) => {
                           const value = row.getValue(property)
-                          const displayValue = row.format
+                          const displayValue = row.format && typeof value === 'number'
                             ? row.format(value)
                             : String(value ?? 'N/A')
                           const isBest = bestIndex === colIndex

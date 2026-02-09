@@ -97,7 +97,7 @@ async def get_export_columns(request: Request):
 
 @router.post("/csv")
 @limiter.limit("10/minute")
-async def export_csv(
+def export_csv(
     request: Request,
     export_request: ExportRequest,
     auth_data: dict = Depends(get_current_user_or_api_key),
@@ -186,7 +186,7 @@ async def export_csv(
 
 @router.post("/json")
 @limiter.limit("10/minute")
-async def export_json(
+def export_json(
     request: Request,
     export_request: ExportRequest,
     auth_data: dict = Depends(get_current_user_or_api_key),
@@ -280,7 +280,7 @@ async def export_json(
 
 @router.get("/preview")
 @limiter.limit("30/minute")
-async def preview_export(
+def preview_export(
     request: Request,
     state: Optional[str] = None,
     county: Optional[str] = None,
