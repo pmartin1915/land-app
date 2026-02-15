@@ -5,10 +5,8 @@
 *.sqlite
 *.sqlite3
 
-# Log files (exclude large logs)
+# Log files
 *.log
-logs/*.log
-streamlit_error.log
 
 # Frontend / Node.js
 frontend/node_modules/
@@ -211,3 +209,10 @@ auctiontest_output.json
 
 # Data backups folder
 data/backups/
+
+# One-off analysis artifacts
+db_analysis_*.txt
+recalculation_comparison_*.csv
+
+# Malformed path artifacts (Windows CLI)
+c:auction*
