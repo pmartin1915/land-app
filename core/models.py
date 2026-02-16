@@ -19,10 +19,12 @@ class Parcel(BaseModel):
     tax_due: float
     other_liens: List[Lien] = []
 
+    @property
     def total_encumbrance(self) -> float:
         """Calculates total debt on property."""
         return self.tax_due + sum(lien.amount for lien in self.other_liens)
 
+    @property
     def ltv_ratio(self) -> float:
         """Loan-to-Value ratio based on total debt vs market estimate."""
         if self.market_value_estimate == 0:
