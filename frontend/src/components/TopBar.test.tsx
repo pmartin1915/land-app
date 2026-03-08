@@ -181,7 +181,7 @@ describe('TopBar', () => {
       render(<TopBar title="Dashboard" />)
 
       const select = screen.getByRole('combobox')
-      expect(select).toHaveValue('last-7-days')
+      expect(select).toHaveValue('all-time')
     })
 
     it('has all period options', () => {
