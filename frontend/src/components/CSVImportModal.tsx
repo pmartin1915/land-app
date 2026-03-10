@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'motion/react'
 import { X, Upload, FileSpreadsheet, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
 import { importApi, CSVPreviewResponse, CSVImportResult } from '../lib/api'
 import { useFocusTrap } from '../lib/useFocusTrap'
