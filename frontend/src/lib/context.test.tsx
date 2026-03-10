@@ -613,5 +613,3 @@ describe('useApp Hook', () => {
   })
 })
 
-// Import vi from vitest at the top of the test file
-import { vi } from 'vitest'

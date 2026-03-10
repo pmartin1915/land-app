@@ -81,7 +81,7 @@ export function EmptyState({
     return (
       <div className={`flex items-center gap-3 py-6 px-4 text-center justify-center ${className}`}>
         <div className="text-text-muted">
-          {React.cloneElement(displayIcon as React.ReactElement, {
+          {React.cloneElement(displayIcon as React.ReactElement<{ className?: string }>, {
             className: 'w-6 h-6'
           })}
         </div>
